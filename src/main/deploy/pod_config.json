@@ -1,0 +1,7 @@
+{
+  "number": "153",
+  "loggingDir": "/home/lvuser/eventlogs/",
+  "voltageBounds": [7.0, 13.0],
+  "voltageCheckInterval": 0.50,
+  "trackingWriteInterval": 0.250
+}

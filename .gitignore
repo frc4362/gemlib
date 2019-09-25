@@ -1,0 +1,11 @@
+
+\.gradle/
+
+
+\.idea/
+
+
+build/*
+*.class
+
+out/production/classes/META-INF/

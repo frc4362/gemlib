@@ -1,0 +1,27 @@
+Subsystems can handles states in several forms, depending on the application
+IMPORTANT CONCEPT: 1. States are often modes of execution, rather than specific actions or
+                      controlled goals.
+                   2. It is perfectly alright to have internal methods which the
+                      onUpdate(time) simply delegates to. There is no reason for onUpdate(time)
+                      to contain all of the internal actuation and updating.
+For systems like drive trains, which have multiple forms of output, or elevators with an open loop
+    option, it is appropriate to have discrete methods for each state and handle transitions
+    within the method- for instance, setDisabled(), setOpenLoop(signal), or setMotionMagic(ref).
+    This allows for the user to not worry about state transitions at all, and simplifies
+    implementation of the onUpdate(time) method because it doesn't have to worry about
+    transition- merely sophisticated actuation. Often, these public methods for setting state will
+    simply update the periodicIO of a Subsystem, and the onUpdate(time) method will actuate based
+    on the set state combined with the periodicIO values. For instance, setOpenLoop(signal) will
+    simply change the periodicIOs demands, and the onUpdate(time) method will actuate based on the
+    periodicIO demands IF it is in the appropriate state. As a result, it is necessary for other
+    subsystems to zero out the demands of states which they are not using, but only so that they
+    may be logged appropriately.
+For systems with discrete, simply-actuated, game-piece-handling state such as our pneumatic disk
+    handler from 2019, it is best to use a single setState method, and handle transitions in the
+    onUpdate(time) method. This allows one to set the wanted state, and to force it to conform to
+    states when necessary, as it as modeled as swapping directly between physical states, rather
+    than multiple modes of actuation.
+For systems such as ones which focus on reading and coordinating sensors, and do not have meaningful
+    internally determined state, or an elevator which only has a positional control mode, it is
+    appropriate to have a setPosition(pos) method, and effectively have an empty or nearly-empty
+    onUpdate(time) method.
