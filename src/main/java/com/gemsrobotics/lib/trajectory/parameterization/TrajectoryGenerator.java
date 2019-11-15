@@ -23,7 +23,7 @@ public final class TrajectoryGenerator {
 		m_model = model;
 	}
 
-	public TrajectoryContainer generateTrajectory(
+	public TrajectoryContainer<RigidTransformWithCurvature> generateTrajectory(
 	        final boolean highGear,
 			final boolean reversed,
 			final List<RigidTransform> waypoints,
@@ -39,7 +39,7 @@ public final class TrajectoryGenerator {
 		);
 	}
 
-	public TrajectoryContainer generateTrajectory(
+	public TrajectoryContainer<RigidTransformWithCurvature> generateTrajectory(
 	        final boolean highGear,
 			final boolean reversed,
 			List<RigidTransform> waypoints,
@@ -60,7 +60,12 @@ public final class TrajectoryGenerator {
 			final List<RigidTransformWithCurvature> flipped = new ArrayList<>(trajectory.length());
 
 			for (int i = 0; i < trajectory.length(); i++) {
-				flipped.add(new RigidTransformWithCurvature(trajectory.getState(i).getRigidTransform().transformBy(flip), -trajectory.getState(i).getCurvature(), trajectory.getState(i).getDCurvatureDs()));
+				final var curvedState = new RigidTransformWithCurvature(
+						trajectory.getState(i).getRigidTransform().transformBy(flip),
+						-trajectory.getState(i).getCurvature(),
+						trajectory.getState(i).getDCurvatureDs());
+
+				flipped.add(curvedState);
 			}
 
 			trajectory = new Trajectory<>(flipped);
@@ -69,7 +74,7 @@ public final class TrajectoryGenerator {
 		// Create the constraint that the robot must be able to traverse the trajectory without ever applying more
 		// than the specified voltage.
 		final DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> drivingConstraints =
-				new	DifferentialDriveDynamicsConstraint<>(m_model, highGear, m_config.maxVoltage);
+				new	DifferentialDriveDynamicsConstraint<>(m_model, highGear, m_config.maxVoltage    );
 
         final CentripetalAccelerationConstraint centripetalAccelerationConstraints =
                 new CentripetalAccelerationConstraint(m_config.maxCentripetalAcceleration);
@@ -83,7 +88,7 @@ public final class TrajectoryGenerator {
 		}
 
 		// Generate the timed trajectory.
-		return new TrajectoryContainer(
+		return new TrajectoryContainer<RigidTransformWithCurvature>(
 		        highGear,
                 Parameterizer.timeParameterizeTrajectory(
                     reversed,

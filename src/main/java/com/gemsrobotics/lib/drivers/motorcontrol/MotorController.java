@@ -31,6 +31,8 @@ public interface MotorController {
      */
     double getDrawnCurrent();
 
+    int getDeviceID();
+
     /**
      * @return Whether or not an encoder is attached
      */
@@ -77,6 +79,13 @@ public interface MotorController {
      * @return If the operation was successful
      */
     boolean setEncoderPosition(double position);
+
+    /**
+     * @param timeToRamp The amount of time, in seconds, to change 12V of the output
+     * @return If the write succeeded
+     */
+    boolean setOpenLoopVoltageRampRate(double timeToRamp);
+    boolean setClosedLoopVoltageRampRate(double timeToRamp);
 
     boolean setPIDF(PIDFController.Gains gains);
     default boolean setPIDF(final double kP, final double kI, final double kD, final double kFF) {

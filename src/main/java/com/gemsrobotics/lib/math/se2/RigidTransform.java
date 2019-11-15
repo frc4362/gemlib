@@ -123,7 +123,7 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
                 m_rotation.sum(other.m_rotation));
     }
 
-    public RigidTransform relativeTo(final RigidTransform other) {
+    public RigidTransform inFrameOfReferenceOf(final RigidTransform other) {
         return new RigidTransform(
                 m_translation.difference(other.getTranslation()).rotateBy(other.getRotation().inverse()),
                 m_rotation.difference(other.getRotation()));
@@ -150,16 +150,34 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
     public Translation intersection(final RigidTransform other) {
         final Rotation otherRotation = other.getRotation();
 
+        // Lines are parallel.
         if (m_rotation.isParallel(otherRotation)) {
-            // Lines are parallel.
             return new Translation(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
         }
 
+        final RigidTransform a, b;
+
         if (abs(m_rotation.cos()) < abs(otherRotation.cos())) {
-            return intersectionInternal(this, other);
+            a = this;
+            b = other;
         } else {
-            return intersectionInternal(other, this);
+            a = other;
+            b = this;
         }
+
+        final Rotation aR = a.getRotation();
+        final Rotation bR = b.getRotation();
+        final Translation aT = a.getTranslation();
+        final Translation bT = b.getTranslation();
+
+        final var tanB = bR.tan();
+        final var t = ((aT.x() - bT.x()) * tanB + bT.y() - aT.y()) / (aR.sin() - aR.cos() * tanB);
+
+        if (Double.isNaN(t)) {
+            return new Translation(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+        }
+
+        return aT.translateBy(aR.toTranslation().scale(t));
     }
 
     /**
@@ -175,24 +193,7 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
     }
 
     public boolean epsilonEquals(final RigidTransform other, final double epsilon) {
-        return getTranslation().epsilonEquals(other.getTranslation(), epsilon)
-                && getRotation().isParallel(other.getRotation());
-    }
-
-    private static Translation intersectionInternal(final RigidTransform a, final RigidTransform b) {
-        final Rotation aR = a.getRotation();
-        final Rotation bR = b.getRotation();
-        final Translation aT = a.getTranslation();
-        final Translation bT = b.getTranslation();
-
-        final var tanB = bR.tan();
-        final var t = ((aT.x() - bT.x()) * tanB + bT.y() - aT.y()) / (aR.sin() - aR.cos() * tanB);
-
-        if (Double.isNaN(t)) {
-            return new Translation(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
-        }
-
-        return aT.translateBy(aR.toTranslation().scale(t));
+        return getTranslation().epsilonEquals(other.getTranslation(), epsilon) && getRotation().isParallel(other.getRotation());
     }
 
     /**
@@ -231,7 +232,6 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
         }
 
         final var castedOther = ((RigidTransform) other);
-
         return getRotation().equals(castedOther.getRotation()) && getTranslation().equals(castedOther.getTranslation());
     }
 

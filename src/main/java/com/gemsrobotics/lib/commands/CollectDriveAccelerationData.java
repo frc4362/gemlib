@@ -50,7 +50,7 @@ public class CollectDriveAccelerationData extends Command {
         final double acceleration = (currentVelocity - m_lastVelocity) / (currentTime - m_lastTime);
 
         //ignore accelerations that are too small
-        if (acceleration > MathUtils.kEpsilon) {
+        if (acceleration > MathUtils.Epsilon) {
             m_data.add(new DriveCharacterizer.AccelerationDataPoint(currentVelocity, POWER * 12.0, acceleration));
         }
 

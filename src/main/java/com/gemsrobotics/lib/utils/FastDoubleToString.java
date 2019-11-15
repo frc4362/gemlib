@@ -8,7 +8,7 @@ public final class FastDoubleToString {
 	private static final long[] POW10 = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000 };
 
 	public static String format(double val) {
-		return format(val, 2);
+		return format(val, 3);
 	}
 
 	public static synchronized String format(double val, final int precision) {

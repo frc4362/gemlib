@@ -3,7 +3,7 @@ package com.gemsrobotics.lib.drivers.hid;
 import java.util.function.Function;
 
 import com.gemsrobotics.lib.math.se2.Translation;
-import com.gemsrobotics.lib.property.CachedValue;
+import com.gemsrobotics.lib.data.CachedValue;
 
 import edu.wpi.first.wpilibj.Joystick;
 

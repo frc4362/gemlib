@@ -11,10 +11,10 @@ public class TrajectorySamplePoint<S extends State<S>> {
     @SerializedName("indexCeiling")
     protected final int m_indexCeiling;
 
-    public TrajectorySamplePoint(final S state, final int index_floor, final int index_ceil) {
+    public TrajectorySamplePoint(final S state, final int indexFloor, final int indexCeiling) {
         m_state = state;
-        m_indexFloor = index_floor;
-        m_indexCeiling = index_ceil;
+        m_indexFloor = indexFloor;
+        m_indexCeiling = indexCeiling;
     }
 
     public TrajectorySamplePoint(final TrajectoryPoint<S> point) {
@@ -22,7 +22,7 @@ public class TrajectorySamplePoint<S extends State<S>> {
         m_indexFloor = m_indexCeiling = point.index();
     }
 
-    public S state() {
+    public S getState() {
         return m_state;
     }
 

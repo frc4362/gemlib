@@ -1,6 +1,6 @@
 package com.gemsrobotics.lib.utils;
 
-import static java.lang.Math.PI;
+import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
 public class Units {
     private Units() {}
@@ -14,11 +14,11 @@ public class Units {
     }
 
 	public static double rpm2RadsPerSecond(final double rpm) {
-		return rpm * 2.0 * PI / 60.0;
+		return rpm * Tau / 60.0;
 	}
 
 	public static double radsPerSec2Rpm(final double radiansPerSecond) {
-		return radiansPerSecond * 60.0 / (2.0 * PI);
+		return radiansPerSecond * 60.0 / Tau;
 	}
 
 	public static double inches2Meters(final double inches) {

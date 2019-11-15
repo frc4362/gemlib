@@ -6,6 +6,8 @@ import com.gemsrobotics.lib.math.se2.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.Math.abs;
+
 public class SplineGenerator {
     private static final int kMinSampleSize = 1;
 
@@ -26,7 +28,7 @@ public class SplineGenerator {
     ) {
         final var rv = new ArrayList<RigidTransformWithCurvature>();
 
-        rv.add(s.getRigidTransform2dWithCurvature(0.0));
+        rv.add(s.getRigidTransformWithCurvature(0.0));
 
         final var dt = (t1 - t0);
 
@@ -51,7 +53,7 @@ public class SplineGenerator {
             return rv;
         }
 
-        rv.add(splines.get(0).getRigidTransform2dWithCurvature(0.0));
+        rv.add(splines.get(0).getRigidTransformWithCurvature(0.0));
 
         for (final var spline : splines) {
             final var samples = parameterizeSpline(config, spline);
@@ -64,27 +66,27 @@ public class SplineGenerator {
     }
 
     private static void makeSegmentArc(
-            final Spline s,
-            final List<RigidTransformWithCurvature> rv,
+            final Spline spline,
+            final List<RigidTransformWithCurvature> points,
             final double t0,
             final double t1,
             final double maxDx,
             final double maxDy,
             final double maxDTheta
     ) {
-        final var p0 = s.getPoint(t0);
-        final var p1 = s.getPoint(t1);
-        final var r0 = s.getHeading(t0);
-        final var r1 = s.getHeading(t1);
+        final var p0 = spline.getPoint(t0);
+        final var p1 = spline.getPoint(t1);
+        final var r0 = spline.getHeading(t0);
+        final var r1 = spline.getHeading(t1);
         final var transformation = new RigidTransform(new Translation(p0, p1).rotateBy(r0.inverse()), r1.difference(r0));
 
         final var twist = transformation.toTwist();
-
-        if (twist.dy > maxDy || twist.dx > maxDx || twist.dtheta > maxDTheta) {
-            makeSegmentArc(s, rv, t0, (t0 + t1) / 2, maxDx, maxDy, maxDTheta);
-            makeSegmentArc(s, rv, (t0 + t1) / 2, t1, maxDx, maxDy, maxDTheta);
+        // thank you to the man Prateek of 5190 for finding this bug
+        if (abs(twist.dy) > maxDy || abs(twist.dx) > maxDx || abs(twist.dtheta) > maxDTheta) {
+            makeSegmentArc(spline, points, t0, (t0 + t1) / 2, maxDx, maxDy, maxDTheta);
+            makeSegmentArc(spline, points, (t0 + t1) / 2, t1, maxDx, maxDy, maxDTheta);
         } else {
-            rv.add(s.getRigidTransform2dWithCurvature(t1));
+            points.add(spline.getRigidTransformWithCurvature(t1));
         }
     }
 }

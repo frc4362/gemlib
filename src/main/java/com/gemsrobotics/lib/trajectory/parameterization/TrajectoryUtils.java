@@ -52,7 +52,7 @@ public class TrajectoryUtils {
      * Creates a Trajectory by sampling a TrajectoryView at a regular interval.
      */
     public static <S extends State<S>> Trajectory<S> resample(final TrajectoryView<S> trajectoryView, final double interval) {
-        if (interval <= MathUtils.kEpsilon) {
+        if (interval <= MathUtils.Epsilon) {
             return new Trajectory<>();
         }
 
@@ -60,7 +60,7 @@ public class TrajectoryUtils {
         final var states = new ArrayList<S>(num_states);
 
         for (int i = 0; i < num_states; i++) {
-            states.add(trajectoryView.sample(i * interval + trajectoryView.getFirstInterpolant()).state());
+            states.add(trajectoryView.sample(i * interval + trajectoryView.getFirstInterpolant()).getState());
         }
 
         return new Trajectory<>(states);

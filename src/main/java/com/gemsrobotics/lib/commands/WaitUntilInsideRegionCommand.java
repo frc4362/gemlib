@@ -14,17 +14,26 @@ public class WaitUntilInsideRegionCommand extends Command {
             final DifferentialDrive chassis,
             final Translation bottomLeft,
             final Translation topRight,
-            final Side startingSide
+            final boolean flip
     ) {
         m_odometer = chassis.getOdometer();
 
-        if (startingSide.isRight()) {
+        if (flip) {
             m_cornerLeftBottom = new Translation(bottomLeft.x(), -topRight.y());
             m_cornerRightTop = new Translation(topRight.x(), -bottomLeft.y());
         } else {
             m_cornerLeftBottom = bottomLeft;
             m_cornerRightTop = topRight;
         }
+    }
+
+    public WaitUntilInsideRegionCommand(
+            final DifferentialDrive chassis,
+            final Translation bottomLeft,
+            final Translation topRight,
+            final Side side
+    ) {
+        this(chassis, bottomLeft, topRight, side.isRight());
     }
 
     @Override

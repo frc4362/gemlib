@@ -1,7 +1,7 @@
 package com.gemsrobotics.lib.data;
 
-import com.gemsrobotics.lib.math.interpolation.Interpolable;
-import com.gemsrobotics.lib.math.interpolation.InverseInterpolable;
+import com.gemsrobotics.lib.math.interpolation.Interpolatable;
+import com.gemsrobotics.lib.math.interpolation.InverseInterpolatable;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -16,8 +16,8 @@ import java.util.TreeMap;
  *            The type of the value (must implement Interpolable)
  */
 public class InterpolatingTreeMap<
-                 K extends InverseInterpolable<K> & Comparable<K>,
-                 V extends Interpolable<V>>
+                 K extends InverseInterpolatable<K> & Comparable<K>,
+                 V extends Interpolatable<V>>
         extends TreeMap<K, V> {
     private static final long serialVersionUID = 8347275262778054124L;
 

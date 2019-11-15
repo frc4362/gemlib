@@ -4,7 +4,7 @@ import edu.wpi.first.wpilibj.command.Command;
 
 public abstract class EndlessCommand extends Command {
 	@Override
-	public boolean isFinished() {
+	public final boolean isFinished() {
 		return false;
 	}
 }

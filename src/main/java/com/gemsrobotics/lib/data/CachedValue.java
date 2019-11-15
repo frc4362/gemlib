@@ -1,4 +1,4 @@
-package com.gemsrobotics.lib.property;
+package com.gemsrobotics.lib.data;
 
 import com.gemsrobotics.lib.telemetry.reporting.Reporter;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
@@ -64,7 +64,7 @@ public class CachedValue<T> implements Reportable {
 	    return m_timer.hasElapsed();
     }
 
-	public Optional<T> getLastValue() {
+	public synchronized Optional<T> getLastValue() {
 		return Optional.ofNullable(m_oldValue);
 	}
 

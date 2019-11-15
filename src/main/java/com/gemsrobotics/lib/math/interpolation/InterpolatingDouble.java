@@ -8,8 +8,8 @@ import com.gemsrobotics.lib.data.InterpolatingTreeMap;
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class InterpolatingDouble implements
-        Interpolable<InterpolatingDouble>,
-        InverseInterpolable<InterpolatingDouble>,
+        Interpolatable<InterpolatingDouble>,
+        InverseInterpolatable<InterpolatingDouble>,
         Comparable<InterpolatingDouble>
 {
     public Double value;
@@ -27,17 +27,17 @@ public class InterpolatingDouble implements
 
     @Override
     public double inverseInterpolate(final InterpolatingDouble upper, final InterpolatingDouble query) {
-        final var upper_to_lower = upper.value - value;
-        if (upper_to_lower <= 0) {
+        final var upperToLower = upper.value - value;
+        if (upperToLower <= 0) {
             return 0;
         }
 
-        final var  query_to_lower = query.value - value;
-        if (query_to_lower <= 0) {
+        final var  queryToLower = query.value - value;
+        if (queryToLower <= 0) {
             return 0;
         }
 
-        return query_to_lower / upper_to_lower;
+        return queryToLower / upperToLower;
     }
 
     @Override

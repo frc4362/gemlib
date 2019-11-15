@@ -41,7 +41,7 @@ public class TrajectoryIterator<S extends State<S>> {
     }
 
     public S getState() {
-        return getSample().state();
+        return getSample().getState();
     }
 
     public TrajectorySamplePoint<S> advance(final double progressTime) {

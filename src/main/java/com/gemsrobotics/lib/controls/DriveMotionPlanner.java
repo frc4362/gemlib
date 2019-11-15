@@ -1,22 +1,23 @@
 package com.gemsrobotics.lib.controls;
 
+import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.Model;
+import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
 import com.gemsrobotics.lib.trajectory.parameterization.*;
-import com.gemsrobotics.lib.utils.MathUtils;
-import com.google.gson.annotations.SerializedName;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Config;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
+import static java.lang.Double.isInfinite;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
@@ -51,11 +52,11 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 	public static class Output implements Loggable {
 	    @Log.ToString(name="Velocity (rad per s, rad per s)")
-		public Model.WheelState velocity; // rad/s
+		public WheelState velocity; // rad/s
         @Log.ToString(name="Acceleration (rad per s^2, rad per s^2)")
-		public Model.WheelState acceleration; // rad/s^2
+		public WheelState acceleration; // rad/s^2
         @Log.ToString(name="Feedforward (V, V)")
-		public Model.WheelState feedforwardVoltage; // volts
+		public WheelState feedforwardVoltage; // volts
 
 		public void flip() {
 			velocity.flip();
@@ -92,19 +93,16 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	protected boolean m_isReversed;
 	protected double m_lastTime;
 	protected Output m_output;
-	protected Model.ChassisState m_previousVelocity;
-	protected final Supplier<Boolean> m_isHighGear;
+	protected ChassisState m_previousVelocity;
 
 	public DriveMotionPlanner(
 			final MotionConfig config,
 			final Model model,
-			final FollowerType followerType,
-            final Supplier<Boolean> isHighGear
+			final FollowerType followerType
 	) {
 		m_config = config;
 		m_model = model;
 		m_followerType = followerType;
-		m_isHighGear = isHighGear;
 		reset();
 	}
 
@@ -115,10 +113,10 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		for (int i = 0; i < trajectory.getTrajectory().length(); i++) {
 			final var state = trajectory.getTrajectory().getState(i);
 
-			if (state.getVelocity() > MathUtils.kEpsilon) {
+			if (state.getVelocity() > Epsilon) {
 				m_isReversed = false;
 				break;
-			} else if (state.getVelocity() < MathUtils.kEpsilon) {
+			} else if (state.getVelocity() < Epsilon) {
 				m_isReversed = true;
 				break;
 			}
@@ -129,15 +127,15 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		m_error = RigidTransform.identity();
 		m_output = new Output();
 		m_lastTime = Double.POSITIVE_INFINITY;
-		m_previousVelocity = new Model.ChassisState();
+		m_previousVelocity = new ChassisState();
 	}
 
-	public Optional<Output> update(final double timestamp, final RigidTransform currentPose) {
+	public Optional<Output> update(final double timestamp, final RigidTransform currentPose, final boolean isHighGear) {
 		if (Objects.isNull(m_trajectory)) {
 			return Optional.empty();
 		}
 
-		if (m_trajectory.getProgress() == 0.0 && Double.isInfinite(m_lastTime)) {
+		if (m_trajectory.getProgress() == 0.0 && isInfinite(m_lastTime)) {
 			m_lastTime = timestamp;
 		}
 
@@ -145,17 +143,20 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		m_lastTime = timestamp;
 
 		final var samplePoint = m_trajectory.advance(dt);
-		m_setpoint = samplePoint.state();
+		m_setpoint = samplePoint.getState();
 
 		if (!m_trajectory.isDone()) {
-			final var velocity = m_setpoint.getVelocity();
-			final var curvature = m_setpoint.getState().getCurvature();
-			final var acceleration = m_setpoint.getAcceleration();
+			final var velocityMetersPerSecond = m_setpoint.getVelocity();
+			final var curvatureRadiansPerMeter = m_setpoint.getState().getCurvature();
+			final var curvatureDsRadiansPerMeterSquared = m_setpoint.getState().getDCurvatureDs();
+			final var accelerationMetersPerSecondSquared = m_setpoint.getAcceleration();
 
 			final var setpointDynamics = m_model.solveInverseDynamics(
-					new Model.ChassisState(velocity, velocity * curvature),
-					new Model.ChassisState(acceleration, acceleration * curvature + velocity * velocity * m_setpoint.getState().getDCurvatureDs()),
-                    m_isHighGear.get()
+					new ChassisState(velocityMetersPerSecond, velocityMetersPerSecond * curvatureRadiansPerMeter),
+					new ChassisState(accelerationMetersPerSecondSquared,
+                            accelerationMetersPerSecondSquared * curvatureRadiansPerMeter
+                                    + velocityMetersPerSecond * velocityMetersPerSecond * curvatureDsRadiansPerMeterSquared),
+                    isHighGear
 			);
 
 			m_error = currentPose.inverse().transformBy(m_setpoint.getState().getRigidTransform());
@@ -167,7 +168,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
                     m_output.feedforwardVoltage = setpointDynamics.voltage;
                     break;
 				case RAMSETE:
-					m_output = updateRamsete(dt, setpointDynamics, currentPose);
+					m_output = updateRamsete(dt, setpointDynamics, currentPose, isHighGear);
 					break;
 			}
 		} else {
@@ -178,41 +179,41 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	}
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
-	protected Output updateRamsete(final double dt, final Model.Dynamics dynmx, final RigidTransform currentPose) {
-		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * dynmx.chassisVelocity.linear * dynmx.chassisVelocity.linear + dynmx.chassisVelocity.angular * dynmx.chassisVelocity.angular);
+	protected Output updateRamsete(final double dt, final Model.Dynamics dynmx, final RigidTransform currentPose, final boolean isHighGear) {
+		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * dynmx.chassisVelocity.linearMeters * dynmx.chassisVelocity.linearMeters + dynmx.chassisVelocity.angularRadians * dynmx.chassisVelocity.angularRadians);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
 		final var sinXOverX = epsilonEquals(angularErrorRadians, 0.0, 0.01) ? 1.0 : m_error.getRotation().sin() / angularErrorRadians;
 
-		final var adjustedVelocity = new Model.ChassisState(
-				dynmx.chassisVelocity.linear * m_error.getRotation().cos()
+		final var adjustedVelocity = new ChassisState(
+				dynmx.chassisVelocity.linearMeters * m_error.getRotation().cos()
                         + k * m_error.getTranslation().x(),
-				dynmx.chassisVelocity.angular
+				dynmx.chassisVelocity.angularRadians
 					    + k * angularErrorRadians
-					    + dynmx.chassisVelocity.linear * m_config.beta * sinXOverX * m_error.getTranslation().y());
+					    + dynmx.chassisVelocity.linearMeters * m_config.beta * sinXOverX * m_error.getTranslation().y());
 
 		dynmx.chassisVelocity = adjustedVelocity;
+		// this is where everything goes from meters to wheel radians/s!!
 		dynmx.wheelVelocity = m_model.inverseKinematics(adjustedVelocity);
 
 		if (dt == 0.0) {
-			dynmx.chassisAcceleration = new Model.ChassisState(0,0);
+			dynmx.chassisAcceleration.linearMeters = 0.0;
+			dynmx.chassisAcceleration.angularRadians = 0.0;
 		} else {
-			dynmx.chassisAcceleration = new Model.ChassisState(
-					(dynmx.chassisVelocity.linear - m_previousVelocity.linear) / dt,
-					(dynmx.chassisVelocity.angular - m_previousVelocity.angular) / dt);
+			dynmx.chassisAcceleration.linearMeters = (dynmx.chassisVelocity.linearMeters - m_previousVelocity.linearMeters) / dt;
+			dynmx.chassisAcceleration.angularRadians = (dynmx.chassisVelocity.angularRadians - m_previousVelocity.angularRadians) / dt;
 		}
 
 		// store previous velocity, allows the user to only have to worry about passing the new state
         // this is superior to passing velocity and acceleration in, like 1678 does, since it allows the user to worry about fewer calculations up front
-        // and works fine with a variant dt. However, where it lacks is in application- our Ramsete controller is highly coupled. This should be fine. - Ethan, 9/24/19
+        // and works fine with a variant dt. However, where it lacks is in application-
+        // our Ramsete controller is highly coupled. This should be fine. - Ethan, 9/24/19
 		m_previousVelocity = dynmx.chassisVelocity;
 
 		final var output = new Output();
-
 		output.velocity = dynmx.wheelVelocity;
 		output.acceleration = dynmx.wheelAcceleration;
-		output.feedforwardVoltage = m_model.solveInverseDynamics(dynmx.chassisVelocity, dynmx.chassisAcceleration, m_isHighGear.get()).voltage;
-
+		output.feedforwardVoltage = m_model.solveInverseDynamics(dynmx.chassisVelocity, dynmx.chassisAcceleration, isHighGear).voltage;
 		return output;
 	}
 

@@ -22,7 +22,7 @@ public abstract class Spline {
         return new RigidTransform(getPoint(t), getHeading(t));
     }
 
-    public RigidTransformWithCurvature getRigidTransform2dWithCurvature(double t) {
+    public RigidTransformWithCurvature getRigidTransformWithCurvature(double t) {
         return new RigidTransformWithCurvature(
                 getRigidTransform2d(t),
                 getCurvature(t),

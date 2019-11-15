@@ -88,7 +88,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
         m_fieldToVehicle.put(new InterpolatingDouble(timestamp), observation);
     }
 
-    public synchronized void addObservations(
+    public synchronized void addObservation(
             final double timestamp,
             final Twist measuredVelocity,
             final Twist predicted_velocity
@@ -100,7 +100,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
     }
 
     public synchronized Twist generateOdometryFromSensors(
-            final Model.WheelState deltaDistance,
+            final WheelState deltaDistance,
             final Rotation currentRotation
     ) {
         final var lastRotation = getLatestFieldToVehicle().getValue().getRotation();

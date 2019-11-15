@@ -33,13 +33,13 @@ public class DistanceView<S extends State<S>> implements TrajectoryView<S> {
             final TrajectoryPoint<S> s = m_trajectory.getPoint(i);
 
             if (m_distances[i] >= distance) {
-                final TrajectoryPoint<S> prev_s = m_trajectory.getPoint(i - 1);
+                final S previousState = m_trajectory.getPoint(i - 1).state();
 
                 if (epsilonEquals(m_distances[i], m_distances[i - 1])) {
                     return new TrajectorySamplePoint<>(s);
                 } else {
                     return new TrajectorySamplePoint<>(
-                            prev_s.state().interpolate(
+                            previousState.interpolate(
                                     s.state(),
                                     (distance - m_distances[i - 1]) / (m_distances[i] - m_distances[i - 1])),
                             i - 1, i

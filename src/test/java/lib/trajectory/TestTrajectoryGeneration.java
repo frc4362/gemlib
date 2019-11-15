@@ -1,4 +1,4 @@
-package lib;
+package lib.trajectory;
 
 import com.gemsrobotics.lib.math.se2.*;
 import com.gemsrobotics.lib.physics.MotorTransmission;
@@ -7,8 +7,10 @@ import com.gemsrobotics.lib.subsystems.drivetrain.Model;
 import com.gemsrobotics.lib.trajectory.MirroredTrajectory;
 import com.gemsrobotics.lib.trajectory.TimedView;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
+import com.gemsrobotics.lib.trajectory.TrajectoryPoint;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryGenerator;
+import com.gemsrobotics.lib.utils.FastDoubleToString;
 import com.gemsrobotics.lib.utils.Units;
 import com.google.gson.Gson;
 import org.junit.Test;
@@ -23,7 +25,7 @@ import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
-import static com.gemsrobotics.lib.utils.MathUtils.kEpsilon;
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static java.lang.Math.abs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -54,7 +56,7 @@ public class TestTrajectoryGeneration {
     @Test
     public void test() {
         try {
-            final var raw = String.join("", Files.readAllLines(Path.of("E:\\gemlib\\src\\main\\deploy\\drivetrain_properties.json")));
+            final var raw = String.join("", Files.readAllLines(Path.of("D:\\gemlib\\src\\main\\deploy\\drivetrain_properties.json")));
             cfg = new Gson().fromJson(raw, DifferentialDrive.Config.class);
         } catch (final IOException e) {
             e.printStackTrace();
@@ -63,11 +65,11 @@ public class TestTrajectoryGeneration {
         final var transmission = new MotorTransmission(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
         final var props = new Model.Properties() {
             {
-                mass = 63;
-                momentInertia = 84;
-                angularDrag = 12.0;
-                wheelRadius = Units.inches2Meters(2.0);
-                wheelbaseRadius = Units.inches2Meters(25.0) / 2.0;
+                massKg = 63;
+                momentInertiaKgMetersSquared = 84;
+                angularDragTorquePerRadiansPerSecond = 12.0;
+                wheelRadiusMeters = Units.inches2Meters(2.0);
+                wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
             }
         };
 
@@ -76,21 +78,30 @@ public class TestTrajectoryGeneration {
 
         reflectingPoseValidator(generator);
 
-        final var reversed = true;
+        final var reversed = false;
 
         final var trajectory = generator.generateTrajectory(
                 false,
                 reversed,
                 Arrays.asList(
                         RigidTransform.identity(),
-                        new RigidTransform(-100 * 0.0254, -100 * 0.0254, Rotation.degrees(90))),
+                        new RigidTransform(100 * 0.0254, 0, Rotation.degrees(0)),
+                        new RigidTransform(140, 36, Rotation.degrees(0))),
                 Collections.emptyList(),
                 0.0,
                 0.0);
 
-        System.out.println(trajectory.trajectory.getPoints().stream().map(point -> point.state().toString()).collect(Collectors.joining("\n")));
+        System.out.println(trajectory.getTrajectory().getTrajectory().getPoints().stream()
+              .map(TrajectoryPoint::state)
+              .map(state -> {
+                  final var trans = state.getState().getTranslation();
+                  return FastDoubleToString.format(trans.x()) + ", "
+                         + FastDoubleToString.format(trans.y())
+                         + ", " + FastDoubleToString.format(state.getState().getRotation().getDegrees());
+              })
+              .collect(Collectors.joining("\n")));
 
-        verifyMirroredTrajectories(new MirroredTrajectory(trajectory.trajectory), reversed);
+        verifyMirroredTrajectories(new MirroredTrajectory(trajectory.getTrajectory().getTrajectory()), reversed);
     }
 
     public void verifyMirroredTrajectories(final MirroredTrajectory mirrored, final boolean shouldBeReversed) {
@@ -99,63 +110,67 @@ public class TestTrajectoryGeneration {
         final var iteratorRight = new TrajectoryIterator<>(new TimedView<>(mirrored.right));
 
         final double dt = 0.05;
-        TimedState<RigidTransformWithCurvature> previousLeftState = null;
-        TimedState<RigidTransformWithCurvature> previousRightState = null;
+        RigidTransformWithCurvature previousLeftState = null;
+        RigidTransformWithCurvature previousRightState = null;
 
         while (!iteratorLeft.isDone() && !iteratorRight.isDone()) {
             TimedState<RigidTransformWithCurvature> stateLeft = iteratorLeft.getState();
             TimedState<RigidTransformWithCurvature> stateRight = iteratorRight.getState();
 
-            assertThat(stateLeft.t(), closeTo(stateRight.t(), kEpsilon));
-            assertThat(stateLeft.getVelocity(), closeTo(stateRight.getVelocity(), kEpsilon));
-            assertThat(stateLeft.getAcceleration(), closeTo(stateRight.getAcceleration(), kEpsilon));
+            assertThat(stateLeft.t(), closeTo(stateRight.t(), Epsilon));
+            assertThat(stateLeft.getVelocity(), closeTo(stateRight.getVelocity(), Epsilon));
+            assertThat(stateLeft.getAcceleration(), closeTo(stateRight.getAcceleration(), Epsilon));
 
-            assertThat((shouldBeReversed ? -1.0 : 1.0) * stateLeft.getVelocity(), greaterThanOrEqualTo(-kEpsilon));
-            assertThat((shouldBeReversed ? -1.0 : 1.0) * stateRight.getVelocity(), greaterThanOrEqualTo(-kEpsilon));
+            assertThat((shouldBeReversed ? -1.0 : 1.0) * stateLeft.getVelocity(), greaterThanOrEqualTo(-Epsilon));
+            assertThat((shouldBeReversed ? -1.0 : 1.0) * stateRight.getVelocity(), greaterThanOrEqualTo(-Epsilon));
+
+            final RigidTransformWithCurvature poseLeft = stateLeft.getState();
+            final RigidTransformWithCurvature poseRight = stateRight.getState();
 
             if (previousLeftState != null && previousRightState != null) {
                 // Check there are no angle discontinuities.
-                final double kMaxReasonableChangeInAngle = 0.3;  // rad
+                final double maxReasonableChangeInAngle = 0.3;  // rad
 
-                Twist deltaLeft = RigidTransform.toTwist(previousLeftState.getState().getRigidTransform().inverse().transformBy(stateLeft.getState().getRigidTransform()));
-                Twist deltaRight = RigidTransform.toTwist(previousRightState.getState().getRigidTransform().inverse().transformBy(stateRight.getState().getRigidTransform()));
+                Twist deltaLeft = previousLeftState.getRigidTransform().inverse().transformBy(poseLeft.getRigidTransform()).toTwist();
+                Twist deltaRight = previousRightState.getRigidTransform().inverse().transformBy(poseRight.getRigidTransform()).toTwist();
 
-                assertThat(abs(deltaLeft.dtheta), lessThan(kMaxReasonableChangeInAngle));
-                assertThat(abs(deltaRight.dtheta), lessThan(kMaxReasonableChangeInAngle));
+                assertThat(abs(deltaLeft.dtheta), lessThan(maxReasonableChangeInAngle));
+                assertThat(abs(deltaRight.dtheta), lessThan(maxReasonableChangeInAngle));
 
                 if (!epsilonEquals(deltaLeft.dtheta, 0.0) || !epsilonEquals(deltaRight.dtheta, 0.0)) {
                     // Could be a curvature sign change between prev and now, so just check that either matches our expected sign.
-                    final boolean isLeftCurvaturePositive = stateLeft.getState().getCurvature() > kEpsilon || previousLeftState.getState().getCurvature() > kEpsilon;
-                    final boolean isLeftCurvatureNegative = stateLeft.getState().getCurvature() < -kEpsilon || previousLeftState.getState().getCurvature() < -kEpsilon;
-                    final boolean isRightCurvaturePositive = stateRight.getState().getCurvature() > kEpsilon || previousRightState.getState().getCurvature() > kEpsilon;
-                    final boolean isRightCurvatureNegative = stateRight.getState().getCurvature() < -kEpsilon || previousRightState.getState().getCurvature() < -kEpsilon;
+                    final boolean isLeftCurvaturePositive = poseLeft.getCurvature() > Epsilon || previousLeftState.getCurvature() > Epsilon;
+                    final boolean isLeftCurvatureNegative = poseLeft.getCurvature() < -Epsilon || previousLeftState.getCurvature() < -Epsilon;
+                    final boolean isRightCurvaturePositive = poseRight.getCurvature() > Epsilon || previousRightState.getCurvature() > Epsilon;
+                    final boolean isRightCurvatureNegative = poseRight.getCurvature() < -Epsilon || previousRightState.getCurvature() < -Epsilon;
 
                     final double curvatureLeft = deltaLeft.dtheta / deltaLeft.dx;
                     final double curvatureRight = deltaRight.dtheta / deltaRight.dx;
 
-                    if (curvatureLeft < -kEpsilon) {
+                    if (curvatureLeft < -Epsilon) {
                         assertThat(isLeftCurvatureNegative, is(true));
-                    } else if (curvatureLeft > kEpsilon) {
+                    } else if (curvatureLeft > Epsilon) {
                         assertThat(isLeftCurvaturePositive, is(true));
                     }
 
-                    if (curvatureRight < -kEpsilon) {
+                    if (curvatureRight < -Epsilon) {
                         assertThat(isRightCurvatureNegative, is(true));
-                    } else if (curvatureRight > kEpsilon) {
+                    } else if (curvatureRight > Epsilon) {
                         assertThat(isRightCurvaturePositive, is(true));
                     }
                 }
             }
 
-            assertThat(stateLeft.getState().getTranslation().x(), closeTo(stateRight.getState().getTranslation().x(), kEpsilon));
-            assertThat(stateLeft.getState().getTranslation().y(), closeTo(-stateRight.getState().getTranslation().y(), kEpsilon));
-            assertThat(stateLeft.getState().getRotation().getRadians(), closeTo(stateRight.getState().getRotation().inverse().getRadians(), kEpsilon));
-            assertThat(stateLeft.getState().getCurvature(), closeTo(-stateRight.getState().getCurvature(), kEpsilon));
+            assertThat(poseLeft.getTranslation().x(), closeTo(poseRight.getTranslation().x(), Epsilon));
+            assertThat(poseLeft.getTranslation().y(), closeTo(-poseRight.getTranslation().y(), Epsilon));
+            assertThat(poseLeft.getRotation().getRadians(), closeTo(poseRight.getRotation().inverse().getRadians(), Epsilon));
+            assertThat(poseLeft.getCurvature(), closeTo(-poseRight.getCurvature(), Epsilon));
 
             iteratorLeft.advance(dt);
             iteratorRight.advance(dt);
-            previousLeftState = stateLeft;
-            previousRightState = stateRight;
+
+            previousLeftState = poseLeft;
+            previousRightState = poseRight;
         }
 
         assertThat(iteratorLeft.isDone() && iteratorRight.isDone(), is(true));

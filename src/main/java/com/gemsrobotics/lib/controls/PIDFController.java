@@ -2,10 +2,10 @@ package com.gemsrobotics.lib.controls;
 
 import com.gemsrobotics.lib.utils.MathUtils.Bounds;
 
-import static com.gemsrobotics.lib.utils.MathUtils.kEpsilon;
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static java.lang.Math.abs;
 
-public class PIDFController {
+public final class PIDFController extends FeedbackController {
     public static class Gains {
         public double kP, kI, kD, kFF, allowableError;
 
@@ -59,9 +59,10 @@ public class PIDFController {
         this(p, i, d, 0);
     }
 
-    public double update(final double input, double dt) {
-        if (dt < kEpsilon) {
-            dt = kEpsilon;
+    @Override
+    public double update(double dt, final double input) {
+        if (dt < Epsilon) {
+            dt = Epsilon;
         }
 
         double error = m_reference - input;
@@ -97,22 +98,25 @@ public class PIDFController {
         // only apply deadband to proportional response, maintains derivative
         final var proportional = abs(error) < m_allowedError ? 0.0 : error;
 
-        return m_outputRange.constrain(
+        return m_outputRange.coerce(
                 m_gains.kP * proportional
                     + m_gains.kI * integral
                     + m_gains.kD * derivative
                     + m_gains.kFF * m_reference);
     }
 
+    @Override
     public void reset() {
         m_lastError = Double.NaN;
         m_integralAccum = 0.0;
     }
 
+    @Override
     public double getReference() {
         return m_reference;
     }
 
+    @Override
     public void setReference(final double reference) {
         m_reference = reference;
     }
@@ -143,10 +147,17 @@ public class PIDFController {
         m_outputRange = new Bounds(min, max);
     }
 
-    public void setDeadband(final double deadband) {
+    @Override
+    public void setTolerance(final double deadband) {
         m_allowedError = abs(deadband);
     }
 
+    @Override
+    public double getTolerance() {
+        return m_allowedError;
+    }
+
+    @Override
     public boolean isOnTarget(final double tolerance) {
         return !Double.isNaN(m_lastError) && abs(m_lastError) < tolerance;
     }

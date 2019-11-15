@@ -2,9 +2,6 @@ package com.gemsrobotics.lib.drivers;
 
 import edu.wpi.first.wpilibj.AnalogInput;
 
-import java.util.LinkedHashMap;
-import java.util.function.Supplier;
-
 public final class BannerSensor {
     private static final double DEFAULT_THRESHOLD = 0.1;
 
@@ -24,7 +21,11 @@ public final class BannerSensor {
         return m_input;
     }
 
-    public boolean get() {
+    public boolean isBlocked() {
         return m_input.getAverageVoltage() > m_threshold;
+    }
+
+    public boolean isReflecting() {
+        return !isBlocked();
     }
 }

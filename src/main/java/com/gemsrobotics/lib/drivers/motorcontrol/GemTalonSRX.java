@@ -7,7 +7,7 @@ import com.ctre.phoenix.motorcontrol.InvertType;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.PIDFController;
-import com.gemsrobotics.lib.property.CachedBoolean;
+import com.gemsrobotics.lib.data.CachedBoolean;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
 import com.gemsrobotics.lib.utils.TalonUtils;
@@ -27,10 +27,6 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
         return m_name;
     }
 
-    private final String m_name;
-
-    private final CachedBoolean m_isEncoderPresent;
-
 	private ControlMode m_lastMode;
 	private DemandType m_lastDemandType;
 	private boolean m_hasMotionProfilingBeenConfigured;
@@ -38,16 +34,19 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
     private int m_selectedProfileID;
 	private double m_metersPerRotation;
 
+    private final String m_name;
+    private final CachedBoolean m_isEncoderPresent;
+
 	protected GemTalonSRX(final int port, final boolean isSlave) {
 		super(port);
 
 		m_name = "TalonSRX-" + (isSlave ? "Slave-" : "") + port;
 
 		enableVoltageCompensation(true);
-		configVoltageCompSaturation(12.0);
+		runWithRetries(() -> configVoltageCompSaturation(12.0, TIMEOUT_MS));
 
 		m_metersPerRotation = 1.0;
-		m_isEncoderPresent = new CachedBoolean(0.02, () -> TalonUtils.isEncoderPresent(this));
+		m_isEncoderPresent = new CachedBoolean(0.05, () -> TalonUtils.isEncoderPresent(this));
         m_selectedProfileID = 0;
         m_hasMotionProfilingBeenConfigured = false;
 
@@ -77,7 +76,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 	@Override
     public void set(final ControlMode mode, final double value, final DemandType demandType, final double demand) {
         if (mode != m_lastMode || value != m_lastValue || demandType != m_lastDemandType || demand != m_lastDemand) {
-            super.set(mode, value, demandType, demand);
+            super.set(mode, value, demandType, demand * 1023); // multiply by 1023 because it wants throttle units on the output
 
             m_lastMode = mode;
             m_lastValue = value;
@@ -100,6 +99,11 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
     @Override
     public double getDrawnCurrent() {
         return getOutputCurrent();
+    }
+
+    @Override
+    public int getDeviceID() {
+        return super.getDeviceID();
     }
 
     @Override
@@ -154,6 +158,16 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
     @Override
     public synchronized boolean setEncoderPosition(final double position) {
         return runWithRetries(() -> setSelectedSensorPosition((int) position, m_selectedProfileID, TIMEOUT_MS));
+    }
+
+    @Override
+    public boolean setOpenLoopVoltageRampRate(final double timeToRamp) {
+        return runWithRetries(() -> configOpenloopRamp(timeToRamp, TIMEOUT_MS));
+    }
+
+    @Override
+    public boolean setClosedLoopVoltageRampRate(final double timeToRamp) {
+	    return runWithRetries(() -> configClosedloopRamp(timeToRamp, TIMEOUT_MS));
     }
 
     @Override

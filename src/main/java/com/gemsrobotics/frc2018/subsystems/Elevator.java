@@ -8,8 +8,9 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.telemetry.reporting.Reporter;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
-import com.gemsrobotics.lib.property.CachedValue;
+import com.gemsrobotics.lib.data.CachedValue;
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.utils.MathUtils;
 import io.github.oblarg.oblog.Loggable;
 import com.gemsrobotics.lib.controls.PIDFController.Gains;
 import io.github.oblarg.oblog.annotations.Log;
@@ -18,7 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.lang.Math.abs;
-import static com.gemsrobotics.lib.utils.MathUtils.constrain;
+import static com.gemsrobotics.lib.utils.MathUtils.coerce;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Elevator extends Subsystem implements Loggable {
@@ -35,15 +36,15 @@ public class Elevator extends Subsystem implements Loggable {
 	}
 
     private static final Gains GAINS = new Gains(0.235,0.0002,2.0, 0.01, 100);
-
-	private static final double
-		GRAVITY_FF = 0.07;
-
-	private static final MotorController.MotionParameters MOTION_CONFIG = new MotorController.MotionParameters(26000, 22000, 200);
+    private static final MotorController.MotionParameters MOTION_CONFIG = new MotorController.MotionParameters(26000, 22000, 200);
+	private static final double GRAVITY_FF = 0.07;
 
 	private static final int
 		LIFT_HEIGHT_TICKS = 30100,
 		ALLOWABLE_CLOSED_LOOP_ERROR = 200;
+
+	private static final MathUtils.Bounds positionBounds =
+            new MathUtils.Bounds(Position.BOTTOM.ticks, Position.TOP.ticks);
 
 	public final CachedValue<Boolean> isEncoderPresent;
 	private final GemTalonSRX m_master, m_slave;
@@ -63,9 +64,9 @@ public class Elevator extends Subsystem implements Loggable {
         m_master.setMotionParameters(MOTION_CONFIG);
 
         m_master.configForwardSoftLimitEnable(true);
-        m_master.configForwardSoftLimitThreshold(Position.TOP.positionTicks, 10);
+        m_master.configForwardSoftLimitThreshold(Position.TOP.ticks, 10);
         m_master.configReverseSoftLimitEnable(true);
-        m_master.configReverseSoftLimitThreshold(Position.BOTTOM.positionTicks, 10);
+        m_master.configReverseSoftLimitThreshold(Position.BOTTOM.ticks, 10);
 
         m_slave = MotorControllerFactory.createSlaveTalonSRX(Ports.ELEVATOR_PORT_SLAVE);
 		m_slave.follow(m_master, true);
@@ -89,10 +90,10 @@ public class Elevator extends Subsystem implements Loggable {
 		CLOSE_THRESHOLD(0.2),
 		BOTTOM(-0.006);
 
-		public final int positionTicks;
+		public final int ticks;
 
 		Position(final double percent) {
-			positionTicks = (int) percent * LIFT_HEIGHT_TICKS;
+			ticks = (int) percent * LIFT_HEIGHT_TICKS;
 		}
 	}
 
@@ -132,21 +133,20 @@ public class Elevator extends Subsystem implements Loggable {
 	}
 
 	private boolean isMotorInUnsafePosition(final GemTalonSRX device) {
-		final var pos = device.getSelectedSensorPosition(0);
-		return pos > (Position.TOP.positionTicks + OVERRUN_THRESHOLD) || pos < (Position.BOTTOM.positionTicks - OVERRUN_THRESHOLD);
+		return positionBounds.isValid(device.getSelectedSensorPosition(0));
 	}
 
-	private void setNeutralMode(final NeutralMode mode) {
+	private synchronized void setNeutralMode(final NeutralMode mode) {
 		m_master.setNeutralMode(mode);
 		m_slave.setNeutralMode(mode);
 	}
 
-	private void setSensorPosition(final int position) {
+	private synchronized void setSensorPosition(final int position) {
 		m_master.setSelectedSensorPosition(position, 0, 10);
 		m_slave.setSelectedSensorPosition(position, 0, 10);
 	}
 
-	public void setDisabled() {
+	public synchronized void setDisabled() {
 		if (m_controlMode != Mode.DISABLED) {
 			m_master.set(com.ctre.phoenix.motorcontrol.ControlMode.Disabled, 0);
 			m_slave.set(com.ctre.phoenix.motorcontrol.ControlMode.Disabled, 0);
@@ -154,101 +154,91 @@ public class Elevator extends Subsystem implements Loggable {
 		}
 	}
 
-	public void setOpenLoop(final double speed) {
-		synchronized (this) {
-			if (m_controlMode != Mode.OPEN_LOOP) {
-				m_controlMode = Mode.OPEN_LOOP;
-			}
+	public synchronized void setOpenLoop(final double speed) {
+        if (m_controlMode != Mode.OPEN_LOOP) {
+            m_controlMode = Mode.OPEN_LOOP;
+        }
 
-			m_periodicIO.openLoopDemand = constrain(-1, speed, +1);
-		}
+        m_periodicIO.openLoopDemand = coerce(-1, speed, +1);
 	}
 
-	public void setReference(final Position reference) {
-		setReference(reference.positionTicks);
+	public synchronized void setReference(final Position reference) {
+		setReference(reference.ticks);
 	}
 
-	private void setReference(final double reference) {
-		synchronized (this) {
-			if (m_controlMode != Mode.MOTION_MAGIC) {
-				m_controlMode = Mode.MOTION_MAGIC;
-                m_periodicIO.openLoopDemand = 0;
-			}
-			
-			m_periodicIO.closedLoopReference = reference;
-		}
+	private synchronized void setReference(final double newReference) {
+        if (m_controlMode != Mode.MOTION_MAGIC) {
+            m_controlMode = Mode.MOTION_MAGIC;
+            m_periodicIO.openLoopDemand = 0;
+        }
+
+        m_periodicIO.closedLoopReference = positionBounds.coerce(newReference);
 	}
 
-	public void adjustReference(final double adjustment) {
+	public synchronized void adjustReference(final double adjustment) {
 		final var newRef = m_periodicIO.closedLoopReference + (adjustment * LIFT_HEIGHT_TICKS);
-		setReference(constrain(Position.BOTTOM.positionTicks, newRef, Position.TOP.positionTicks));
+		setReference(newRef);
 	}
 
 	@Override
 	public void onCreate(final double timestamp) {
 		synchronized (this) {
-			setSensorPosition(Position.STARTING.positionTicks);
+			setSensorPosition(Position.STARTING.ticks);
 			setReference(Position.STARTING);
 		}
 	}
 
 	@Override
-	public void onEnable(final double timestamp) {
-		synchronized (this) {
-			setNeutralMode(NeutralMode.Brake);
-		}
+	public synchronized void onEnable(final double timestamp) {
+        setNeutralMode(NeutralMode.Brake);
 	}
 
 	@Override
-	public void onUpdate(final double timestamp) {
-		synchronized (this) {
-			switch (m_controlMode) {
-				case DISABLED:
-					break;
-				case OPEN_LOOP:
-					m_master.setDutyCycle(m_periodicIO.openLoopDemand);
-					break;
-				case MOTION_MAGIC:
-					m_master.setPositionRotations(m_periodicIO.closedLoopReference, GRAVITY_FF);
-					break;
-				default:
-					report(Reporter.Event.Kind.ERROR, "Unexpected Elevator Control Mode " + m_controlMode.toString());
-					break;
-			}
-		}
+	public synchronized void onUpdate(final double timestamp) {
+        switch (m_controlMode) {
+            case DISABLED:
+                break;
+            case OPEN_LOOP:
+                m_master.setDutyCycle(m_periodicIO.openLoopDemand);
+                break;
+            case MOTION_MAGIC:
+                m_master.setPositionRotations(m_periodicIO.closedLoopReference, GRAVITY_FF);
+                break;
+            default:
+                report(Reporter.Event.Kind.ERROR, "Unexpected Elevator Control Mode " + m_controlMode.toString());
+                break;
+        }
 	}
 
 	@Override
-	public void onStop(double timestamp) {
-		synchronized (this) {
-			setSafeState();
-		}
+	public synchronized void onStop(double timestamp) {
+        setSafeState();
 	}
 
 	@Override
-	public void setSafeState() {
+	public synchronized void setSafeState() {
         setNeutralMode(NeutralMode.Brake);
         setDisabled();
 	}
 
-	public boolean isAtReference(final double epsilon) {
+	public synchronized boolean isAtReference(final double epsilon) {
 		return abs(m_periodicIO.closedLoopError) < epsilon;
 	}
 
-	public double getReference() {
+	public synchronized double getReference() {
 		return m_periodicIO.closedLoopReference;
 	}
 
-	public double getPosition() {
+	public synchronized double getPosition() {
 		return m_periodicIO.position;
 	}
 
-	public Mode getControlMode() {
+	public synchronized Mode getControlMode() {
 		return m_controlMode;
 	}
 
 	@Override
-	public FaultedResponse checkFaulted() {
+	public synchronized FaultedResponse checkFaulted() {
 		var ret = FaultedResponse.NONE;
 
 		if (!isEncoderPresent.get()) {

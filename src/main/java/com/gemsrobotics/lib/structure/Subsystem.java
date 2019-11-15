@@ -14,16 +14,33 @@ public abstract class Subsystem
         return getName();
     }
 
+    @Override
+    protected void initDefaultCommand() {
+        // subclasses may choose to use this functionality
+    }
+
 	public enum FaultedResponse {
 		NONE,
 		DISABLE_SUBSYSTEM,
 		DISABLE_ROBOT
 	}
 
+    /**
+     * Subclass is expected to announce and describe all faults, and return what the SystemManager
+     * should do to handle the faulted subsystem.
+     * @return The expected response from the SystemManager
+     */
+    protected synchronized FaultedResponse checkFaulted() {
+        return FaultedResponse.NONE;
+    }
+
+    public abstract void setSafeState();
+
 	private double m_dt = 0.0;
+    private double m_lastUpdateTime = Double.NaN;
 	private boolean m_isActive = false;
 
-	protected final double dt() {
+	protected synchronized final double dt() {
         return m_dt;
     }
 
@@ -44,29 +61,18 @@ public abstract class Subsystem
     protected abstract void readPeriodicInputs();
 
     protected abstract void onCreate(double timestamp);
-	// I wish this didn't have to be public
     protected abstract void onEnable(double timestamp);
     protected abstract void onUpdate(double timestamp);
     protected abstract void onStop(double timestamp);
 
-    protected final void doPeriodicReads(final double dt) {
-        m_dt = dt;
+    protected synchronized final void updatePeriodicState(final double timestamp) {
+        if (Double.isNaN(m_lastUpdateTime)) {
+            m_lastUpdateTime = timestamp;
+        }
+
+        m_dt = m_lastUpdateTime - timestamp;
+        m_lastUpdateTime = timestamp;
+
         readPeriodicInputs();
-    }
-
-	public abstract void setSafeState();
-
-	/**
-	 * Subclass is expected to announce and describe all faults, and return what the SystemManager
-	 * should do to handle the faulted subsystem.
-	 * @return The expected response from the SystemManager
-	 */
-	protected FaultedResponse checkFaulted() {
-	    return FaultedResponse.NONE;
-    }
-
-    @Override
-    protected void initDefaultCommand() {
-	    // subclasses may choose to override this, if it applies
     }
 }

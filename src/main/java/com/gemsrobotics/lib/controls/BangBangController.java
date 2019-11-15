@@ -1,12 +1,10 @@
 package com.gemsrobotics.lib.controls;
 
-import com.gemsrobotics.lib.utils.MathUtils;
-
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.abs;
 import static java.lang.Math.signum;
 
-public class BangBangController {
+public final class BangBangController extends FeedbackController {
     // the setpoint of the controller
     protected double m_reference;
     // the allowed error in the controller
@@ -20,19 +18,33 @@ public class BangBangController {
         m_error = Double.NaN;
     }
 
+    @Override
     public void reset() {
         m_error = Double.NaN;
     }
 
+    @Override
     public void setReference(final double reference) {
         m_reference = reference;
     }
 
+    @Override
+    public double getReference() {
+        return m_reference;
+    }
+
+    @Override
     public void setTolerance(final double tolerance) {
         m_tolerance = abs(tolerance);
     }
 
-    public double update(final double input) {
+    @Override
+    public double getTolerance() {
+        return m_tolerance;
+    }
+
+    @Override
+    public double update(final double dt, final double input) {
         m_error = m_reference - input;
 
         if (isOnTarget()) {
@@ -42,11 +54,8 @@ public class BangBangController {
         }
     }
 
+    @Override
     public boolean isOnTarget(final double tolerance) {
         return epsilonEquals(m_error, 0, tolerance);
-    }
-
-    public boolean isOnTarget() {
-        return isOnTarget(m_tolerance);
     }
 }

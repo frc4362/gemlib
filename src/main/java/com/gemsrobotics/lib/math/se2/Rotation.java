@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Objects;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
-import static java.lang.Math.hypot;
+import static java.lang.Math.*;
 
 /**
  * A rotation in a 2d coordinate frame represented a point on the unit circle (cosine and sine).
@@ -35,7 +35,7 @@ public class Rotation implements IRotation2d<Rotation> {
             // Normalizing forces us to re-scale the sin and cos to reset rounding errors.
             final double magnitude = hypot(x, y);
 
-            if (magnitude > MathUtils.kEpsilon) {
+            if (magnitude > MathUtils.Epsilon) {
                 m_sin = y / magnitude;
                 m_cos = x / magnitude;
             } else {
@@ -135,6 +135,20 @@ public class Rotation implements IRotation2d<Rotation> {
         return new Translation(m_cos, m_sin);
     }
 
+    public Rotation getNearestPole() {
+        double poleSin, poleCos;
+
+        if (abs(m_cos) > abs(m_sin)) {
+            poleCos = signum(m_cos);
+            poleSin = 0.0;
+        } else {
+            poleSin = 0.0;
+            poleCos = signum(m_sin);
+        }
+
+        return new Rotation(poleCos, poleSin, false);
+    }
+
     @Override
     public Rotation interpolate(final Rotation other, final double x) {
         if (x <= 0) {
@@ -155,7 +169,7 @@ public class Rotation implements IRotation2d<Rotation> {
 
     @Override
     public double distance(final Rotation other) {
-        return inverse().rotateBy(other).getRadians();
+        return difference(other).getRadians();
     }
 
     @Override

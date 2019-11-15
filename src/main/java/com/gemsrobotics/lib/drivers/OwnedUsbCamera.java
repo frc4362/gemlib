@@ -1,4 +1,4 @@
-package com.gemsrobotics.lib.cameras;
+package com.gemsrobotics.lib.drivers;
 
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import edu.wpi.cscore.CvSink;
@@ -16,13 +16,13 @@ import edu.wpi.cscore.UsbCamera;
  * or Ethab#4362 on Discord
  */
 @SuppressWarnings("FieldCanBeLocal")
-public final class OwnedCamera implements Reportable {
+public final class OwnedUsbCamera implements Reportable {
 	private static int newId = 0;
 
 	private final UsbCamera m_camera;
 	private final CvSink m_sink;
 
-	public OwnedCamera(final UsbCamera camera) {
+	public OwnedUsbCamera(final UsbCamera camera) {
 		m_camera = camera;
 		m_sink = new CvSink("sink_" + newId++);
 		m_sink.setSource(m_camera);

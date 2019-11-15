@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.gemsrobotics.lib.utils.MathUtils.kEpsilon;
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static java.lang.Math.*;
 
 public class Parameterizer {
@@ -27,7 +27,7 @@ public class Parameterizer {
         final int stateCount = (int) ceil(distanceView.getLastInterpolant() / stepSize + 1);
 
         final List<S> states = IntStream.range(0, stateCount).mapToObj(i ->
-            distanceView.sample(min(i * stepSize, distanceView.getLastInterpolant())).state()).collect(Collectors.toList());
+            distanceView.sample(min(i * stepSize, distanceView.getLastInterpolant())).getState()).collect(Collectors.toList());
 
         return timeParameterizeTrajectory(
                 reverse,
@@ -110,10 +110,8 @@ public class Parameterizer {
                         throw new RuntimeException();
                     }
 
-                    constrainedState.accelerationMin = max(constrainedState.accelerationMin,
-                            reverse ? -minMaxAcceleration.getAccelerationMax() : minMaxAcceleration.getAccelerationMin());
-                    constrainedState.accelerationMax = min(constrainedState.accelerationMax,
-                            reverse ? -minMaxAcceleration.getAccelerationMin() : minMaxAcceleration.getAccelerationMax());
+                    constrainedState.accelerationMin = max(constrainedState.accelerationMin, reverse ? -minMaxAcceleration.getAccelerationMax() : minMaxAcceleration.getAccelerationMin());
+                    constrainedState.accelerationMax = min(constrainedState.accelerationMax, reverse ? -minMaxAcceleration.getAccelerationMin() : minMaxAcceleration.getAccelerationMax());
                 }
 
                 if (constrainedState.accelerationMin > constrainedState.accelerationMax) {
@@ -121,7 +119,7 @@ public class Parameterizer {
                     throw new RuntimeException();
                 }
 
-                if (ds < kEpsilon) {
+                if (ds < Epsilon) {
                     break;
                 }
 
@@ -131,10 +129,10 @@ public class Parameterizer {
                 // Doing a search would be better.
                 final double actualAcceleration = (constrainedState.velocityMax * constrainedState.velocityMax - predecessor.velocityMax * predecessor.velocityMax) / (2.0 * ds);
 
-                if (constrainedState.accelerationMax < actualAcceleration - kEpsilon) {
+                if (constrainedState.accelerationMax < actualAcceleration - Epsilon) {
                     predecessor.accelerationMax = constrainedState.accelerationMax;
                 } else {
-                    if (actualAcceleration > predecessor.accelerationMin + kEpsilon) {
+                    if (actualAcceleration > predecessor.accelerationMin + Epsilon) {
                         predecessor.accelerationMax = actualAcceleration;
                     }
 
@@ -195,7 +193,7 @@ public class Parameterizer {
                     throw new RuntimeException();
                 }
 
-                if (ds > kEpsilon) {
+                if (ds > Epsilon) {
                     break;
                 }
 
@@ -205,7 +203,7 @@ public class Parameterizer {
                 // Doing a search would be better.
                 final double actualAcceleration = (constrainedState.velocityMax * constrainedState.velocityMax - successor.velocityMax * successor.velocityMax) / (2.0 * ds);
 
-                if (constrainedState.accelerationMin > actualAcceleration + kEpsilon) {
+                if (constrainedState.accelerationMin > actualAcceleration + Epsilon) {
                     successor.accelerationMin = constrainedState.accelerationMin;
                 } else {
                     successor.accelerationMin = actualAcceleration;
@@ -233,9 +231,9 @@ public class Parameterizer {
             if (i > 0) {
                 timedState.get(i - 1).setAcceleration(reverse ? -accel : accel);
 
-                if (abs(accel) > kEpsilon) {
+                if (abs(accel) > Epsilon) {
                     dt = (constrainedState.velocityMax - v) / accel;
-                } else if (abs(v) > kEpsilon) {
+                } else if (abs(v) > Epsilon) {
                     dt = ds / v;
                 } else {
                     throw new RuntimeException();

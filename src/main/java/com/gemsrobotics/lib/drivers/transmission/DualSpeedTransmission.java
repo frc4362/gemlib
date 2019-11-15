@@ -17,7 +17,6 @@ public class DualSpeedTransmission implements Transmission {
 
     /**
      * Swaps the shifter to be in high gear when unpowered, and low gear when powered.
-     * @param inverted
      */
     public void setInverted(final boolean inverted) {
         m_inverted = inverted;

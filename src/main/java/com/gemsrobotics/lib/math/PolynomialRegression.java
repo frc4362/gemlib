@@ -1,4 +1,3 @@
-// Available at https://algs4.cs.princeton.edu/14analysis/PolynomialRegression.java.html
 package com.gemsrobotics.lib.math;
 
 import Jama.Matrix;
@@ -7,6 +6,7 @@ import Jama.QRDecomposition;
 import static java.lang.Integer.max;
 import static java.lang.Math.abs;
 
+// See: https://algs4.cs.princeton.edu/14analysis/PolynomialRegression.java.html
 /**
  *  The {@code PolynomialRegression} class performs a polynomial regression
  *  on an set of <em>N</em> data points (<em>y<sub>i</sub></em>, <em>x<sub>i</sub></em>).
@@ -55,7 +55,7 @@ public final class PolynomialRegression implements Comparable<PolynomialRegressi
      * @param  variableName the name of the predictor variable
      * @throws IllegalArgumentException if the lengths of the two arrays are not equal
      */
-    public PolynomialRegression(double[] x, double[] y, int degree, String variableName) {
+    public PolynomialRegression(final double[] x, final double[] y, final int degree, final String variableName) {
         m_degree = degree;
         m_variableName = variableName;
 
@@ -189,6 +189,7 @@ public final class PolynomialRegression implements Comparable<PolynomialRegressi
      *         including the best-fit polynomial and the coefficient of
      *         determination <em>R</em><sup>2</sup>
      */
+    @Override
     public String toString() {
         final var s = new StringBuilder();
         int j = m_degree;
@@ -222,6 +223,7 @@ public final class PolynomialRegression implements Comparable<PolynomialRegressi
     /**
      * Compare lexicographically.
      */
+    @Override
     public int compareTo(final PolynomialRegression that) {
         final var EPSILON = 1E-5;
         final var maxDegree = max(this.degree(), that.degree());

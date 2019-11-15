@@ -6,36 +6,34 @@ import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
 import com.google.gson.annotations.SerializedName;
 import com.revrobotics.*;
 
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 public final class GemSparkMax extends CANSparkMax implements MotorController, Reportable {
+    private static final int MAX_TRIES = 3;
+
     @Override
     public String getName() {
         return m_name;
     }
 
-    private static final int MAX_TRIES = 3;
-
-    private final String m_name;
-    private final CANPIDController m_controller;
-    private final CANEncoder m_encoder;
+    private ControlType m_lastDemandType;
+    private double m_lastDemand;
+    private double m_lastFeedforward;
     private CANSparkMax m_leader;
     private boolean m_hasMotionProfilingBeenConfigured;
     private int m_selectedProfileID;
 
-    @SerializedName("lastDemandType")
-	private ControlType m_lastDemandType;
-	@SerializedName("lastDemand")
-	private double m_lastDemand;
-	@SerializedName("lastFeedforward")
-    private double m_lastFeedforward;
+    private final String m_name;
+    private final CANPIDController m_controller;
+    private final CANEncoder m_encoder;
 
     protected GemSparkMax(final int port) {
 		super(port, MotorType.kBrushless);
 
 		m_name = "SparkMAX-" + port;
 
-		enableVoltageCompensation(12.0);
+		runWithRetries(() -> enableVoltageCompensation(12.0));
 
 		m_controller = getPIDController();
 		m_encoder = getEncoder();
@@ -83,6 +81,11 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
     @Override
     public double getDrawnCurrent() {
         return getOutputCurrent();
+    }
+
+    @Override
+    public int getDeviceID() {
+        return super.getDeviceId();
     }
 
     @Override
@@ -136,6 +139,16 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
     @Override
     public synchronized boolean setEncoderPosition(double position) {
         return runWithRetries(() -> m_encoder.setPosition(position));
+    }
+
+    @Override
+    public boolean setOpenLoopVoltageRampRate(final double timeToRamp) {
+        return runWithRetries(() -> setOpenLoopRampRate(timeToRamp));
+    }
+
+    @Override
+    public boolean setClosedLoopVoltageRampRate(double timeToRamp) {
+        return runWithRetries(() -> setClosedLoopRampRate(timeToRamp));
     }
 
     @Override

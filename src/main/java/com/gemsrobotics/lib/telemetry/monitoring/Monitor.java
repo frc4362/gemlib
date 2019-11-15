@@ -1,9 +1,6 @@
 package com.gemsrobotics.lib.telemetry.monitoring;
 
-import com.gemsrobotics.lib.data.DigitalSignalTrigger;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-
-import java.util.stream.Stream;
 
 public abstract class Monitor implements Reportable {
     private boolean m_isActive = false;
@@ -14,8 +11,8 @@ public abstract class Monitor implements Reportable {
 
     public final void doMonitoring() {
         m_isActive = true;
-        initialize();
+        initializeDefaultBehaviour();
     }
 
-    public abstract void initialize();
+    public abstract void initializeDefaultBehaviour();
 }

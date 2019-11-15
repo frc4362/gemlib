@@ -8,7 +8,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.*;
 
 /**
- * A movement along an arc at constant curvature and getVelocity. We can use ideas from differential calculus to create
+ * A movement along an arc at constant curvature and velocity. We can use ideas from differential calculus to create
  * new RigidTransform2d's from a Twist2d and visa versa.
  * <p>
  * A Twist can be used to represent a difference between two poses, a getVelocity, an getAcceleration, etc.

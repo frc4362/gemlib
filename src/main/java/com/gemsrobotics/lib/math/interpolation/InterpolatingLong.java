@@ -8,8 +8,8 @@ import com.gemsrobotics.lib.data.InterpolatingTreeMap;
  * @see InterpolatingTreeMap
  */
 public class InterpolatingLong implements
-        Interpolable<InterpolatingLong>,
-        InverseInterpolable<InterpolatingLong>,
+        Interpolatable<InterpolatingLong>,
+        InverseInterpolatable<InterpolatingLong>,
         Comparable<InterpolatingLong>
 {
     public Long value;
@@ -27,21 +27,21 @@ public class InterpolatingLong implements
 
     @Override
     public double inverseInterpolate(final InterpolatingLong upper, final InterpolatingLong query) {
-        final var upper_to_lower = upper.value - value;
-        if (upper_to_lower <= 0) {
-            return 0;
+        final var upperToLower = upper.value - value;
+        if (upperToLower <= 0.0) {
+            return 0.0;
         }
 
-        final var query_to_lower = query.value - value;
-        if (query_to_lower <= 0) {
-            return 0;
+        final var queryToLower = query.value - value;
+        if (queryToLower <= 0.0) {
+            return 0.0;
         }
 
-        return query_to_lower / (double) upper_to_lower;
+        return queryToLower / (double) upperToLower;
     }
 
     @Override
-    public int compareTo(InterpolatingLong other) {
+    public int compareTo(final InterpolatingLong other) {
         if (other.value < value) {
             return 1;
         } else if (other.value > value) {

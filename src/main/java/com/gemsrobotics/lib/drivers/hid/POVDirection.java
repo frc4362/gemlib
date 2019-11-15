@@ -37,7 +37,7 @@ public enum POVDirection {
         case 6: return W;
         case 7: return NW;
         default:
-            // this should never happen
+            // bro
             return NONE;
         }
     }

@@ -7,11 +7,10 @@ import com.gemsrobotics.lib.data.InterpolatingTreeMap;
  * third query key, an InverseInterpolable object can calculate the interpolation parameter of the query key on the
  * interval [0, 1].
  * 
- * @param <T>
- *            The Type of InverseInterpolable
+ * @param <T> The Type of InverseInterpolable
  * @see InterpolatingTreeMap
  */
-public interface InverseInterpolable<T> {
+public interface InverseInterpolatable<T> {
     /**
      * Given this point (lower), a query point (query), and an upper point (upper), estimate how far (on [0, 1]) between
      * 'lower' and 'upper' the query point lies.

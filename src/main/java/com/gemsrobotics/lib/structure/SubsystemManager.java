@@ -5,6 +5,7 @@ import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import io.github.oblarg.oblog.Loggable;
@@ -42,23 +43,27 @@ public final class SubsystemManager implements Reportable, Loggable {
             }
 
             synchronized (m_lock) {
+                // make it NaN so m_lastUpdateTime is never made null
                 double now = Double.NaN;
 
                 for (final var subsystem : m_subsystems) {
                     now = Timer.getFPGATimestamp();
-                    m_dt = now - m_lastUpdateTime;
 
                     try {
-                        subsystem.doPeriodicReads(m_dt);
+                        // provide each subsystem the time, it will update the dt internally
+                        // this is better than providing the schedule dt as it will be more accurate
+                        subsystem.updatePeriodicState(now);
                     } catch (final Throwable throwable) {
                         Pod.catchThrowable(subsystem, throwable);
                     }
 
-                    if (subsystem.isActive()) {
+                    if (RobotState.isEnabled() && subsystem.isActive()) {
                         subsystem.onUpdate(now);
                     }
                 }
 
+                // this is the overall scheduler dt, sum of the subsystems execution times
+                m_dt = now - m_lastUpdateTime;
                 m_lastUpdateTime = now;
 
                 if (m_faultCheckTimer.hasElapsed()) {
@@ -146,12 +151,10 @@ public final class SubsystemManager implements Reportable, Loggable {
     }
 
 	private void estop(final Subsystem subsystem) {
-	    synchronized (subsystem) {
-            report(Kind.ERROR, "E-stopping subsystem \"" + subsystem.getName() + "\".");
-            subsystem.setActive(false);
-            subsystem.onStop(getFPGATimestamp());
-            subsystem.setSafeState();
-        }
+        report(Kind.ERROR, "E-stopping subsystem \"" + subsystem.getName() + "\".");
+        subsystem.setActive(false);
+        subsystem.onStop(getFPGATimestamp());
+        subsystem.setSafeState();
 	}
 
 	@Log.VoltageView(

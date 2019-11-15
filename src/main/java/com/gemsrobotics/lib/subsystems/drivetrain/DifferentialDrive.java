@@ -2,11 +2,10 @@ package com.gemsrobotics.lib.subsystems.drivetrain;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
-import com.gemsrobotics.lib.drivers.imu.CollisionDetectingIMU;
 import com.gemsrobotics.lib.drivers.imu.NavX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
 import com.gemsrobotics.lib.drivers.transmission.Transmission;
-import com.gemsrobotics.lib.telemetry.monitoring.ConnectionMonitor;
 import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
@@ -20,19 +19,19 @@ import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryGenerator;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
 @SuppressWarnings({"unused", "WeakerAccess", "OverlyCoupledClass"})
 public abstract class DifferentialDrive extends Subsystem {
+    // This config as one class allows for deserialization from a JSON file to describe nearly the entire drive train
     public static class Config {
 		public double rotationsToMeters;
 		public double maxVoltage;
+		public double secondsToMaxVoltage;
 
 		public DriveMotionPlanner.MotionConfig motionConfig;
-        public CollisionDetectingIMU.Thresholds collisionThresholds;
 
 		public PIDFController.Gains gainsLowGear;
 		public PIDFController.Gains gainsHighGear;
@@ -42,61 +41,72 @@ public abstract class DifferentialDrive extends Subsystem {
 		public Model.Properties propertiesModel;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
+
+		private PIDFController.Gains velocityGainsForGear(final boolean highGear) {
+		    return highGear ? gainsHighGear : gainsLowGear;
+        }
 	}
 
-	protected final Model m_model;
 	protected final Config m_config;
+    protected final Model m_model;
 	protected final OpenLoopDriveHelper m_openLoopHelper;
-	protected transient final CollisionDetectingIMU m_imu;
-	protected FieldToVehicleEstimator m_odometry;
-	protected final DriveMotionPlanner m_motionPlanner;
     protected final TrajectoryGenerator m_generator;
+	protected final DriveMotionPlanner m_motionPlanner;
+
+    protected final NavX m_imu;
+	protected final MotorControllerGroup m_motorsLeft, m_motorsRight;
+    protected final MotorController m_masterMotorLeft;
+    protected final MotorController m_masterMotorRight;
+	protected final Transmission m_transmission;
     protected final PeriodicIO m_periodicIO;
 
-	protected final MotorController m_masterLeft, m_masterRight, m_slaveLeft, m_slaveRight;
-	protected final Transmission m_transmission;
-
-	protected ControlMode m_controlState;
-	protected boolean m_isHighGear, m_forceFinishPath;
+    protected FieldToVehicleEstimator m_odometer;
+    protected boolean m_isHighGear, m_forceFinishTrajectory;
+	protected ControlMode m_controlMode;
 	protected Rotation m_headingOffset;
 
     protected abstract Config getConfig();
-    protected abstract List<MotorController> getMotorControllers();
+    protected abstract MotorControllerGroup getMotorControllersLeft();
+    protected abstract MotorControllerGroup getMotorControllersRight();
     protected abstract Transmission getTransmission();
 
 	protected DifferentialDrive() {
-		m_config = getConfig();
+        m_config = getConfig();
 		m_transmission = getTransmission();
+        m_motorsLeft = getMotorControllersLeft();
+        m_motorsRight = getMotorControllersLeft();
 
-		final var motors = getMotorControllers();
-		m_masterLeft = motors.get(0);
-		configureMotorController(m_masterLeft, true);
-		m_slaveLeft = motors.get(1);
-		m_slaveLeft.follow(m_masterLeft, false);
-		m_masterRight = motors.get(2);
-		configureMotorController(m_masterRight, false);
-		m_slaveRight = motors.get(3);
-		m_slaveRight.follow(m_masterRight, false);
+        m_masterMotorLeft = m_motorsLeft.getMaster();
+        m_masterMotorRight = m_motorsRight.getMaster();
 
-		m_model = new Model(m_config.propertiesModel, new MotorTransmission(m_config.propertiesLowGear), new MotorTransmission(m_config.propertiesHighGear));
+        configureMotorController(m_masterMotorLeft, true);
+        m_motorsLeft.followMaster(false);
 
-		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE, this::isHighGear);
-        m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
+        configureMotorController(m_masterMotorRight, false);
+        m_motorsRight.followMaster(false);
 
-		m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
         m_imu = new NavX();
+		m_model = new Model(
+		        m_config.propertiesModel,
+                new MotorTransmission(m_config.propertiesLowGear),
+                new MotorTransmission(m_config.propertiesHighGear));
+        m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
+        m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
+		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);
+        m_periodicIO = new PeriodicIO();
 
         m_headingOffset = Rotation.identity();
-		m_forceFinishPath = false;
-
-        m_periodicIO = new PeriodicIO();
-	}
+		m_forceFinishTrajectory = false;
+    }
 
 	private void configureMotorController(final MotorController controller, final boolean isLeft) {
 		controller.setInvertedOutput(!isLeft);
 		controller.setRotationsPerMeter(m_config.rotationsToMeters);
+		controller.setOpenLoopVoltageRampRate(m_config.secondsToMaxVoltage);
+
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);
+
 		controller.setSelectedProfile(slotForGear(true));
 		controller.setPIDF(m_config.gainsHighGear);
 	}
@@ -104,46 +114,44 @@ public abstract class DifferentialDrive extends Subsystem {
 	public enum ControlMode {
 		DISABLED,
 		OPEN_LOOP,
-		PATH_FOLLOWING
+        TRAJECTORY_TRACKING
 	}
 
 	private class PeriodicIO implements Loggable {
-		// INPUTS
+		// Inputs
         @Log.ToString(name="Wheel Position (m, m)")
-		public Model.WheelState positionMeters = new Model.WheelState();
+		public WheelState positionMeters = new WheelState();
         @Log.ToString(name="Wheel Delta Position (m, m)")
-		public Model.WheelState positionDeltaMeters = new Model.WheelState();
+		public WheelState positionDeltaMeters = new WheelState();
         @Log.ToString(name="Wheel Velocity (m per s, m per s)")
-		public Model.WheelState velocityMeters = new Model.WheelState();
+		public WheelState velocityMeters = new WheelState();
         @Log.ToString(name="Wheel Acceleration (m per s^2, m per s^2)")
-		public Model.WheelState accelerationMeters = new Model.WheelState();
+		public WheelState accelerationMeters = new WheelState();
         @Log.ToString(name="Heading (deg)")
 		public Rotation heading = Rotation.identity();
         @Log(name="High Gear? (Boolean)")
-		public boolean isHighGear = DifferentialDrive.this.m_transmission.isHighGear();
+		public boolean isHighGear = m_transmission.isHighGear();
 
         @Log(name="Tipping? (Boolean)")
 		public boolean isTipping = false;
         @Log(name="Colliding? (Boolean)")
 		public boolean isCollisionOccurring = false;
 
-		// OUTPUTS
+		// Outputs
         @Log.ToString(name="Control Mode")
         public ControlMode demandType = null;
         @Log.ToString(name="Current Demand")
-		public Model.WheelState demand = new Model.WheelState();
+		public WheelState demand = new WheelState();
         @Log.ToString(name="Feedforward Demand")
-		public Model.WheelState feedforward = new Model.WheelState();
+		public WheelState feedforward = new WheelState();
 
 		public RigidTransform error = new RigidTransform();
-		public TimedState<RigidTransformWithCurvature> pathReference = null;
+		public TimedState<RigidTransformWithCurvature> trajectoryReference = null;
 	}
 
-	public synchronized void setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
-		m_masterLeft.setNeutralBehaviour(mode);
-		m_slaveLeft.setNeutralBehaviour(mode);
-		m_masterRight.setNeutralBehaviour(mode);
-		m_slaveRight.setNeutralBehaviour(mode);
+	public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
+	    // please note the use of the NON short-circuiting operator (&&)
+	    return m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode)) & m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
 	}
 
 	public synchronized void setHighGear(final boolean wantsHighGear) {
@@ -152,67 +160,91 @@ public abstract class DifferentialDrive extends Subsystem {
 			m_transmission.setHighGear(wantsHighGear);
 
             final int profile = slotForGear(wantsHighGear);
-            m_masterLeft.setSelectedProfile(profile);
-            m_masterRight.setSelectedProfile(profile);
+            m_masterMotorLeft.setSelectedProfile(profile);
+            m_masterMotorRight.setSelectedProfile(profile);
 		}
 	}
 
 	public synchronized void setDisabled() {
-		if (m_controlState != DifferentialDrive.ControlMode.DISABLED) {
-			m_masterLeft.setNeutral();
-			m_masterRight.setNeutral();
-			m_controlState = DifferentialDrive.ControlMode.DISABLED;
-            m_periodicIO.demand = new Model.WheelState();
-            m_periodicIO.feedforward = new Model.WheelState();
-            m_periodicIO.pathReference = null;
-		}
+		configureControlMode(ControlMode.DISABLED);
 	}
+
+	protected synchronized void configureControlMode(final ControlMode newControlMode) {
+	    if (newControlMode != m_controlMode) {
+	        switch (newControlMode) {
+                case DISABLED:
+                    m_masterMotorLeft.setNeutral();
+                    m_masterMotorRight.setNeutral();
+
+                    m_periodicIO.demand = new WheelState();
+                    m_periodicIO.feedforward = new WheelState();
+                    m_periodicIO.trajectoryReference = null;
+
+                    m_controlMode = DifferentialDrive.ControlMode.DISABLED;
+                    break;
+                case OPEN_LOOP:
+                    setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+
+                    m_periodicIO.feedforward = new WheelState();
+                    m_periodicIO.trajectoryReference = null;
+
+                    m_openLoopHelper.reset();
+
+                    m_controlMode = ControlMode.OPEN_LOOP;
+                    break;
+                case TRAJECTORY_TRACKING:
+                    setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+                    m_forceFinishTrajectory = false;
+
+                    m_motionPlanner.reset();
+
+                    m_controlMode = ControlMode.TRAJECTORY_TRACKING;
+                    break;
+            }
+        }
+    }
 
 	public synchronized void setOpenLoop(final double throttle, final double wheel, final boolean isQuickTurn) {
-		if (m_controlState != ControlMode.OPEN_LOOP) {
-			setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-			m_controlState = ControlMode.OPEN_LOOP;
-            m_periodicIO.feedforward = new Model.WheelState();
-            m_periodicIO.pathReference = null;
-		}
-
+		configureControlMode(ControlMode.OPEN_LOOP);
 		m_periodicIO.demand = m_openLoopHelper.drive(throttle, wheel, isQuickTurn, m_periodicIO.isHighGear);
-        m_periodicIO.feedforward = new Model.WheelState();
 	}
+
+	public synchronized void setChassisVelocities(final ChassisState chassisState) {
+	    configureControlMode(ControlMode.OPEN_LOOP);
+	    m_periodicIO.demand = m_model.inverseKinematics(chassisState);
+    }
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
 		if (!Objects.isNull(m_motionPlanner)) {
-			m_forceFinishPath = false;
-			m_motionPlanner.reset();
-			m_motionPlanner.setTrajectory(trajectory);
-
-			m_openLoopHelper.reset();
-            m_controlState = ControlMode.PATH_FOLLOWING;
-		}
+		    configureControlMode(ControlMode.TRAJECTORY_TRACKING);
+            m_motionPlanner.setTrajectory(trajectory);
+		} else {
+		    configureControlMode(ControlMode.DISABLED);
+        }
 	}
 
-	protected final void driveOpenLoop(final Model.WheelState demand) {
-		m_masterLeft.setDutyCycle(demand.left);
-		m_masterRight.setDutyCycle(demand.right);
+	protected final void driveOpenLoop(final WheelState demandDutyCycle) {
+		m_masterMotorLeft.setDutyCycle(demandDutyCycle.left);
+		m_masterMotorRight.setDutyCycle(demandDutyCycle.right);
 	}
 
-	protected final void driveVelocity(final Model.WheelState demand, final Model.WheelState feedforward) {
-		m_masterLeft.setVelocityMetersPerSecond(demand.left, feedforward.left);
-		m_masterRight.setVelocityMetersPerSecond(demand.right, feedforward.right);
+	protected final void driveVelocity(final WheelState demandMetersPerSecond, final WheelState feedforwardDutyCycle) {
+		m_masterMotorLeft.setVelocityMetersPerSecond(demandMetersPerSecond.left, feedforwardDutyCycle.left);
+		m_masterMotorRight.setVelocityMetersPerSecond(demandMetersPerSecond.right, feedforwardDutyCycle.right);
 	}
 
 	@Override
 	protected synchronized void readPeriodicInputs() {
-        m_periodicIO.demandType = m_controlState;
+        m_periodicIO.demandType = m_controlMode;
 
         // Position calculations
-		final var oldPosition = new Model.WheelState(m_periodicIO.positionMeters);
+		final var oldPosition = new WheelState(m_periodicIO.positionMeters);
 		final var newPosition = getWheelProperty(MotorController::getPositionMeters);
 		m_periodicIO.positionMeters = newPosition;
 		m_periodicIO.positionDeltaMeters = newPosition.difference(oldPosition);
 
 		// Velocity and acceleration calculations
-		final var oldVelocity = new Model.WheelState(m_periodicIO.velocityMeters);
+		final var oldVelocity = new WheelState(m_periodicIO.velocityMeters);
 		final var newVelocity = getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		m_periodicIO.velocityMeters = newVelocity;
 		m_periodicIO.accelerationMeters = newVelocity.difference(oldVelocity).map(val -> val / dt());
@@ -222,54 +254,50 @@ public abstract class DifferentialDrive extends Subsystem {
         m_periodicIO.isCollisionOccurring = m_imu.isCollisionOccurring();
         m_periodicIO.isTipping = m_imu.isTipping();
 
+        // Transmission
         m_periodicIO.isHighGear = m_transmission.isHighGear();
 	}
 
 	protected void updateStateEstimation(final double timestamp) {
-		final var measuredVelocity = m_odometry.generateOdometryFromSensors(m_periodicIO.positionDeltaMeters, m_periodicIO.heading);
+		final var measuredVelocity = m_odometer.generateOdometryFromSensors(m_periodicIO.positionDeltaMeters, m_periodicIO.heading);
 		final var predictedVelocity = m_model.forwardKinematics(m_periodicIO.velocityMeters.left, m_periodicIO.velocityMeters.right);
 
-		m_odometry.addObservations(timestamp, measuredVelocity, predictedVelocity);
+		m_odometer.addObservation(timestamp, measuredVelocity, predictedVelocity);
 	}
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
-		if (m_controlState == ControlMode.PATH_FOLLOWING) {
-			final var output = m_motionPlanner.update(timestamp, m_odometry.getFieldToVehicle(timestamp));
+		if (m_controlMode == ControlMode.TRAJECTORY_TRACKING) {
+			final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
+                    .orElse(new DriveMotionPlanner.Output());
 
 			m_periodicIO.error = m_motionPlanner.getError();
-			m_periodicIO.pathReference = m_motionPlanner.getSetpoint();
+			m_periodicIO.trajectoryReference = m_motionPlanner.getSetpoint();
 
-			output.ifPresent(outputs -> {
-			   if (!m_forceFinishPath) {
-                   // convert from radians/second to meters/second
-                   // please note that we cannot use setVelocityRPM as the calculated rad/s are for the wheel, not the drive shaft
-                   m_periodicIO.demand = outputs.velocity.map(radiansPerSecond -> (m_config.propertiesModel.wheelbaseRadius * radiansPerSecond));
-                   // convert from volts to % output
-                   m_periodicIO.feedforward = outputs.feedforwardVoltage.map(v -> v / 12.0);
-               }
-            });
+           if (!m_forceFinishTrajectory) {
+               // convert from radians/second to meters/second
+               // please note that we cannot use setVelocityRPM as the calculated rad/s are for the wheel, not the motor
+               m_periodicIO.demand = output.velocity.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
+
+               // convert from volts to % output, then use D term to calculate additional gain based on acceleration (dv/dt)
+               final var kD = m_config.velocityGainsForGear(m_periodicIO.isHighGear).kD;
+               m_periodicIO.feedforward = output.feedforwardVoltage.map(v -> v / 12.0).sum(output.acceleration.map(a -> a * kD));
+           }
 		} else {
-			report(Kind.ERROR, "Tried to update trajectory following in bad control state: " + m_controlState.toString());
+			report(Kind.ERROR, "Tried to update trajectory following in bad control state: " + m_controlMode.toString());
 		}
 	}
 
 	@Override
-	protected synchronized void onCreate(final double timestamp) {
-        m_odometry = FieldToVehicleEstimator.withStarting(m_model, timestamp, RigidTransform.identity());
+	protected final synchronized void onCreate(final double timestamp) {
+        m_odometer = FieldToVehicleEstimator.withStarting(m_model, timestamp, RigidTransform.identity());
         setDisabled();
-        setHighGear(false);
-	}
-
-	@Override
-	protected synchronized void onEnable(final double timestamp) {
-        setOpenLoop(0, 0, false);
 	}
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
         updateStateEstimation(timestamp);
 
-        switch (m_controlState) {
+        switch (m_controlMode) {
             case DISABLED:
                 // No actuation
                 break;
@@ -277,7 +305,7 @@ public abstract class DifferentialDrive extends Subsystem {
                 // This makes sense, since this demand was updated externally
                 driveOpenLoop(m_periodicIO.demand);
                 break;
-            case PATH_FOLLOWING:
+            case TRAJECTORY_TRACKING:
                 // This makes sense, since the demands are updated in this method
                 updateTrajectoryFollowingDemands(timestamp);
                 driveVelocity(m_periodicIO.demand, m_periodicIO.feedforward);
@@ -286,33 +314,30 @@ public abstract class DifferentialDrive extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onStop(final double timestamp) {
-		setDisabled();
-		setNeutralBehaviour(ConnectionMonitor.getInstance().hasConnectedToField()
-                ? MotorController.NeutralBehaviour.BRAKE
-                : MotorController.NeutralBehaviour.COAST);
-	}
-
-	@Override
 	public void setSafeState() {
 		setDisabled();
 		setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		driveOpenLoop(new WheelState());
 	}
 
 	@Override
 	public FaultedResponse checkFaulted() {
-	    if (!m_masterLeft.isEncoderPresent()) {
-	        report(Kind.HARDWARE_FAULT, "Left encoder lost!");
+	    var response = FaultedResponse.NONE;
+
+	    if (!m_masterMotorLeft.isEncoderPresent()) {
+	        report(Kind.HARDWARE_FAULT, "Left encoder lost!!");
+	        response = FaultedResponse.DISABLE_SUBSYSTEM;
         }
 
-	    if (!m_masterRight.isEncoderPresent()) {
-	        report(Kind.HARDWARE_FAULT, "Right encoder lost!");
+	    if (!m_masterMotorRight.isEncoderPresent()) {
+	        report(Kind.HARDWARE_FAULT, "Right encoder lost!!");
+            response = FaultedResponse.DISABLE_SUBSYSTEM;
         }
 
-	    return FaultedResponse.NONE;
+	    return response;
 	}
 
-    private int slotForGear(final boolean isHighGear) {
+    private static int slotForGear(final boolean isHighGear) {
 	    return isHighGear ? 1 : 0;
     }
 
@@ -321,21 +346,21 @@ public abstract class DifferentialDrive extends Subsystem {
     }
 
 	public synchronized final boolean isTrajectoryFinished() {
-		if (Objects.isNull(m_motionPlanner) || m_controlState != ControlMode.PATH_FOLLOWING) {
-			return false;
+		if (Objects.isNull(m_motionPlanner) || m_controlMode != ControlMode.TRAJECTORY_TRACKING) {
+			return true;
 		} else {
-			return m_motionPlanner.isDone() || m_forceFinishPath;
+			return m_motionPlanner.isDone() || m_forceFinishTrajectory;
 		}
 	}
 
 	public synchronized void forceFinishTrajectory() {
-		if (m_controlState == ControlMode.PATH_FOLLOWING && !Objects.isNull(m_motionPlanner)) {
-			m_forceFinishPath = true;
+		if (m_controlMode == ControlMode.TRAJECTORY_TRACKING && !Objects.isNull(m_motionPlanner)) {
+			m_forceFinishTrajectory = true;
 		}
 	}
 
-	public Model.WheelState getWheelProperty(final Function<MotorController, Double> getter) {
-		return new Model.WheelState(getter.apply(m_masterLeft), getter.apply(m_masterRight));
+	public WheelState getWheelProperty(final Function<MotorController, Double> getter) {
+		return new WheelState(getter.apply(m_masterMotorLeft), getter.apply(m_masterMotorRight));
 	}
 
 	public synchronized void setHeading(final Rotation heading) {
@@ -361,18 +386,18 @@ public abstract class DifferentialDrive extends Subsystem {
 	}
 
 	public final FieldToVehicleEstimator getOdometer() {
-	    return m_odometry;
+	    return m_odometer;
     }
 
     public final TrajectoryGenerator getTrajectoryGenerator() {
 	    return m_generator;
     }
 
-    public synchronized final Optional<TimedState<RigidTransformWithCurvature>> getPathReference() {
-	    return Optional.ofNullable(m_periodicIO.pathReference);
+    public synchronized final Optional<TimedState<RigidTransformWithCurvature>> getTrajectoryReference() {
+	    return Optional.ofNullable(m_periodicIO.trajectoryReference);
     }
 
-    public final Model getModelling() {
+    public final Model getModel() {
 	    return m_model;
     }
 }

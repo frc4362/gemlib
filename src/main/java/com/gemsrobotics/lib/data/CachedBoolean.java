@@ -1,4 +1,4 @@
-package com.gemsrobotics.lib.property;
+package com.gemsrobotics.lib.data;
 
 import java.util.function.Supplier;
 

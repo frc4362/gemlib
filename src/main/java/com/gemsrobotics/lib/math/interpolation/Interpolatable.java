@@ -6,11 +6,10 @@ import com.gemsrobotics.lib.data.InterpolatingTreeMap;
  * Interpolable is an interface used by an Interpolating Tree as the Value type. Given two end points and an
  * interpolation parameter on [0, 1], it calculates a new Interpolable representing the interpolated value.
  * 
- * @param <T>
- *            The Type of Interpolable
+ * @param <T> The Type of Interpolable
  * @see InterpolatingTreeMap
  */
-public interface Interpolable<T> {
+public interface Interpolatable<T> {
     /**
      * Interpolates between this value and an other value according to a given parameter. If m_x is 0, the method should
      * return this value. If m_x is 1, the method should return the other value. If 0 < m_x < 1, the return value should be

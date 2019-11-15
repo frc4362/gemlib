@@ -2,7 +2,7 @@ package com.gemsrobotics.lib.physics;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static com.gemsrobotics.lib.utils.MathUtils.kEpsilon;
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 
 /**
  * Model of a DC motor rotating a shaft.  All parameters refer to the output
@@ -12,18 +12,18 @@ import static com.gemsrobotics.lib.utils.MathUtils.kEpsilon;
 @SuppressWarnings("WeakerAccess")
 public final class MotorTransmission {
     public static class Properties {
-		double speedPerVolt, torquePerVolt, stictionVoltage;
+		double speedRadiansPerSecondPerVolt, torquePerVolt, stictionVoltage;
 	}
 
 	// all units must be SI
-	public final double speedPerVolt; // rad/s per V (no load)
+	public final double speedRadiansPerSecondPerVolt; // rad/s per V (no load)
 	public final double torquePerVolt; // N m per V (stall)
 	public final double stictionVoltage; // V
 
     public MotorTransmission(final double v, final double a, final double s) {
         this(new Properties() {
             {
-                speedPerVolt = v;
+                speedRadiansPerSecondPerVolt = v;
                 torquePerVolt = a;
                 stictionVoltage = s;
             }
@@ -31,60 +31,60 @@ public final class MotorTransmission {
     }
 
 	public MotorTransmission(final Properties properties) {
-		speedPerVolt = properties.speedPerVolt;
+		speedRadiansPerSecondPerVolt = properties.speedRadiansPerSecondPerVolt;
 		torquePerVolt = properties.torquePerVolt;
 		stictionVoltage = properties.stictionVoltage;
 	}
 
-	public double freeSpeedAtVoltage(final double voltage) {
+	public double freeSpeedAtVoltageRadiansPerSecond(final double voltage) {
 		double effectiveVoltage = 0.0;
 
-		if (voltage > kEpsilon) {
+		if (voltage > Epsilon) {
 			// rolling forward, friction negative
 			effectiveVoltage = max(0.0, voltage - stictionVoltage);
-		} else if (voltage < -kEpsilon) {
+		} else if (voltage < -Epsilon) {
 			// rolling backward, friction positive
 			effectiveVoltage = min(0.0, voltage + stictionVoltage);
 		}
 
-		return effectiveVoltage * speedPerVolt;
+		return effectiveVoltage * speedRadiansPerSecondPerVolt;
 	}
 
-	public double torqueForVoltage(final double velocity, final double voltage) {
+	public double torqueForVoltage(final double velocityRadiansPerSecond, final double voltage) {
 		double effectiveVoltage = voltage;
 
-		if (velocity > kEpsilon) {
+		if (velocityRadiansPerSecond > Epsilon) {
 			// rolling forward, friction negative
 			effectiveVoltage -= stictionVoltage;
-		} else if (velocity < -kEpsilon) {
+		} else if (velocityRadiansPerSecond < -Epsilon) {
 			// rolling backward, friction positive
 			effectiveVoltage += stictionVoltage;
-		} else if (voltage > kEpsilon) {
+		} else if (voltage > Epsilon) {
 			// static, with positive voltage
 			effectiveVoltage = max(0.0, voltage - stictionVoltage);
-		} else if (voltage < -kEpsilon) {
+		} else if (voltage < -Epsilon) {
 			// static, with negative voltage
 			effectiveVoltage = min(0.0, voltage + stictionVoltage);
 		} else {
 			return 0.0;
 		}
 
-		return torquePerVolt * (effectiveVoltage - (velocity / speedPerVolt));
+		return torquePerVolt * (effectiveVoltage - (velocityRadiansPerSecond / speedRadiansPerSecondPerVolt));
 	}
 
-	public double voltageFromTorque(final double velocity, final double torque) {
+	public double voltageFromTorque(final double velocityRadiansPerSecond, final double torque) {
 		double effectiveStiction;
 
-		if (velocity > kEpsilon) {
+		if (velocityRadiansPerSecond > Epsilon) {
 			// rolling forward, friction negative
 			effectiveStiction = stictionVoltage;
-		} else if (velocity < -kEpsilon) {
+		} else if (velocityRadiansPerSecond < -Epsilon) {
 			// rolling backward, friction positive
 			effectiveStiction = -stictionVoltage;
-		} else if (torque > kEpsilon) {
+		} else if (torque > Epsilon) {
 			// static, wants net torque forward
 			effectiveStiction = stictionVoltage;
-		} else if (torque < -kEpsilon) {
+		} else if (torque < -Epsilon) {
 			// static, wants net torque backward
 			effectiveStiction = -stictionVoltage;
 		} else {
@@ -92,6 +92,6 @@ public final class MotorTransmission {
 			return 0.0;
 		}
 
-		return (torque / torquePerVolt) + (velocity / speedPerVolt) + effectiveStiction;
+		return (torque / torquePerVolt) + (velocityRadiansPerSecond / speedRadiansPerSecondPerVolt) + effectiveStiction;
 	}
 }

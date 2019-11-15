@@ -1,9 +1,6 @@
 package com.gemsrobotics.lib.telemetry.monitoring;
 
 import com.gemsrobotics.lib.data.DigitalSignalTrigger;
-import com.gemsrobotics.lib.property.CachedBoolean;
-import com.gemsrobotics.lib.property.CachedValue;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
@@ -48,7 +45,7 @@ public final class ConnectionMonitor extends Monitor {
     }
 
     @Override
-    public void initialize() {
+    public void initializeDefaultBehaviour() {
         m_connectedToField.onRisingEdge(() -> {
             report(SYSTEM, "Field connected");
 

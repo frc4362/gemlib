@@ -28,10 +28,6 @@ public abstract class Limelight extends Subsystem {
 
     protected final PeriodicIO m_periodicIO;
 
-    protected LEDMode m_modeLed;
-    protected CameraMode m_modeCamera;
-    protected int m_selectedPipeline;
-
 	protected Limelight(final String name) {
 	    setName("Limelight" + (DEFAULT_NAME.equals(name) ? "" : "-" + name));
 
@@ -73,7 +69,7 @@ public abstract class Limelight extends Subsystem {
     protected static class PeriodicIO {
         // INPUTS
         public double latency = IMAGE_CAPTURE_LATENCY_S;
-        public boolean targetExists = false;
+        public boolean targetPresent = false;
         public Rotation offsetHorizontal = Rotation.identity();
         public Rotation offsetVertical = Rotation.identity();
         public double targetArea = 0;
@@ -90,8 +86,9 @@ public abstract class Limelight extends Subsystem {
     protected synchronized final void readPeriodicInputs() {
         // INPUTS
         m_periodicIO.latency = IMAGE_CAPTURE_LATENCY_S + (m_latencyEntry.getDouble(Double.POSITIVE_INFINITY) * 1e-3);
-        m_periodicIO.targetExists = m_existsEntry.getDouble(0) == 1.0;
-        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0));
+        m_periodicIO.targetPresent = m_existsEntry.getDouble(0) == 1.0;
+        // invert this so it is CCW-positive
+        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0)).inverse();
         m_periodicIO.offsetVertical = Rotation.degrees(m_offsetVerticalEntry.getDouble(0));
         m_periodicIO.targetArea = m_areaEntry.getDouble(0.0);
         m_periodicIO.targetSkew = m_skewEntry.getDouble(0.0);
@@ -101,32 +98,29 @@ public abstract class Limelight extends Subsystem {
         m_periodicIO.corners = makeCornerArrays(xs, ys);
 
         // OUTPUTS
-        m_periodicIO.ledMode = m_modeLed;
-        m_periodicIO.cameraMode = m_modeCamera;
-        m_periodicIO.pipeline = m_selectedPipeline;
+        m_periodicIO.ledMode = LEDMode.values()[(int) m_pipelineEntry.getDouble(0.0)];
+        m_periodicIO.cameraMode = CameraMode.values()[(int) m_modeCameraEntry.getDouble(0.0)];
+        m_periodicIO.pipeline = (int) m_pipelineEntry.getDouble(0.0);
     }
 
     public synchronized final void setLEDMode(final LEDMode mode) {
-	    if (mode != m_modeLed) {
+	    if (mode != m_periodicIO.ledMode) {
             m_modeLedEntry.setDouble(mode.ordinal());
-            m_modeLed = mode;
-            report("LED mode changed to " + mode.toString() + ".");
+            report("Wanted LED mode changed to " + mode.toString() + ".");
         }
     }
 
     public synchronized final void setCameraMode(final CameraMode mode) {
-	    if (mode != m_modeCamera) {
+	    if (mode != m_periodicIO.cameraMode) {
             m_modeCameraEntry.setDouble(mode.ordinal());
-            m_modeCamera = mode;
-            report("Camera mode swapped to " + mode.toString() + ".");
+            report("Wanted camera mode swapped to " + mode.toString() + ".");
         }
     }
 
     public synchronized final void setSelectedPipeline(final int p) {
-        if (p < 9 && p > 0 && p != m_selectedPipeline) {
+        if (p < 9 && p > 0 && p != m_periodicIO.pipeline) {
             m_pipelineEntry.setDouble(p);
-            m_selectedPipeline = p;
-            report("Pipeline swapped to " + p + ".");
+            report("Wanted pipeline swapped to " + p + ".");
         }
     }
 
@@ -142,8 +136,12 @@ public abstract class Limelight extends Subsystem {
     }
 
     @Override
-    public void setSafeState() {
+    public final void setSafeState() {
         // its a limelight, I don't think it can *be* unsafe...
+    }
+
+    public synchronized final boolean isAlive() {
+	    return m_periodicIO.latency > IMAGE_CAPTURE_LATENCY_S;
     }
 
     /**
@@ -157,11 +155,11 @@ public abstract class Limelight extends Subsystem {
      * @return Whether or not any contours are found in frame
      */
 	public synchronized final boolean isTargetPresent() {
-		return m_periodicIO.targetExists;
+		return m_periodicIO.targetPresent;
 	}
 
     /**
-     * @return Offset from the center in radians, positive is to the right of view origin
+     * @return Offset from the center in radians, positive is to the left of view origin
      */
 	public synchronized final Rotation getOffsetHorizontal() {
 		return m_periodicIO.offsetHorizontal;
@@ -193,6 +191,8 @@ public abstract class Limelight extends Subsystem {
     }
 
     private static Translation[] makeCornerArrays(final double[] xs, final double[] ys) {
-        return IntStream.range(0, min(xs.length, ys.length)).mapToObj(i -> new Translation(xs[i], ys[i])).toArray(Translation[]::new);
+        return IntStream.range(0, min(xs.length, ys.length))
+                        .mapToObj(i -> new Translation(xs[i], ys[i]))
+                        .toArray(Translation[]::new);
     }
 }

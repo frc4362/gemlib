@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.drivers.hid;
 
+import com.gemsrobotics.lib.commands.DoRumbleCommand;
 import com.gemsrobotics.lib.commands.SetRumbleCommand;
 import com.gemsrobotics.lib.commands.WaitCommand;
 import com.gemsrobotics.lib.data.DigitalSignalTrigger;
@@ -42,34 +43,34 @@ public final class Gempad {
     }
 
     private class ButtonListener extends DigitalSignalTrigger {
-        private int m_buttonId;
+        private final int m_buttonId;
 
         private ButtonListener(final int buttonId) {
             m_buttonId = buttonId;
         }
 
         @Override
-        public boolean get() {
+        public final boolean get() {
             return m_internal.getRawButton(m_buttonId);
         }
 
         @Override
-        public boolean getRisingEdge() {
+        public final boolean getRisingEdge() {
             return m_internal.getRawButtonPressed(m_buttonId);
         }
 
         @Override
-        public boolean getFallingEdge() {
+        public final boolean getFallingEdge() {
             return m_internal.getRawButtonReleased(m_buttonId);
         }
 
         @Override
-        public void onRisingEdge(final Command command) {
+        public final void onRisingEdge(final Command command) {
             m_triggersRisingEdge.computeIfAbsent(m_buttonId, id -> triggerOf(ButtonListener.this::getRisingEdge)).whenActive(command);
         }
 
         @Override
-        public void onFallingEdge(final Command command) {
+        public final void onFallingEdge(final Command command) {
             m_triggersFallingEdge.computeIfAbsent(m_buttonId, id -> triggerOf(ButtonListener.this::getFallingEdge)).whenActive(command);
         }
     }
@@ -132,13 +133,7 @@ public final class Gempad {
     }
 
     public void doRumble(final RumbleKind kind, final double strength, final double duration) {
-        new CommandGroup() {
-            {
-                addSequential(new SetRumbleCommand(Gempad.this, kind, strength));
-                addSequential(new WaitCommand(duration));
-                addSequential(new SetRumbleCommand(Gempad.this, kind, 0.0));
-            }
-        }.start();
+        new DoRumbleCommand(this, kind, strength, duration).start();
     }
 
     public Translation getStick(final GenericHID.Hand side) {

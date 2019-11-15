@@ -19,7 +19,7 @@ public final class DriveCharacterizer implements Reportable {
     }
 
     public static class VelocityDataPoint {
-        public final double velocity, power;
+        protected final double velocity, power;
 
         public VelocityDataPoint(final double velocity, final double power) {
             this.velocity = velocity;
@@ -28,7 +28,7 @@ public final class DriveCharacterizer implements Reportable {
     }
 
     public static class AccelerationDataPoint {
-        public final double velocity, power, acceleration;
+        protected final double velocity, power, acceleration;
 
         public AccelerationDataPoint(final double velocity, final double power, final double acceleration) {
             this.velocity = velocity;
@@ -88,7 +88,7 @@ public final class DriveCharacterizer implements Reportable {
         int startTrim = 0;
 
         for (int i = 0; i < input.size(); ++i) {
-            if (input.get(i).velocity > MathUtils.kEpsilon) {
+            if (input.get(i).velocity > MathUtils.Epsilon) {
                 if (Objects.isNull(output)) {
                     output = new double[input.size() - i][2];
                     startTrim = i;

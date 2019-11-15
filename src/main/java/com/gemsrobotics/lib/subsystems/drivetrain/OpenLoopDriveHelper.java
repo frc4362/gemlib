@@ -42,11 +42,11 @@ public class OpenLoopDriveHelper {
 		m_negInertiaAccumulator = 0.0;
 	}
 
-	public Model.WheelState drive(
+	public WheelState drive(
 			double xPower,
 			double zRotation,
-			boolean isQuickTurn,
-			boolean isHighGear
+			final boolean isQuickTurn,
+			final boolean isHighGear
 	) {
 		double negInertia = zRotation - m_lastWheel;
 		m_lastWheel = zRotation;
@@ -105,22 +105,22 @@ public class OpenLoopDriveHelper {
 			m_negInertiaAccumulator = 0.0;
 		}
 
-		final Model.ChassisState powers = new Model.ChassisState();
-		powers.linear = xPower;
+		final ChassisState powers = new ChassisState();
+		powers.linearMeters = xPower;
 
 		final double overPower;
 
 		if (isQuickTurn) {
-			if (abs(powers.linear) < m_cfg.quickStopDeadband) {
+			if (abs(powers.linearMeters) < m_cfg.quickStopDeadband) {
 				m_quickStopAccumulator = (1.0 - m_cfg.quickStopWeight) * m_quickStopAccumulator;
 				m_quickStopAccumulator += m_cfg.quickStopWeight * limit(zRotation, 1.0) * m_cfg.quickStopScalar;
 			}
 
 			overPower = 1.0;
-			powers.angular = zRotation;
+			powers.angularRadians = zRotation;
 		} else  {
 			overPower = 0.0;
-			powers.angular = abs(xPower) * zRotation * sensitivity - m_quickStopAccumulator;
+			powers.angularRadians = abs(xPower) * zRotation * sensitivity - m_quickStopAccumulator;
 
 			if (m_quickStopAccumulator > 1.0) {
 				m_quickStopAccumulator -= 1.0;
@@ -131,7 +131,7 @@ public class OpenLoopDriveHelper {
 			}
 		}
 
-		final Model.WheelState output = new Model.WheelState(powers.linear + powers.angular, powers.linear - powers.angular);
+		final WheelState output = new WheelState(powers.linearMeters + powers.angularRadians, powers.linearMeters - powers.angularRadians);
 
 		if (output.left > 1.0) {
 			output.right -= overPower * (output.left - 1.0);

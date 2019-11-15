@@ -7,13 +7,18 @@ import com.kauailabs.navx.frc.ITimestampedDataSubscriber;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Timer;
 
-import static java.lang.Math.abs;
+import static java.lang.Math.*;
 
-public class NavX implements CollisionDetectingIMU {
+public class NavX {
+    private static final byte
+            UPDATE_RATE_HZ = (byte) 200;
     public static final double
             COLLISION_JERK_THRESHOLD = 950,
             TIPPING_THRESHOLD_DEGREES = 11;
+    private static final long
+            INVALID_TIMESTAMP = -1L;
 
+    // This handles the fact that the sensor is inverted from our coordinate conventions.
     private class PeriodicIO implements ITimestampedDataSubscriber {
         @Override
         public void timestampedDataReceived(
@@ -23,8 +28,7 @@ public class NavX implements CollisionDetectingIMU {
                 final Object context
         ) {
             synchronized (NavX.this) {
-                // This handles the fact that the sensor is inverted from our coordinate conventions.
-                if (m_lastSensorTimestamp != kInvalidTimestamp && m_lastSensorTimestamp < sensorTimestamp) {
+                if (m_lastSensorTimestamp != INVALID_TIMESTAMP && m_lastSensorTimestamp < sensorTimestamp) {
                     m_yawRateDegreesPerSecond = 1000.0 * (-m_yawDegrees - update.yaw) / (double) (sensorTimestamp - m_lastSensorTimestamp);
                 }
 
@@ -37,30 +41,25 @@ public class NavX implements CollisionDetectingIMU {
 
     protected AHRS m_ahrs;
 
-    protected Rotation m_angleAdjustment;
+    protected Rotation m_yawOffset;
 
     protected double m_yawDegrees;
     protected double m_fusedHeading;
     protected double m_yawRateDegreesPerSecond;
-    protected final long kInvalidTimestamp = -1;
     protected long m_lastSensorTimestamp;
 
-    protected double m_prevAccelX;
-    protected double m_prevAccelY;
-    protected double m_prevTime;
-
-    protected double m_collisionJerkThreshold;
-    protected double m_tippingThresholdDegrees;
+    protected double m_lastAccelerationX;
+    protected double m_lastAccelerationY;
+    protected double m_lastTime;
 
     public NavX(final SPI.Port spiPort) {
-        m_angleAdjustment = Rotation.identity();
-        m_prevAccelX = 0;
-        m_prevAccelY = 0;
-        m_prevTime = 0;
-        m_collisionJerkThreshold = COLLISION_JERK_THRESHOLD;
-        m_tippingThresholdDegrees = TIPPING_THRESHOLD_DEGREES;
+        m_lastSensorTimestamp = INVALID_TIMESTAMP;
+        m_yawOffset = Rotation.identity();
+        m_lastAccelerationX = 0;
+        m_lastAccelerationY = 0;
+        m_lastTime = 0;
 
-        m_ahrs = new AHRS(spiPort, (byte) 200);
+        m_ahrs = new AHRS(spiPort, UPDATE_RATE_HZ);
 
         resetState();
 
@@ -71,7 +70,7 @@ public class NavX implements CollisionDetectingIMU {
         this(SPI.Port.kMXP);
     }
 
-    public boolean isPresent() {
+    public synchronized boolean isPresent() {
         return m_ahrs.isConnected();
     }
 
@@ -86,100 +85,86 @@ public class NavX implements CollisionDetectingIMU {
         resetState();
     }
 
-    private void resetState() {
-        m_lastSensorTimestamp = kInvalidTimestamp;
+    private synchronized void resetState() {
+        m_lastSensorTimestamp = INVALID_TIMESTAMP;
         m_yawDegrees = 0.0;
         m_yawRateDegreesPerSecond = 0.0;
     }
 
-    public synchronized void setAngleAdjustment(Rotation adjustment) {
-        m_angleAdjustment = adjustment;
+    public synchronized void setAngleAdjustment(final Rotation adjustment) {
+        m_yawOffset = adjustment;
     }
 
     public synchronized double getRawYawDegrees() {
         return m_yawDegrees;
     }
 
-    public Rotation getYaw() {
-        return m_angleAdjustment.rotateBy(Rotation.degrees(getRawYawDegrees()));
+    public synchronized Rotation getYaw() {
+        return m_yawOffset.rotateBy(Rotation.degrees(getRawYawDegrees()));
     }
 
-    public Rotation getRoll() {
+    public synchronized Rotation getRoll() {
         return Rotation.degrees(m_ahrs.getRoll());
     }
 
-    public Rotation getPitch() {
+    public synchronized Rotation getPitch() {
         return Rotation.degrees(m_ahrs.getPitch());
     }
 
-    public double getYawRateDegreesPerSec() {
+    public synchronized double getYawRateDegreesPerSec() {
         return m_yawRateDegreesPerSecond;
     }
 
-    public double getFusedHeading() {
+    public synchronized double getFusedHeading() {
         return m_fusedHeading;
     }
 
-    public double getYawRateRadiansPerSec() {
-        return 180.0 / Math.PI * getYawRateDegreesPerSec();
+    public synchronized double getYawRateRadiansPerSec() {
+        return toRadians(getYawRateDegreesPerSec());
     }
 
-    public double getRawAccelX() {
+    public synchronized double getRawAccelerationX() {
         return m_ahrs.getRawAccelX();
     }
 
-    public double getRawAccelY() {
+    public synchronized double getRawAccelerationY() {
         return m_ahrs.getRawAccelY();
     }
 
-    public double getRawAccelZ() {
+    public synchronized double getRawAccelerationZ() {
         return m_ahrs.getRawAccelZ();
     }
 
-    public synchronized void setThresholds(final Thresholds thresholds) {
-        setCollisionJerkThreshold(thresholds.collisionJerkThreshold);
-        setTippingThreshold(thresholds.tipThresholdDegrees);
-    }
+    public final synchronized boolean isCollisionOccurring() {
+        boolean isCollisionOccurring = false;
 
-    public synchronized void setCollisionJerkThreshold(double jerkCollisionThreshold) {
-        m_collisionJerkThreshold = jerkCollisionThreshold;
-    }
+        final double accelerationX = m_ahrs.getWorldLinearAccelX();
+        final double accelerationY = m_ahrs.getWorldLinearAccelY();
 
-    public synchronized void setTippingThreshold(double tippingThreshold) {
-        m_tippingThresholdDegrees = tippingThreshold;
-    }
+        final double t = Timer.getFPGATimestamp();
+        final double dt = t - m_lastTime;
 
-    public boolean isCollisionOccurring() {
-        boolean collisionOccurring = false;
+        final double jerkX = (accelerationX - m_lastAccelerationX) / dt;
+        final double jerkY = (accelerationY - m_lastAccelerationY) / dt;
 
-        final double accelX = m_ahrs.getWorldLinearAccelX();
-        final double accelY = m_ahrs.getWorldLinearAccelY();
-
-        final double currTime = Timer.getFPGATimestamp();
-        final double dt = currTime - m_prevTime;
-
-        final double jerkX = (accelX - m_prevAccelX) / dt;
-        final double jerkY = (accelY - m_prevAccelY) / dt;
-
-        if (abs(jerkX) > m_collisionJerkThreshold || abs(jerkY) > m_collisionJerkThreshold) {
-            collisionOccurring = true;
+        if (hypot(jerkX, jerkY) > COLLISION_JERK_THRESHOLD) {
+            isCollisionOccurring = true;
         }
 
-        m_prevAccelX = accelX;
-        m_prevAccelY = accelY;
+        m_lastAccelerationX = accelerationX;
+        m_lastAccelerationY = accelerationY;
 
-        if (m_prevTime == 0) {
-            m_prevTime = currTime;
+        if (m_lastTime == 0) {
+            m_lastTime = t;
             return false;
         }
 
-        m_prevTime = currTime;
+        m_lastTime = t;
 
-        return collisionOccurring;
+        return isCollisionOccurring;
     }
 
-    public boolean isTipping() {
-        return abs(m_ahrs.getPitch()) > m_tippingThresholdDegrees || abs(m_ahrs.getRoll()) > m_tippingThresholdDegrees;
+    public final synchronized boolean isTipping() {
+        return abs(m_ahrs.getPitch()) > TIPPING_THRESHOLD_DEGREES || abs(m_ahrs.getRoll()) > TIPPING_THRESHOLD_DEGREES;
     }
 }
-

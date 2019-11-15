@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
+import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.Model;
 import com.gemsrobotics.lib.math.se2.ICurvature;
 import com.gemsrobotics.lib.math.se2.IRigidTransform2d;
@@ -27,7 +28,7 @@ public class DifferentialDriveDynamicsConstraint<S extends IRigidTransform2d<S> 
     public MinMaxAcceleration getMinMaxAcceleration(final S state, final double velocity) {
         // NOTE: units cancel on angular getVelocity.
         final var bounds = m_model.calculateMinMaxAcceleration(
-                new Model.ChassisState(velocity, state.getCurvature() * velocity),
+                new ChassisState(velocity, state.getCurvature() * velocity),
                 state.getCurvature(),
                 m_absoluteVoltageLimit,
                 m_isHighGear);
