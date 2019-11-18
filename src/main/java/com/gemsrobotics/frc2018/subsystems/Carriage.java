@@ -5,7 +5,7 @@ import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.frc2018.Ports;
 import com.gemsrobotics.lib.drivers.BannerSensor;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.data.CachedValue;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
@@ -27,16 +27,12 @@ public final class Carriage extends Subsystem implements Loggable {
 		return INSTANCE;
 	}
 
-	private static final double
-			VOLTAGE_DETECTION_THRESHOLD = 0.1;
-
-	public final CachedValue<Boolean> isSensorPresent;
-
 	private final BannerSensor m_reflectiveSensor;
 	private final DoubleSolenoid m_mouth;
 	private final TalonSRX m_inner1, m_inner2, m_outer1, m_outer2;
-
 	private final PeriodicIO m_periodicIO;
+
+    public final CachedValue<Boolean> isSensorPresent;
 
 	private MouthState m_mouthState;
 
@@ -115,31 +111,28 @@ public final class Carriage extends Subsystem implements Loggable {
 
 	@Override
 	public synchronized void onCreate(final double timestamp) {
-        setWantedMouthState(MouthState.AUTOMATIC);
-        setOpenLoop(0.0);
-	}
-
-	@Override
-	public synchronized void onEnable(final double timestamp) {
         m_outer2.set(ControlMode.Follower, m_outer1.getDeviceID());
         m_inner2.set(ControlMode.Follower, m_inner1.getDeviceID());
 	}
 
 	@Override
+	public synchronized void onEnable(final double timestamp) {
+        setWantedMouthState(MouthState.AUTOMATIC);
+        setOpenLoop(0.0);
+	}
+
+	@Override
 	public synchronized void onUpdate(final double timestamp) {
+        m_outer1.set(ControlMode.PercentOutput, m_periodicIO.openLoopDemand);
+        m_inner1.set(ControlMode.PercentOutput, m_periodicIO.mouthOpen ? m_periodicIO.openLoopDemand : 0.0);
+
         switch (m_mouthState) {
             case AUTOMATIC:
                 final var elevator = Elevator.getInstance();
                 final var reference = elevator.getReference();
                 final var position = elevator.getPosition();
 
-                if ((reference <= position && reference < Elevator.Position.CARRY.ticks)
-                     || (position < Elevator.Position.CLOSE_THRESHOLD.ticks)
-                ) {
-                    setMouthOpen(true);
-                } else {
-                    setMouthOpen(false);
-                }
+                setMouthOpen((reference <= position && reference < Elevator.Position.CARRY.ticks) || (position < Elevator.Position.CLOSE_THRESHOLD.ticks));
 
                 break;
             case FORCE_CLOSE:
@@ -149,9 +142,6 @@ public final class Carriage extends Subsystem implements Loggable {
                 report(Kind.ERROR, "Unexpected state: \"" + m_mouthState + "\".");
                 break;
         }
-
-        m_outer1.set(ControlMode.PercentOutput, m_periodicIO.openLoopDemand);
-        m_inner1.set(ControlMode.PercentOutput, m_periodicIO.mouthOpen ? m_periodicIO.openLoopDemand : 0.0);
 	}
 
 	@Override

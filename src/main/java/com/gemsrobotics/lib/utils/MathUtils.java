@@ -14,9 +14,6 @@ public class MathUtils {
             Tau = 2 * PI,
             Epsilon = 1e-5;
 
-	private MathUtils() {
-	}
-
     // See: https://floating-point-gui.de/errors/comparison/
     public static boolean epsilonEquals(final double a, final double b, final double epsilon) {
         final double
@@ -95,6 +92,18 @@ public class MathUtils {
         }
 
         return result;
+    }
+
+    public static double sinc(final double x, final double epsilon) {
+	    if (epsilonEquals(x, 0.0, epsilon)) {
+	        return 1.0 - 1.0 / 6.0 * x * x;
+        } else {
+	        return sin(x) / x;
+        }
+    }
+
+    public static double sinc(final double x) {
+        return sinc(x, Epsilon);
     }
 
     // for averaging objects, for instance Translations of vision targets

@@ -47,7 +47,7 @@ public final class BangBangController extends FeedbackController {
     public double update(final double dt, final double input) {
         m_error = m_reference - input;
 
-        if (isOnTarget()) {
+        if (atReference()) {
             return 0.0;
         } else {
             return signum(m_error);
@@ -55,7 +55,7 @@ public final class BangBangController extends FeedbackController {
     }
 
     @Override
-    public boolean isOnTarget(final double tolerance) {
+    public boolean atReference(final double tolerance) {
         return epsilonEquals(m_error, 0, tolerance);
     }
 }

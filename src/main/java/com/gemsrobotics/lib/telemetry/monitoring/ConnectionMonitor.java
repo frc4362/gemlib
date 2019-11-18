@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj.RobotController;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind.*;
+import static com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind.*;
 
 public final class ConnectionMonitor extends Monitor {
     private static ConnectionMonitor INSTANCE;

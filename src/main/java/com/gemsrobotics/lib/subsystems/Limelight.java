@@ -3,7 +3,7 @@ package com.gemsrobotics.lib.subsystems;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -129,7 +129,7 @@ public abstract class Limelight extends Subsystem {
         final var ret = Optional.ofNullable(Double.isNaN(val) ? null : val);
 
         if (ret.isEmpty()) {
-            report(Reporter.Event.Kind.WARNING, "Attempted to access nonexistent property \"" + property + "\".");
+            report(ReportingEndpoint.Event.Kind.WARNING, "Attempted to access nonexistent property \"" + property + "\".");
         }
 
         return ret;

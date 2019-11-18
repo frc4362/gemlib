@@ -44,8 +44,8 @@ public class Model {
 		public ChassisState chassisVelocity = new ChassisState();
 		public ChassisState chassisAcceleration = new ChassisState();
 
-		public WheelState wheelVelocity = new WheelState();
-		public WheelState wheelAcceleration = new WheelState();
+		public WheelState wheelVelocityMetersPerSecond = new WheelState();
+		public WheelState wheelAccelerationMetersPerSecondSquared = new WheelState();
 
 		public WheelState voltage = new WheelState();
 		public WheelState torque = new WheelState();
@@ -145,13 +145,13 @@ public class Model {
 		final var transmission = getTransmission(isHighGear);
 
 		final var ret = new Dynamics();
-		ret.wheelVelocity = inverseKinematics(velocityMetersPerSecond);
+		ret.wheelVelocityMetersPerSecond = inverseKinematics(velocityMetersPerSecond);
 		ret.chassisVelocity = velocityMetersPerSecond;
 		ret.voltage = voltage;
 
 		// not moving, and not giving enough torque to start moving
-		final boolean stuckLeft = epsilonEquals(ret.wheelVelocity.left, 0) && abs(voltage.left) < transmission.stictionVoltage;
-		final boolean stuckRight = epsilonEquals(ret.wheelVelocity.right, 0) && abs(voltage.right) < transmission.stictionVoltage;
+		final boolean stuckLeft = epsilonEquals(ret.wheelVelocityMetersPerSecond.left, 0) && abs(voltage.left) < transmission.stictionVoltage;
+		final boolean stuckRight = epsilonEquals(ret.wheelVelocityMetersPerSecond.right, 0) && abs(voltage.right) < transmission.stictionVoltage;
 
 		if (stuckLeft && stuckRight) {
 			return ret;
@@ -164,8 +164,8 @@ public class Model {
 		}
 
 		ret.torque = new WheelState(
-				transmission.torqueForVoltage(ret.wheelVelocity.left, voltage.left),
-				transmission.torqueForVoltage(ret.wheelVelocity.right, voltage.right)
+				transmission.torqueForVoltage(ret.wheelVelocityMetersPerSecond.left, voltage.left),
+				transmission.torqueForVoltage(ret.wheelVelocityMetersPerSecond.right, voltage.right)
 		);
 
 		ret.chassisAcceleration.linearMeters = (ret.torque.left + ret.torque.right) / (wheelRadiusMeters * massKg);
@@ -180,8 +180,8 @@ public class Model {
 			ret.dcurvatureRadiansPerMeterSquared = 0.0;
 		}
 
-		ret.wheelAcceleration.left = ret.chassisAcceleration.linearMeters - ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
-		ret.wheelAcceleration.right = ret.chassisAcceleration.linearMeters + ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
+		ret.wheelAccelerationMetersPerSecondSquared.left = ret.chassisAcceleration.linearMeters - ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
+		ret.wheelAccelerationMetersPerSecondSquared.right = ret.chassisAcceleration.linearMeters + ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
 
 		return ret;
 	}
@@ -209,8 +209,8 @@ public class Model {
 			ret.dcurvatureRadiansPerMeterSquared = 0.0;
 		}
 
-		ret.wheelVelocity = inverseKinematics(ret.chassisVelocity);
-		ret.wheelAcceleration = inverseKinematics(ret.chassisVelocity);
+		ret.wheelVelocityMetersPerSecond = inverseKinematics(ret.chassisVelocity);
+		ret.wheelAccelerationMetersPerSecondSquared = inverseKinematics(ret.chassisVelocity);
 
 		ret.torque = new WheelState(
 				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
@@ -222,8 +222,8 @@ public class Model {
 		);
 
         final var transmission = getTransmission(isHighGear);
-		ret.voltage.left = transmission.voltageFromTorque(ret.wheelVelocity.left, ret.torque.left);
-		ret.voltage.right = transmission.voltageFromTorque(ret.wheelVelocity.right, ret.torque.right);
+		ret.voltage.left = transmission.voltageFromTorque(ret.wheelVelocityMetersPerSecond.left, ret.torque.left);
+		ret.voltage.right = transmission.voltageFromTorque(ret.wheelVelocityMetersPerSecond.right, ret.torque.right);
 		return ret;
 	}
 

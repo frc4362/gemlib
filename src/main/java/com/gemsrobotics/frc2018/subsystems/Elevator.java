@@ -6,7 +6,7 @@ import com.gemsrobotics.frc2018.Ports;
 import com.gemsrobotics.lib.drivers.motorcontrol.GemTalonSRX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
 import com.gemsrobotics.lib.data.CachedValue;
 import com.gemsrobotics.lib.structure.Subsystem;
@@ -23,7 +23,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.coerce;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class Elevator extends Subsystem implements Loggable {
-    public static final int OVERRUN_THRESHOLD = 100;
+    private static final int OVERRUN_THRESHOLD = 100;
 
     private static Elevator INSTANCE;
 
@@ -205,7 +205,7 @@ public class Elevator extends Subsystem implements Loggable {
                 m_master.setPositionRotations(m_periodicIO.closedLoopReference, GRAVITY_FF);
                 break;
             default:
-                report(Reporter.Event.Kind.ERROR, "Unexpected Elevator Control Mode " + m_controlMode.toString());
+                report(ReportingEndpoint.Event.Kind.ERROR, "Unexpected Elevator Control Mode " + m_controlMode.toString());
                 break;
         }
 	}
@@ -242,12 +242,12 @@ public class Elevator extends Subsystem implements Loggable {
 		var ret = FaultedResponse.NONE;
 
 		if (!isEncoderPresent.get()) {
-			report(Reporter.Event.Kind.HARDWARE_FAULT, "Encoder missing");
+			report(ReportingEndpoint.Event.Kind.HARDWARE_FAULT, "Encoder missing");
 			ret = FaultedResponse.DISABLE_SUBSYSTEM;
 		}
 
 		if (isMotorInUnsafePosition(m_master) || isMotorInUnsafePosition(m_slave)) {
-			report(Reporter.Event.Kind.HARDWARE_FAULT, "Motor in unsafe position",
+			report(ReportingEndpoint.Event.Kind.HARDWARE_FAULT, "Motor in unsafe position",
 					Map.of("positionMaster", FastDoubleToString.format(m_master.getSelectedSensorPosition(0)),
 						   "positionSlave", FastDoubleToString.format(m_slave.getSelectedSensorPosition(0))));
 			ret = FaultedResponse.DISABLE_SUBSYSTEM;

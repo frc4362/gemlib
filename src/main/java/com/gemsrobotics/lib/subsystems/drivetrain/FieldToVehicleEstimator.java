@@ -11,7 +11,7 @@ import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Map;
 
-import static com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind.INFO;
+import static com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind.INFO;
 
 /**
  * FieldToVehicleEstimator keeps track of the poses of various coordinate frames throughout the match. A coordinate frame is simply a

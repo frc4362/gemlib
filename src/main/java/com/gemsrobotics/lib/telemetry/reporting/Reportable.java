@@ -7,16 +7,16 @@ public interface Reportable {
 	    return getClass().getSimpleName();
     }
 
-	default void report(final String str) {
-		report(Reporter.Event.Kind.INFO, str);
+	default void report(final String message) {
+		report(ReportingEndpoint.Event.Kind.INFO, message);
 	}
 
-	default void report(final Reporter.Event.Kind kind, final String str) {
-		report(kind, str, null);
+	default void report(final ReportingEndpoint.Event.Kind kind, final String message) {
+		report(kind, message, null);
 	}
 
-	default void report(final Reporter.Event.Kind kind, final String str, final Object details) {
-		Pod.log(kind, this, str, details);
+	default void report(final ReportingEndpoint.Event.Kind kind, final String message, final Object details) {
+		Pod.log(kind, this, message, details);
 	}
 
 	static Reportable makeDummy(final String name) {
@@ -27,4 +27,8 @@ public interface Reportable {
             }
         };
 	}
+
+	static Reportable makeDummy(final Class<?> type) {
+	    return makeDummy(type.getSimpleName());
+    }
 }

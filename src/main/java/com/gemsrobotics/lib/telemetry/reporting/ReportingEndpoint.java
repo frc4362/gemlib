@@ -5,7 +5,7 @@ import com.gemsrobotics.lib.telemetry.Pod;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public abstract class Reporter {
+public abstract class ReportingEndpoint {
     public static final int REPORT_RATE_MS = 100;
 
     public static class Event {
@@ -38,7 +38,7 @@ public abstract class Reporter {
 
     protected boolean m_halted;
 
-    protected Reporter() {
+    protected ReportingEndpoint() {
         m_eventsToReport = new LinkedList<>();
         m_halted = false;
     }

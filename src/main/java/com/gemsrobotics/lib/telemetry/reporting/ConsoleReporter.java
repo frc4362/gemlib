@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind.*;
+import static com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind.*;
 
-public final class ConsoleReporter extends Reporter {
+public final class ConsoleReporter extends ReportingEndpoint {
     private static ConsoleReporter INSTANCE;
 
     public static ConsoleReporter getInstance() {

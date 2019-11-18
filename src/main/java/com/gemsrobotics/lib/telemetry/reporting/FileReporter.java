@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public final class FileReporter extends Reporter {
+public final class FileReporter extends ReportingEndpoint {
     private static final String OUTPUT_DIR = "/home/lvuser/eventlogs/";
 
     private static FileReporter INSTANCE;
@@ -36,7 +36,7 @@ public final class FileReporter extends Reporter {
 
     private final Gson m_eventEntrySerializer;
     private final Session m_eventSession;
-    private FileChannel m_channel;
+    private final Optional<FileChannel> m_channel;
 
     private FileReporter() {
         final var runtime = Pod.getLaunchTime();
@@ -45,13 +45,16 @@ public final class FileReporter extends Reporter {
         m_eventSession = new Session(runtime);
 
         final var outputPath = Paths.get(OUTPUT_DIR + runtime + ".json");
+        Optional<FileChannel> channel;
 
         try {
-            m_channel = FileChannel.open(outputPath, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            channel = Optional.of(FileChannel.open(outputPath, StandardOpenOption.CREATE, StandardOpenOption.APPEND));
         } catch (final IOException ioException) {
             ioException.printStackTrace();
-            m_channel = null;
+            channel = Optional.empty();
         }
+
+        m_channel = channel;
     }
 
     @Override
@@ -61,7 +64,7 @@ public final class FileReporter extends Reporter {
 
     @Override
     protected void doWrite(final Event[] events) {
-        if (Objects.isNull(m_channel)) {
+        if (m_channel.isEmpty()) {
             halt();
             return;
         }
@@ -72,7 +75,7 @@ public final class FileReporter extends Reporter {
         final var bytes = ByteBuffer.wrap(serializedEvents.getBytes());
 
         try {
-            m_channel.truncate(0).write(bytes);
+            m_channel.get().truncate(0).write(bytes);
         } catch (final Throwable exception) {
             exception.printStackTrace();
             halt();

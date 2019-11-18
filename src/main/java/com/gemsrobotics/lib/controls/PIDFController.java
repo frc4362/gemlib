@@ -7,22 +7,22 @@ import static java.lang.Math.abs;
 
 public final class PIDFController extends FeedbackController {
     public static class Gains {
-        public double kP, kI, kD, kFF, allowableError;
+        public double kP, kI, kD, kFF, tolerance;
 
         public Gains(final double p, final double i, final double d, final double ff) {
             kP = p;
             kI = i;
             kD = d;
             kFF = ff;
-            allowableError = 0.0;
+            tolerance = 0.0;
         }
 
-        public Gains(final double p, final double i, final double d, final double ff, final int error) {
+        public Gains(final double p, final double i, final double d, final double ff, final double tolerance) {
             kP = p;
             kI = i;
             kD = d;
             kFF = ff;
-            allowableError = error;
+            this.tolerance = tolerance;
         }
     }
 
@@ -36,7 +36,7 @@ public final class PIDFController extends FeedbackController {
     private double m_lastError;
     private double m_integralAccum;
     private double m_integralRange;
-    private double m_allowedError;
+    private double m_tolerance;
 
     public PIDFController(final Gains constants) {
         m_gains = constants;
@@ -48,7 +48,7 @@ public final class PIDFController extends FeedbackController {
         m_integralAccum = 0.0;
         m_integralRange = Double.POSITIVE_INFINITY;
 
-        m_allowedError = constants.allowableError;
+        m_tolerance = constants.tolerance;
     }
 
     public PIDFController(final double p, final double i, final double d, final double f) {
@@ -96,7 +96,7 @@ public final class PIDFController extends FeedbackController {
         m_lastError = error;
 
         // only apply deadband to proportional response, maintains derivative
-        final var proportional = abs(error) < m_allowedError ? 0.0 : error;
+        final var proportional = abs(error) < m_tolerance ? 0.0 : error;
 
         return m_outputRange.coerce(
                 m_gains.kP * proportional
@@ -148,17 +148,17 @@ public final class PIDFController extends FeedbackController {
     }
 
     @Override
-    public void setTolerance(final double deadband) {
-        m_allowedError = abs(deadband);
+    public void setTolerance(final double tolerance) {
+        m_tolerance = abs(tolerance);
     }
 
     @Override
     public double getTolerance() {
-        return m_allowedError;
+        return m_tolerance;
     }
 
     @Override
-    public boolean isOnTarget(final double tolerance) {
+    public boolean atReference(final double tolerance) {
         return !Double.isNaN(m_lastError) && abs(m_lastError) < tolerance;
     }
 }

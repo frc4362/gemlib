@@ -6,7 +6,7 @@ import com.gemsrobotics.lib.drivers.imu.NavX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
 import com.gemsrobotics.lib.drivers.transmission.Transmission;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -247,7 +247,7 @@ public abstract class DifferentialDrive extends Subsystem {
 		final var oldVelocity = new WheelState(m_periodicIO.velocityMeters);
 		final var newVelocity = getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		m_periodicIO.velocityMeters = newVelocity;
-		m_periodicIO.accelerationMeters = newVelocity.difference(oldVelocity).map(val -> val / dt());
+		m_periodicIO.accelerationMeters = newVelocity.difference(oldVelocity).map(dv -> dv / dt());
 
 		// IMU reads and adjustments
 		m_periodicIO.heading = m_imu.getYaw().rotateBy(m_headingOffset);

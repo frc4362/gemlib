@@ -3,7 +3,7 @@ package com.gemsrobotics.lib.commands;
 import com.gemsrobotics.lib.physics.DriveCharacterizer;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
 import edu.wpi.first.wpilibj.command.CommandGroup;
 

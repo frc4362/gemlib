@@ -19,7 +19,7 @@ import static java.lang.Math.*;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public final class Gemstick extends Joystick {
 	/**
-	 * Effectively a {@link Translation} with a timestamp and a rotation
+	 * Effectively a {@link Translation} with a rotation
 	 */
 	public static class Frame extends Translation {
 		private final double z;
@@ -47,15 +47,13 @@ public final class Gemstick extends Joystick {
 	 */
 	@SuppressWarnings("unused")
 	private static class Deadbands {
-		private static final double TWO_THIRDS = 2.0 / 3.0;
-
 		/**
 		 * @return The default function pipeline
 		 */
 		public static Function<Frame, Frame> defaultPipeline() {
 			return Deadbands.makeInverts(false, true, false)
-                    .andThen(Deadbands.makeRectangleDeadband(0.12, 0.12))
-                    .andThen(Deadbands.makeZDeadband(0.08));
+                    .andThen(Deadbands.makeRectangleDeadband(0.08, 0.08))
+                    .andThen(Deadbands.makeZDeadband(0.06));
 		}
 
 		/**
@@ -137,10 +135,7 @@ public final class Gemstick extends Joystick {
 		 */
 		public static Function<Frame, Frame> makeAstroidDeadband(final double limit) {
 			return (stick) -> {
-				final double value = 
-						Math.pow(Math.abs(stick.x()), TWO_THIRDS)
-						+ Math.pow(Math.abs(stick.y()), TWO_THIRDS);
-
+				final double value = pow(abs(stick.x()), 2.0 / 3.0) + pow(abs(stick.y()), 2.0 / 3.0);
 				final boolean valid = limit < value;
 
 				return new Frame(

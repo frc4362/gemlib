@@ -9,7 +9,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.data.CachedBoolean;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.utils.TalonUtils;
 
 import java.util.Objects;
@@ -198,7 +198,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 	    success &= runWithRetries(() -> config_kI(m_selectedProfileID, gains.kI, TIMEOUT_MS));
 	    success &= runWithRetries(() -> config_kD(m_selectedProfileID, gains.kD, TIMEOUT_MS));
 	    success &= runWithRetries(() -> config_kF(m_selectedProfileID, gains.kFF, TIMEOUT_MS));
-	    success &= runWithRetries(() -> configAllowableClosedloopError(m_selectedProfileID, (int) gains.allowableError, TIMEOUT_MS));
+	    success &= runWithRetries(() -> configAllowableClosedloopError(m_selectedProfileID, (int) gains.tolerance, TIMEOUT_MS));
 
 	    return success;
     }

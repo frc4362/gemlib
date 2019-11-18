@@ -1,7 +1,7 @@
 package com.gemsrobotics.lib.telemetry.monitoring;
 
 import com.gemsrobotics.lib.data.DigitalSignalTrigger;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
 import edu.wpi.first.wpilibj.RobotController;
 

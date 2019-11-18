@@ -15,8 +15,7 @@ import io.github.oblarg.oblog.annotations.Log;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
-import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
+import static com.gemsrobotics.lib.utils.MathUtils.*;
 import static java.lang.Double.isInfinite;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
@@ -163,8 +162,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 			switch (m_followerType) {
                 case FEEDFORWARD:
-                    m_output.velocity = setpointDynamics.wheelVelocity;
-                    m_output.acceleration = setpointDynamics.wheelAcceleration;
+                    m_output.velocity = setpointDynamics.wheelVelocityMetersPerSecond;
+                    m_output.acceleration = setpointDynamics.wheelAccelerationMetersPerSecondSquared;
                     m_output.feedforwardVoltage = setpointDynamics.voltage;
                     break;
 				case RAMSETE:
@@ -179,41 +178,40 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	}
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
-	protected Output updateRamsete(final double dt, final Model.Dynamics dynmx, final RigidTransform currentPose, final boolean isHighGear) {
-		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * dynmx.chassisVelocity.linearMeters * dynmx.chassisVelocity.linearMeters + dynmx.chassisVelocity.angularRadians * dynmx.chassisVelocity.angularRadians);
+	protected Output updateRamsete(final double dt, final Model.Dynamics ref, final RigidTransform currentPose, final boolean isHighGear) {
+		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linearMeters * ref.chassisVelocity.linearMeters + ref.chassisVelocity.angularRadians * ref.chassisVelocity.angularRadians);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
-		final var sinXOverX = epsilonEquals(angularErrorRadians, 0.0, 0.01) ? 1.0 : m_error.getRotation().sin() / angularErrorRadians;
 
 		final var adjustedVelocity = new ChassisState(
-				dynmx.chassisVelocity.linearMeters * m_error.getRotation().cos()
+				ref.chassisVelocity.linearMeters * m_error.getRotation().cos()
                         + k * m_error.getTranslation().x(),
-				dynmx.chassisVelocity.angularRadians
+				ref.chassisVelocity.angularRadians
 					    + k * angularErrorRadians
-					    + dynmx.chassisVelocity.linearMeters * m_config.beta * sinXOverX * m_error.getTranslation().y());
+					    + ref.chassisVelocity.linearMeters * m_config.beta * sinc(m_error.getRotation().getRadians(), 0.01) * m_error.getTranslation().y());
 
-		dynmx.chassisVelocity = adjustedVelocity;
+		ref.chassisVelocity = adjustedVelocity;
 		// this is where everything goes from meters to wheel radians/s!!
-		dynmx.wheelVelocity = m_model.inverseKinematics(adjustedVelocity);
+		ref.wheelVelocityMetersPerSecond = m_model.inverseKinematics(adjustedVelocity);
 
 		if (dt == 0.0) {
-			dynmx.chassisAcceleration.linearMeters = 0.0;
-			dynmx.chassisAcceleration.angularRadians = 0.0;
+			ref.chassisAcceleration.linearMeters = 0.0;
+			ref.chassisAcceleration.angularRadians = 0.0;
 		} else {
-			dynmx.chassisAcceleration.linearMeters = (dynmx.chassisVelocity.linearMeters - m_previousVelocity.linearMeters) / dt;
-			dynmx.chassisAcceleration.angularRadians = (dynmx.chassisVelocity.angularRadians - m_previousVelocity.angularRadians) / dt;
+			ref.chassisAcceleration.linearMeters = (ref.chassisVelocity.linearMeters - m_previousVelocity.linearMeters) / dt;
+			ref.chassisAcceleration.angularRadians = (ref.chassisVelocity.angularRadians - m_previousVelocity.angularRadians) / dt;
 		}
 
 		// store previous velocity, allows the user to only have to worry about passing the new state
         // this is superior to passing velocity and acceleration in, like 1678 does, since it allows the user to worry about fewer calculations up front
         // and works fine with a variant dt. However, where it lacks is in application-
         // our Ramsete controller is highly coupled. This should be fine. - Ethan, 9/24/19
-		m_previousVelocity = dynmx.chassisVelocity;
+		m_previousVelocity = ref.chassisVelocity;
 
 		final var output = new Output();
-		output.velocity = dynmx.wheelVelocity;
-		output.acceleration = dynmx.wheelAcceleration;
-		output.feedforwardVoltage = m_model.solveInverseDynamics(dynmx.chassisVelocity, dynmx.chassisAcceleration, isHighGear).voltage;
+		output.velocity = ref.wheelVelocityMetersPerSecond;
+		output.acceleration = ref.wheelAccelerationMetersPerSecondSquared;
+		output.feedforwardVoltage = m_model.solveInverseDynamics(ref.chassisVelocity, ref.chassisAcceleration, isHighGear).voltage;
 		return output;
 	}
 

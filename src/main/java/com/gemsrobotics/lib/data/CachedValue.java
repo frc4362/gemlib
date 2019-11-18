@@ -1,6 +1,6 @@
 package com.gemsrobotics.lib.data;
 
-import com.gemsrobotics.lib.telemetry.reporting.Reporter;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 
@@ -53,7 +53,7 @@ public class CachedValue<T> implements Reportable {
 				m_timer.reset();
 			}
 		} catch (final Exception ex) {
-			report(Reporter.Event.Kind.ERROR, "Cached value unable to be retrieved: " + ex.getMessage());
+			report(ReportingEndpoint.Event.Kind.ERROR, "Cached value unable to be retrieved: " + ex.getMessage());
 			return m_oldValue;
 		}
 

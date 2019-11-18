@@ -2,7 +2,7 @@ package com.gemsrobotics.lib.structure;
 
 import com.gemsrobotics.lib.telemetry.Pod;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotState;
@@ -159,11 +159,11 @@ public final class SubsystemManager implements Reportable, Loggable {
 
 	@Log.VoltageView(
 	        name="Subsystem Update Rate (hz)",
-	        min=0.0,
-            max=100.0,
+	        min=0,
+            max=110,
             orientation="VERTICAL",
             numTicks=10)
-	public double hz() {
-        return floor(1.0 / m_dt);
+	public int hz() {
+        return (int) floor(1.0 / m_dt);
     }
 }

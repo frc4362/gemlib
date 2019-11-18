@@ -2,11 +2,9 @@ package com.gemsrobotics.lib.drivers.motorcontrol;
 
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.Reporter.Event.Kind;
-import com.google.gson.annotations.SerializedName;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.revrobotics.*;
 
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 public final class GemSparkMax extends CANSparkMax implements MotorController, Reportable {

@@ -10,8 +10,8 @@ public abstract class FeedbackController {
     public abstract void setTolerance(double tolerance);
     public abstract double getTolerance();
 
-    public abstract boolean isOnTarget(double tolerance);
-    public final boolean isOnTarget() {
-        return isOnTarget(getTolerance());
+    public abstract boolean atReference(double tolerance);
+    public final boolean atReference() {
+        return atReference(getTolerance());
     }
 }

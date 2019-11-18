@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public final class OSCReporter extends Reporter {
+public final class OSCReporter extends ReportingEndpoint {
 	private static OSCReporter INSTANCE;
 
 	public static OSCReporter getInstance() {
