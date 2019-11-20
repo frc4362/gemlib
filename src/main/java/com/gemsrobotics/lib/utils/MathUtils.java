@@ -50,6 +50,10 @@ public class MathUtils {
         return min(max(v, bot), top);
     }
 
+    public static boolean inRange(final double min, double v, final double max) {
+        return (v <= max) && (v >= min);
+    }
+
 	public static double limit(final double v, final double magnitude) {
 		return coerce(-magnitude, v, magnitude);
 	}
@@ -134,7 +138,7 @@ public class MathUtils {
         }
 
         public boolean isValid(final double val) {
-            return (val <= max) && (val >= min);
+            return inRange(min, val, max);
         }
 
         @Override

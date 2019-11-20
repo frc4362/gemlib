@@ -6,11 +6,11 @@ public class Units {
     private Units() {}
 
     public static double degrees2Rads(final double degrees) {
-        return degrees * 0.0174533;
+        return Math.toRadians(degrees);
     }
 
     public static double rads2Degrees(final double radians) {
-        return radians * 57.2958;
+        return Math.toDegrees(radians);
     }
 
 	public static double rpm2RadsPerSecond(final double rpm) {
