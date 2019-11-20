@@ -5,9 +5,8 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package com.gemsrobotics.frc2019scuff;
+package com.gemsrobotics.chairbot;
 
-import com.gemsrobotics.frc2018.Robot;
 import edu.wpi.first.wpilibj.RobotBase;
 
 public final class Main {

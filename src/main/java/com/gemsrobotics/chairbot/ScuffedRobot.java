@@ -1,4 +1,4 @@
-package com.gemsrobotics.frc2019scuff;
+package com.gemsrobotics.chairbot;
 
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
