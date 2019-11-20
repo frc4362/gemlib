@@ -92,6 +92,6 @@ public final class MotorTransmission {
 			return 0.0;
 		}
 
-		return (torque / torquePerVolt) + (velocityRadiansPerSecond / speedRadiansPerSecondPerVolt) + effectiveStiction;
+		return effectiveStiction + (torque / torquePerVolt) + (velocityRadiansPerSecond / speedRadiansPerSecondPerVolt);
 	}
 }
