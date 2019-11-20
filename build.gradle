@@ -67,6 +67,7 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.hamcrest:hamcrest-all:1.3'
 
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
     implementation 'gov.nist.math:jama:1.0.3'
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.github.Oblarg:Oblog:2.12.7'

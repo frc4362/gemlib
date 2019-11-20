@@ -19,8 +19,6 @@ import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.command.Subsystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import jaci.pathfinder.PathfinderFRC;
-import jaci.pathfinder.Trajectory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -282,19 +280,7 @@ public final class DifferentialDrive extends Subsystem implements Sendable {
 				maxAcceleration, maxJerk, quickstopThreshold, turnSensitivity,
 				alpha, kP_Rotational, kFF_Rotational;
 
-		private Trajectory.Config m_config;
-
 		public PIDF pidDrive;
-
-		private PIDFVA pidTrajectory;
-
-		public PIDFVA getPIDFVA() {
-			if (pidTrajectory.kV == -1.0) {
-				pidTrajectory.kV = 1 / maxVelocity;
-			}
-
-			return pidTrajectory;
-		}
 
 		public double wheelCircumference() {
 			return Math.PI * wheelDiameter;
@@ -306,21 +292,6 @@ public final class DifferentialDrive extends Subsystem implements Sendable {
 
 		public double rotationsToInches(final DualTransmission transmission) {
 			return wheelCircumference() / transmission.get().ratio;
-		}
-
-		public Trajectory.Config getTrajectoryConfig() {
-			if (Objects.isNull(m_config)) {
-				m_config = new Trajectory.Config(
-						Trajectory.FitMethod.HERMITE_CUBIC,
-						Trajectory.Config.SAMPLES_FAST,
-						dt,
-						100,
-						PathfinderFRC.DEFAULT_ACC * METER_TO_INCHES,
-						PathfinderFRC.DEFAULT_JERK * METER_TO_INCHES
-				);
-			}
-
-			return m_config;
 		}
 	}
 

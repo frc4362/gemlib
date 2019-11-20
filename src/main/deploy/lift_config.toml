@@ -1,0 +1,14 @@
+portMaster = 5
+portSlave = 9
+rotationsTop = 153.0
+rotationsBottom = 0.0
+
+cameraBlockedBottom = 22.0
+cameraBlockedTop = 52.5
+
+[pidVars]
+kP = 1.0
+kI = 0.0
+kD = 0.0
+kF = 0.0
+kIZ = 0.0

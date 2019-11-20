@@ -1,0 +1,12 @@
+port = 39
+widthInches = 8.5
+leftDist = 3700
+rightDist = -3700
+nominalVolts = 0.28334
+adjustmentThresholdRadians = 0.29
+
+[pidVars]
+kP = 0.33
+kI = 0.0
+kD = 0.0
+kF = 0.0

@@ -1,0 +1,33 @@
+[ports]
+front_left = 1
+back_left = 2
+front_right = 3
+back_right = 4
+
+[specifications]
+width = 27.75
+length = 32.0
+wheelDiameter = 6.25
+maxVelocity = 0.0
+maxAcceleration = 0.0
+maxJerk = 0.0
+quickstopThreshold = 0.2
+turnSensitivity = 1.0
+alpha = 0.1
+kP_Rotational = 0.005
+kFF_Rotational = 0.1
+
+[specifications.pidDrive]
+kP = 1.0
+kI = 0.0
+kD = 0.0
+kF = 0.0
+kIZ = 0.0
+
+[specifications.pidTrajectory]
+kP = 0.0
+kI = 0.0
+kD = 0.0
+kF = 0.0
+kV = -1.0
+kA = 0.0
