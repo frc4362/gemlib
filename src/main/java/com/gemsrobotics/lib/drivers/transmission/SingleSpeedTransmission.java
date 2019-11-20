@@ -2,7 +2,7 @@ package com.gemsrobotics.lib.drivers.transmission;
 
 public class SingleSpeedTransmission implements Transmission {
     @Override
-    public void setHighGear(boolean useHighGear) {
+    public void setHighGear(final boolean useHighGear) {
         // nope
     }
 
