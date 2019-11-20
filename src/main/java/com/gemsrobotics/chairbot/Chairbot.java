@@ -5,7 +5,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import edu.wpi.first.wpilibj.TimedRobot;
 
-public class ScuffedRobot extends TimedRobot {
+public class Chairbot extends TimedRobot {
     private Gemstick m_leftStick, m_rightStick;
     private MotorController m_motorLeft, m_motorRight;
 

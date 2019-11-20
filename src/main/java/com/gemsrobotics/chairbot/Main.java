@@ -15,6 +15,6 @@ public final class Main {
     }
 
     public static void main(String... args){
-        RobotBase.startRobot(ScuffedRobot::new);
+        RobotBase.startRobot(Chairbot::new);
     }
 }
