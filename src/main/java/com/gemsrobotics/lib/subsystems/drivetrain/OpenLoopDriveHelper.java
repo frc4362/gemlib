@@ -2,6 +2,8 @@ package com.gemsrobotics.lib.subsystems.drivetrain;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.limit;
+
+import com.gemsrobotics.lib.utils.MathUtils;
 import com.google.gson.annotations.SerializedName;
 
 import static java.lang.Math.*;
@@ -86,6 +88,7 @@ public class OpenLoopDriveHelper {
             // If we are moving away from 0.0, aka, trying to turn more.
 			if (wheel * negInertia > 0) {
 				negativeInertiaScalar = m_cfg.negativeInertiaTurnScalarLow;
+            // If we are moving towards 0.0, aka, trying to stop turning.
 			} else if (abs(wheel) > m_cfg.negativeInertiaThresholdLow) {
                 negativeInertiaScalar = m_cfg.negativeInertiaFarScalarLow;
             } else {
@@ -93,10 +96,7 @@ public class OpenLoopDriveHelper {
             }
 		}
 
-//        System.out.println("neg inertia scalar: " + negativeInertiaScalar);
-
         final double negativeInteriaPower = negInertia * negativeInertiaScalar;
-//        System.out.println("neg inertia power: " + negativeInteriaPower);
         m_negInertiaAccumulator += negativeInteriaPower;
 
 		wheel += negativeInteriaPower;
@@ -138,19 +138,19 @@ public class OpenLoopDriveHelper {
         final WheelState output = new WheelState(powers.linearMeters - powers.angularRadians, powers.linearMeters + powers.angularRadians);
 
         if (output.left > 1.0) {
-			output.right -= overPower * (output.left - 1.0);
-			output.left = 1.0;
-		} else if (output.right > 1.0) {
-			output.left -= overPower * (output.right - 1.0);
-			output.right = 1.0;
-		} else if (output.left < -1.0) {
-			output.right += overPower * (-output.left - 1.0);
-			output.left = -1.0;
-		} else if (output.right < -1.0) {
-			output.left += overPower * (-output.right - 1.0);
-			output.right = -1.0;
-		}
+            output.right -= overPower * (output.left - 1.0);
+            output.left = 1.0;
+        } else if (output.right > 1.0) {
+            output.left -= overPower * (output.right - 1.0);
+            output.right = 1.0;
+        } else if (output.left < -1.0) {
+            output.right += overPower * (-output.left - 1.0);
+            output.left = -1.0;
+        } else if (output.right < -1.0) {
+            output.left += overPower * (-output.right - 1.0);
+            output.right = -1.0;
+        }
 
-		return output;
+		return output.map(p -> limit(p, 1.0));
 	}
 }
