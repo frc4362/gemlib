@@ -18,11 +18,7 @@ public abstract class DigitalSignalTrigger {
         };
     }
 
-    private boolean m_lastValue;
-
-    {
-        m_lastValue = get();
-    }
+    private boolean m_lastValue = get();
 
     /**
      * Returns whether or not the trigger is active.

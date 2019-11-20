@@ -6,6 +6,6 @@ public final class MovingAverage extends LimitedQueue<Double> {
     }
 
     public double getAverage() {
-        return stream().mapToDouble(Double::valueOf).sum();
+        return stream().mapToDouble(Double::valueOf).average().orElse(0.0);
     }
 }
