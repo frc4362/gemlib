@@ -84,9 +84,9 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	}
 
 	protected TrajectoryIterator<TimedState<RigidTransformWithCurvature>> m_trajectory;
-	@Log.ToString(name="Error (pose)")
+	@Log.ToString(name="Error (Pose)")
 	protected RigidTransform m_error;
-	@Log.ToString(name="Setpoint (timed pose w/ curvature)")
+	@Log.ToString(name="Setpoint (Timed Pose w/ Curvature)")
 	protected TimedState<RigidTransformWithCurvature> m_setpoint;
     @Log(name="Reversed? (Boolean)")
 	protected boolean m_isReversed;

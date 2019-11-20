@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.imu.NavX;
@@ -66,6 +67,7 @@ public abstract class DifferentialDrive extends Subsystem {
 	protected Rotation m_headingOffset;
 
     protected abstract Config getConfig();
+    // Invert motors BEFORE passing them into the method...
     protected abstract MotorControllerGroup getMotorControllersLeft();
     protected abstract MotorControllerGroup getMotorControllersRight();
     protected abstract Transmission getTransmission();
@@ -79,10 +81,10 @@ public abstract class DifferentialDrive extends Subsystem {
         m_masterMotorLeft = m_motorsLeft.getMaster();
         m_masterMotorRight = m_motorsRight.getMaster();
 
-        configureMotorController(m_masterMotorLeft, true);
+        configureMotorController(m_masterMotorLeft);
         m_motorsLeft.followMaster(false);
 
-        configureMotorController(m_masterMotorRight, false);
+        configureMotorController(m_masterMotorRight);
         m_motorsRight.followMaster(false);
 
         m_imu = new NavX();
@@ -99,8 +101,7 @@ public abstract class DifferentialDrive extends Subsystem {
 		m_forceFinishTrajectory = false;
     }
 
-	private void configureMotorController(final MotorController controller, final boolean isLeft) {
-		controller.setInvertedOutput(!isLeft);
+	private void configureMotorController(final MotorController controller) {
 		controller.setRotationsPerMeter(m_config.rotationsToMeters);
 		controller.setOpenLoopVoltageRampRate(m_config.secondsToMaxVoltage);
 
@@ -149,10 +150,10 @@ public abstract class DifferentialDrive extends Subsystem {
 		public TimedState<RigidTransformWithCurvature> trajectoryReference = null;
 	}
 
-	public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
-	    // please note the use of the NON short-circuiting operator (&&)
-	    return m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode)) & m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
-	}
+    public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
+        // please note the use of the NON short-circuiting operator (&&)
+        return m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode)) & m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+    }
 
 	public synchronized void setHighGear(final boolean wantsHighGear) {
 		if (wantsHighGear != m_isHighGear) {
@@ -204,14 +205,17 @@ public abstract class DifferentialDrive extends Subsystem {
         }
     }
 
-	public synchronized void setOpenLoop(final double throttle, final double wheel, final boolean isQuickTurn) {
+	public synchronized void setDriverControl(final double throttle, final double wheel, final boolean isQuickTurn) {
 		configureControlMode(ControlMode.OPEN_LOOP);
 		m_periodicIO.demand = m_openLoopHelper.drive(throttle, wheel, isQuickTurn, m_periodicIO.isHighGear);
 	}
 
-	public synchronized void setChassisVelocities(final ChassisState chassisState) {
+	public synchronized void setOpenLoop(final ChassisState chassisState) {
 	    configureControlMode(ControlMode.OPEN_LOOP);
-	    m_periodicIO.demand = m_model.inverseKinematics(chassisState);
+	    m_periodicIO.demand = new WheelState(
+	            chassisState.linearMeters - chassisState.angularRadians,
+                chassisState.linearMeters + chassisState.angularRadians
+        );
     }
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {

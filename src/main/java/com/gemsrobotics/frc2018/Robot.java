@@ -60,11 +60,13 @@ public final class Robot extends TimedRobot implements Loggable {
     @Override
     public void teleopInit() {
         m_subsystemManager.enable();
-        Scheduler.getInstance().add(new CurvatureDriveCommand(
-                Chassis.getInstance(),
-                m_stickRight::y,
-                m_stickRight::x,
-                m_stickRight::getTrigger));
+        Scheduler.getInstance().add(
+                new CurvatureDriveCommand(
+                    Chassis.getInstance(),
+                    m_stickRight::y,
+                    m_stickRight::x,
+                    m_stickRight::getTrigger)
+        );
     }
 
     @Override

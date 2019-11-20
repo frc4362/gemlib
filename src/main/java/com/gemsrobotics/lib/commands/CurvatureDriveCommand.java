@@ -25,7 +25,7 @@ public final class CurvatureDriveCommand extends Command {
 
     @Override
     public void execute() {
-        m_chassis.setOpenLoop(m_throttle.get(), m_wheel.get(), m_isQuickturn.get());
+        m_chassis.setDriverControl(m_throttle.get(), m_wheel.get(), m_isQuickturn.get());
     }
 
     @Override

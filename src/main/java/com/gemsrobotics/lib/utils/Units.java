@@ -17,6 +17,10 @@ public class Units {
 		return rpm * Tau / 60.0;
 	}
 
+	public static double metersPerSecond2MilesPerHours(final double mps) {
+        return mps * 2.23694;
+    }
+
 	public static double radsPerSec2Rpm(final double radiansPerSecond) {
 		return radiansPerSecond * 60.0 / Tau;
 	}
@@ -30,7 +34,7 @@ public class Units {
 	}
 
 	public static double feet2Meters(final double feet) {
-        return inches2Meters(12 * feet);
+        return inches2Meters(12.0 * feet);
     }
 
     public static double meters2Feet(final double meters) {

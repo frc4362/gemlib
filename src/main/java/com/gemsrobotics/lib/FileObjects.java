@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-@SuppressWarnings({"unused", "WeakerAccess"})
+@SuppressWarnings({"unused"})
 public class FileObjects {
 	private static final Gson CONFIG_READER = new GsonBuilder().create();
 	private static final String CONFIG_DIR = "/home/lvuser/deploy/%s.json";

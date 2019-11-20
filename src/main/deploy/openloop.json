@@ -1,0 +1,18 @@
+{
+  "useSineAttack": false,
+  "zNonLinearityHighGear": 1.0,
+  "zNonLinearityLowGear": 1.0,
+  "sensitivityHighGear": 0.65,
+  "sensitivityLowGear": 1.0,
+
+  "negativeInertiaScalarHigh": 4.0,
+
+  "negativeInertiaThresholdLow": 0.65,
+  "negativeInertiaTurnScalarLow": 3.5,
+  "negativeInertiaCloseScalarLow": 4.0,
+  "negativeInertiaFarScalarLow": 5.0,
+
+  "quickStopDeadband": 0.5,
+  "quickStopWeight": 0.1,
+  "quickStopScalar": 5.0
+}

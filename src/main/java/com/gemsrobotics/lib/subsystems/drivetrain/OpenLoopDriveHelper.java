@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
+import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.limit;
 import com.google.gson.annotations.SerializedName;
 
@@ -36,39 +37,41 @@ public class OpenLoopDriveHelper {
 
 	public OpenLoopDriveHelper(final OpenLoopDriveHelper.Config config) {
 		m_cfg = config;
-
-		m_lastWheel = 0.0;
-		m_quickStopAccumulator = 0.0;
-		m_negInertiaAccumulator = 0.0;
+        reset();
 	}
 
+    public void reset() {
+        m_lastWheel = 0.0;
+        m_quickStopAccumulator = 0.0;
+        m_negInertiaAccumulator = 0.0;
+    }
+
 	public WheelState drive(
-			double xPower,
-			double zRotation,
+			double throttle,
+			double wheel,
 			final boolean isQuickTurn,
 			final boolean isHighGear
 	) {
-		double negInertia = zRotation - m_lastWheel;
-		m_lastWheel = zRotation;
+		double negInertia = wheel - m_lastWheel;
+		m_lastWheel = wheel;
 
 		if (m_cfg.useSineAttack) {
 			final double zNonLinearity;
 
+            // Apply a sin function s scaled to make it feel better.
 			if (isHighGear) {
 				zNonLinearity = m_cfg.zNonLinearityHighGear;
 
-				final double denominator = sin(PI / 2.0 * zNonLinearity);
-				// Apply a sin function s scaled to make it feel better.
-				zRotation = sin(PI / 2.0 * zNonLinearity * zRotation) / denominator;
-				zRotation = sin(PI / 2.0 * zNonLinearity * zRotation) / denominator;
+				final double denominator = sin(Tau / 4.0 * zNonLinearity);
+				wheel = sin(Tau / 4.0 * zNonLinearity * wheel) / denominator;
+				wheel = sin(Tau / 4.0 * zNonLinearity * wheel) / denominator;
 			} else {
 				zNonLinearity = m_cfg.zNonLinearityLowGear;
 
-				final double denominator = sin(PI / 2.0 * zNonLinearity);
-				// Apply a sin function s scaled to make it feel better.
-				zRotation = sin(PI / 2.0 * zNonLinearity * zRotation) / denominator;
-				zRotation = sin(PI / 2.0 * zNonLinearity * zRotation) / denominator;
-				zRotation = sin(PI / 2.0 * zNonLinearity * zRotation) / denominator;
+				final double denominator = sin(Tau / 4.0 * zNonLinearity);
+				wheel = sin(Tau / 4.0 * zNonLinearity * wheel) / denominator;
+				wheel = sin(Tau / 4.0 * zNonLinearity * wheel) / denominator;
+				wheel = sin(Tau / 4.0 * zNonLinearity * wheel) / denominator;
 			}
 		}
 
@@ -80,22 +83,23 @@ public class OpenLoopDriveHelper {
 		} else {
 			sensitivity = m_cfg.sensitivityLowGear;
 
-			if (zRotation * negInertia > 0) {
-				// If we are moving away from 0.0, aka, trying to turn more.
+            // If we are moving away from 0.0, aka, trying to turn more.
+			if (wheel * negInertia > 0) {
 				negativeInertiaScalar = m_cfg.negativeInertiaTurnScalarLow;
-			} else {
-				if (abs(zRotation) > m_cfg.negativeInertiaThresholdLow) {
-					negativeInertiaScalar = m_cfg.negativeInertiaFarScalarLow;
-				} else {
-					negativeInertiaScalar = m_cfg.negativeInertiaCloseScalarLow;
-				}
-			}
+			} else if (abs(wheel) > m_cfg.negativeInertiaThresholdLow) {
+                negativeInertiaScalar = m_cfg.negativeInertiaFarScalarLow;
+            } else {
+                negativeInertiaScalar = m_cfg.negativeInertiaCloseScalarLow;
+            }
 		}
 
-		final double negInertiaPower = negInertia * negativeInertiaScalar;
-		m_negInertiaAccumulator += negInertiaPower;
+//        System.out.println("neg inertia scalar: " + negativeInertiaScalar);
 
-		xPower += negInertiaPower;
+        final double negativeInteriaPower = negInertia * negativeInertiaScalar;
+//        System.out.println("neg inertia power: " + negativeInteriaPower);
+        m_negInertiaAccumulator += negativeInteriaPower;
+
+		wheel += negativeInteriaPower;
 
 		if (m_negInertiaAccumulator > 1.0) {
 			m_negInertiaAccumulator -= 1.0;
@@ -106,21 +110,21 @@ public class OpenLoopDriveHelper {
 		}
 
 		final ChassisState powers = new ChassisState();
-		powers.linearMeters = xPower;
+		powers.linearMeters = throttle;
 
 		final double overPower;
 
 		if (isQuickTurn) {
 			if (abs(powers.linearMeters) < m_cfg.quickStopDeadband) {
 				m_quickStopAccumulator = (1.0 - m_cfg.quickStopWeight) * m_quickStopAccumulator;
-				m_quickStopAccumulator += m_cfg.quickStopWeight * limit(zRotation, 1.0) * m_cfg.quickStopScalar;
+				m_quickStopAccumulator += m_cfg.quickStopWeight * limit(wheel, 1.0) * m_cfg.quickStopScalar;
 			}
 
 			overPower = 1.0;
-			powers.angularRadians = zRotation;
+			powers.angularRadians = wheel;
 		} else  {
 			overPower = 0.0;
-			powers.angularRadians = abs(xPower) * zRotation * sensitivity - m_quickStopAccumulator;
+			powers.angularRadians = abs(throttle) * wheel * sensitivity - m_quickStopAccumulator;
 
 			if (m_quickStopAccumulator > 1.0) {
 				m_quickStopAccumulator -= 1.0;
@@ -131,9 +135,10 @@ public class OpenLoopDriveHelper {
 			}
 		}
 
-		final WheelState output = new WheelState(powers.linearMeters + powers.angularRadians, powers.linearMeters - powers.angularRadians);
+        final WheelState output = new WheelState(powers.linearMeters - powers.angularRadians, powers.linearMeters + powers.angularRadians);
 
-		if (output.left > 1.0) {
+
+        if (output.left > 1.0) {
 			output.right -= overPower * (output.left - 1.0);
 			output.left = 1.0;
 		} else if (output.right > 1.0) {
@@ -149,10 +154,4 @@ public class OpenLoopDriveHelper {
 
 		return output;
 	}
-
-	public void reset() {
-	    m_lastWheel = 0.0;
-	    m_quickStopAccumulator = 0.0;
-	    m_negInertiaAccumulator = 0.0;
-    }
 }
