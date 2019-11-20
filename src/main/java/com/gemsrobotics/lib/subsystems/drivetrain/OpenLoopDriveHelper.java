@@ -124,7 +124,7 @@ public class OpenLoopDriveHelper {
 			powers.angularRadians = wheel;
 		} else  {
 			overPower = 0.0;
-			powers.angularRadians = abs(throttle) * wheel * sensitivity - m_quickStopAccumulator;
+			powers.angularRadians = abs(throttle) * (wheel * signum(throttle)) * sensitivity - m_quickStopAccumulator;
 
 			if (m_quickStopAccumulator > 1.0) {
 				m_quickStopAccumulator -= 1.0;
@@ -136,7 +136,6 @@ public class OpenLoopDriveHelper {
 		}
 
         final WheelState output = new WheelState(powers.linearMeters - powers.angularRadians, powers.linearMeters + powers.angularRadians);
-
 
         if (output.left > 1.0) {
 			output.right -= overPower * (output.left - 1.0);

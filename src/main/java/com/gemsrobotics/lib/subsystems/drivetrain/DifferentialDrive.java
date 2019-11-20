@@ -1,6 +1,5 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.imu.NavX;
@@ -146,8 +145,8 @@ public abstract class DifferentialDrive extends Subsystem {
         @Log.ToString(name="Feedforward Demand")
 		public WheelState feedforward = new WheelState();
 
-		public RigidTransform error = new RigidTransform();
-		public TimedState<RigidTransformWithCurvature> trajectoryReference = null;
+		public RigidTransform trackingError = new RigidTransform();
+		public TimedState<RigidTransformWithCurvature> trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
 	}
 
     public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
@@ -179,7 +178,8 @@ public abstract class DifferentialDrive extends Subsystem {
 
                     m_periodicIO.demand = new WheelState();
                     m_periodicIO.feedforward = new WheelState();
-                    m_periodicIO.trajectoryReference = null;
+                    m_periodicIO.trackingError = RigidTransform.identity();
+                    m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
 
                     m_controlMode = DifferentialDrive.ControlMode.DISABLED;
                     break;
@@ -187,7 +187,8 @@ public abstract class DifferentialDrive extends Subsystem {
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 
                     m_periodicIO.feedforward = new WheelState();
-                    m_periodicIO.trajectoryReference = null;
+                    m_periodicIO.trackingError = RigidTransform.identity();
+                    m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
 
                     m_openLoopHelper.reset();
 
@@ -274,7 +275,7 @@ public abstract class DifferentialDrive extends Subsystem {
 			final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
                     .orElse(new DriveMotionPlanner.Output());
 
-			m_periodicIO.error = m_motionPlanner.getError();
+			m_periodicIO.trackingError = m_motionPlanner.getError();
 			m_periodicIO.trajectoryReference = m_motionPlanner.getSetpoint();
 
            if (!m_forceFinishTrajectory) {
