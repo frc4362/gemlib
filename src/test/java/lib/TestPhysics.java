@@ -1,7 +1,7 @@
 package lib;
 
 import com.gemsrobotics.lib.physics.MotorModel;
-import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
@@ -61,7 +61,7 @@ public class TestPhysics {
 
         MotorModel transmission = new MotorModel(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
 
-        final var props = new DifferentialModel.Properties() {
+        final var props = new DifferentialDriveModel.Properties() {
             {
                 massKg = 70;
                 momentInertiaKgMetersSquared = 84;
@@ -71,7 +71,7 @@ public class TestPhysics {
             }
         };
 
-        DifferentialModel drive = new DifferentialModel(props, transmission);
+        DifferentialDriveModel drive = new DifferentialDriveModel(props, transmission);
 //        // Kinematics
         ChassisState v1 = drive.forwardKinematics(new WheelState(0.0, 0.0));
         assertThat(0.0, closeTo(v1.linearMeters, kEpsilon));
@@ -114,7 +114,7 @@ public class TestPhysics {
         assertThat(Units.rpm2RadsPerSecond(-65.0 * 5.0), closeTo(w5.right, kEpsilon));
 
         // Forward dynamics.
-        DifferentialModel.Dynamics d1 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(0.0, 0.0), false);
+        DifferentialDriveModel.Dynamics d1 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(0.0, 0.0), false);
         assertThat(0.0, closeTo(d1.torque.left, kEpsilon));
         assertThat(0.0, closeTo(d1.torque.right, kEpsilon));
         assertThat(0.0, closeTo(d1.wheelAccelerationMetersPerSecondSquared.left, kEpsilon));
@@ -122,7 +122,7 @@ public class TestPhysics {
         assertThat(0.0, closeTo(d1.chassisAcceleration.linearMeters, kEpsilon));
         assertThat(0.0, closeTo(d1.chassisAcceleration.angularRadians, kEpsilon));
 
-        DifferentialModel.Dynamics d2 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(12.0, 12.0), false);
+        DifferentialDriveModel.Dynamics d2 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(12.0, 12.0), false);
         assertThat(11.0 * .35, closeTo(d2.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d2.torque.right, kEpsilon));
         assertThat(0.0, lessThan(d2.wheelAccelerationMetersPerSecondSquared.left));
@@ -130,7 +130,7 @@ public class TestPhysics {
         assertThat(2.0, lessThan(d2.chassisAcceleration.linearMeters));
         assertThat(0.0, closeTo(d2.chassisAcceleration.angularRadians, kEpsilon));
 
-        DifferentialModel.Dynamics d3 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, -12.0), false);
+        DifferentialDriveModel.Dynamics d3 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, -12.0), false);
         assertThat(-11.0 * .35, closeTo(d3.torque.left, kEpsilon));
         assertThat(-11.0 * .35, closeTo(d3.torque.right, kEpsilon));
         assertThat(0.0, greaterThan(d3.wheelAccelerationMetersPerSecondSquared.left));
@@ -138,7 +138,7 @@ public class TestPhysics {
         assertThat(0.0, greaterThan(d3.chassisAcceleration.linearMeters));
         assertThat(0.0, closeTo(d3.chassisAcceleration.angularRadians, kEpsilon));
 
-        DifferentialModel.Dynamics d4 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, 12.0), false);
+        DifferentialDriveModel.Dynamics d4 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, 12.0), false);
         assertThat(-11.0 * .35, closeTo(d4.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d4.torque.right, kEpsilon));
         assertThat(0.0, greaterThan(d4.wheelAccelerationMetersPerSecondSquared.left));
@@ -147,25 +147,25 @@ public class TestPhysics {
         assertThat(0.0, lessThan(d4.chassisAcceleration.angularRadians));
 
         // Inverse dynamics.
-        DifferentialModel.Dynamics d5 = drive.solveInverseDynamics(new ChassisState(0.0, 0.0), new ChassisState(0.0, 0.0), false);
+        DifferentialDriveModel.Dynamics d5 = drive.solveInverseDynamics(new ChassisState(0.0, 0.0), new ChassisState(0.0, 0.0), false);
         assertThat(0.0, is(d5.torque.left));
         assertThat(0.0, is(d5.torque.right));
         assertThat(0.0, is(d5.voltage.left));
         assertThat(0.0, is(d5.voltage.right));
 
-        DifferentialModel.Dynamics d6 = drive.solveInverseDynamics(new ChassisState(Units.feet2Meters(10.0), 0.0), new ChassisState(0.0, 0.0), false);
+        DifferentialDriveModel.Dynamics d6 = drive.solveInverseDynamics(new ChassisState(Units.feet2Meters(10.0), 0.0), new ChassisState(0.0, 0.0), false);
         assertThat(0.0, closeTo(d6.torque.left, kEpsilon));
         assertThat(0.0, closeTo(d6.torque.right, kEpsilon));
         assertThat(9.5, closeTo(d6.voltage.left, kEpsilon));
         assertThat(9.5, closeTo(d6.voltage.right, kEpsilon));
 
-        DifferentialModel.Dynamics d7 = drive.solveInverseDynamics(new ChassisState(Units.inches2Meters(10.0 * 12), 0.0), new ChassisState(Units.inches2Meters(2.0 * 12.0), 0.0), false);
+        DifferentialDriveModel.Dynamics d7 = drive.solveInverseDynamics(new ChassisState(Units.inches2Meters(10.0 * 12), 0.0), new ChassisState(Units.inches2Meters(2.0 * 12.0), 0.0), false);
         assertThat(1.0, closeTo(d7.torque.left, kEpsilon));
         assertThat(1.0, closeTo(d7.torque.right, kEpsilon));
         assertThat(13.0, closeTo(d7.voltage.left, kEpsilon));
         assertThat(13.0, closeTo(d7.voltage.right, kEpsilon));
 
-        DifferentialModel.Dynamics d8 = drive.solveInverseDynamics(new ChassisState(Units.inches2Meters(10.0 * 12), 0.0), new ChassisState(Units.inches2Meters(-2.0 * 12), 0.0), false);
+        DifferentialDriveModel.Dynamics d8 = drive.solveInverseDynamics(new ChassisState(Units.inches2Meters(10.0 * 12), 0.0), new ChassisState(Units.inches2Meters(-2.0 * 12), 0.0), false);
         assertThat(-1.0, closeTo(d8.torque.left, kEpsilon));
         assertThat(-1.0, closeTo(d8.torque.right, kEpsilon));
         assertThat(6.5, closeTo(d8.voltage.left, kEpsilon));

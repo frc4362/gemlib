@@ -3,7 +3,7 @@ package lib.trajectory;
 import com.gemsrobotics.lib.math.se2.*;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
-import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.trajectory.MirroredTrajectory;
 import com.gemsrobotics.lib.trajectory.TimedView;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
@@ -32,7 +32,7 @@ import static org.hamcrest.Matchers.*;
 
 public class TestTrajectoryGeneration {
     private DifferentialDrive.Config cfg;
-    private DifferentialModel model;
+    private DifferentialDriveModel model;
     private TrajectoryGenerator generator;
 
     public void verifyValidPose(final RigidTransform pose) {
@@ -63,7 +63,7 @@ public class TestTrajectoryGeneration {
         }
 
         final var transmission = new MotorModel(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
-        final var props = new DifferentialModel.Properties() {
+        final var props = new DifferentialDriveModel.Properties() {
             {
                 massKg = 63;
                 momentInertiaKgMetersSquared = 84;
@@ -73,7 +73,7 @@ public class TestTrajectoryGeneration {
             }
         };
 
-        model = new DifferentialModel(props, transmission);
+        model = new DifferentialDriveModel(props, transmission);
         generator = new TrajectoryGenerator(cfg.motionConfig, model);
 
         reflectingPoseValidator(generator);

@@ -1,19 +1,19 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
-import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.math.se2.ICurvature;
 import com.gemsrobotics.lib.math.se2.IRigidTransform2d;
 import com.google.gson.annotations.SerializedName;
 
 public class DifferentialDriveDynamicsConstraint<S extends IRigidTransform2d<S> & ICurvature<S>> implements TimingConstraint<S> {
-    protected transient final DifferentialModel m_model;
+    protected transient final DifferentialDriveModel m_model;
     @SerializedName("voltageLimit")
     protected final double m_absoluteVoltageLimit;
     @SerializedName("isHighGear")
     protected final boolean m_isHighGear;
 
-    public DifferentialDriveDynamicsConstraint(final DifferentialModel model, final boolean isHighGear, final double absoluteVoltageLimit) {
+    public DifferentialDriveDynamicsConstraint(final DifferentialDriveModel model, final boolean isHighGear, final double absoluteVoltageLimit) {
         m_model = model;
         m_isHighGear = isHighGear;
         m_absoluteVoltageLimit = absoluteVoltageLimit;
