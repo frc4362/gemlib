@@ -46,7 +46,6 @@ public final class Elevator extends Subsystem implements Loggable {
 	private static final MathUtils.Bounds positionBounds =
             new MathUtils.Bounds(Position.BOTTOM.ticks, Position.TOP.ticks);
 
-	public final CachedValue<Boolean> isEncoderPresent;
 	private final GemTalonSRX m_master, m_slave;
 	private final PeriodicIO m_periodicIO;
 
@@ -72,8 +71,6 @@ public final class Elevator extends Subsystem implements Loggable {
 		m_slave.follow(m_master, true);
 
 		m_periodicIO = new PeriodicIO();
-
-		isEncoderPresent = new CachedValue<Boolean>(Boolean.class,0.5, m_master::isEncoderPresent);
 	}
 
     public enum Mode {
@@ -127,7 +124,7 @@ public final class Elevator extends Subsystem implements Loggable {
 
 		m_periodicIO.closedLoopError = m_master.getClosedLoopError(0);
 
-		m_periodicIO.isEncoderPresent = isEncoderPresent.get();
+		m_periodicIO.isEncoderPresent = m_master.isEncoderPresent();
 		m_periodicIO.temperature = m_master.getTemperature();
 		m_periodicIO.outputCurrent = m_master.getOutputCurrent();
 	}
@@ -241,7 +238,7 @@ public final class Elevator extends Subsystem implements Loggable {
 	public synchronized FaultedResponse checkFaulted() {
 		var ret = FaultedResponse.NONE;
 
-		if (!isEncoderPresent.get()) {
+		if (m_periodicIO.isEncoderPresent) {
 			report(ReportingEndpoint.Event.Kind.HARDWARE_FAULT, "Encoder missing");
 			ret = FaultedResponse.DISABLE_SUBSYSTEM;
 		}
