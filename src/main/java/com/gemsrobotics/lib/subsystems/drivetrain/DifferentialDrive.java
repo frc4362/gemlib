@@ -10,7 +10,7 @@ import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.physics.MotorTransmission;
+import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
@@ -23,6 +23,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+// just copy what was done here
+// https://github.com/frc1678/robot-code-public/blob/master/c2019/subsystems/drivetrain/drivetrain_base.cpp
+// when extending it for a given year
 @SuppressWarnings({"unused", "WeakerAccess", "OverlyCoupledClass"})
 public abstract class DifferentialDrive extends Subsystem {
     // This config as one class allows for deserialization from a JSON file to describe nearly the entire drive train
@@ -36,8 +39,8 @@ public abstract class DifferentialDrive extends Subsystem {
 		public PIDFController.Gains gainsLowGear;
 		public PIDFController.Gains gainsHighGear;
 
-		public MotorTransmission.Properties propertiesHighGear;
-		public MotorTransmission.Properties propertiesLowGear;
+		public MotorModel.Properties propertiesHighGear;
+		public MotorModel.Properties propertiesLowGear;
 		public Model.Properties propertiesModel;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
@@ -89,8 +92,8 @@ public abstract class DifferentialDrive extends Subsystem {
         m_imu = new NavX();
 		m_model = new Model(
 		        m_config.propertiesModel,
-                new MotorTransmission(m_config.propertiesLowGear),
-                new MotorTransmission(m_config.propertiesHighGear));
+                new MotorModel(m_config.propertiesLowGear),
+                new MotorModel(m_config.propertiesHighGear));
         m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
         m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
 		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);

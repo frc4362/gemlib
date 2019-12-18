@@ -1,6 +1,6 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
-import com.gemsrobotics.lib.physics.MotorTransmission;
+import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Twist;
@@ -52,10 +52,10 @@ public class Model {
 	}
 
     public final double wheelBaseRadiusMeters, angularDragTorquePerRadianPerSecond, massKg, momentInertiaKgMetersSquared, wheelRadiusMeters;
-	public final MotorTransmission transmissionLow, transmissionHigh;
+	public final MotorModel transmissionLow, transmissionHigh;
 
 	// two-speed drive train
-	public Model(final Properties properties, final MotorTransmission gearLow, final MotorTransmission gearHigh) {
+	public Model(final Properties properties, final MotorModel gearLow, final MotorModel gearHigh) {
 		wheelBaseRadiusMeters = properties.wheelbaseRadiusMeters;
 		angularDragTorquePerRadianPerSecond = properties.angularDragTorquePerRadiansPerSecond;
 		massKg = properties.massKg;
@@ -67,11 +67,11 @@ public class Model {
 	}
 
     // single speed drive train
-    public Model(final Properties properties, final MotorTransmission transmission) {
+    public Model(final Properties properties, final MotorModel transmission) {
         this(properties, transmission, transmission);
     }
 
-	private MotorTransmission getTransmission(final boolean isHighGear) {
+	private MotorModel getTransmission(final boolean isHighGear) {
 	    if (isHighGear) {
             return transmissionHigh;
         } else {

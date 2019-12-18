@@ -1,7 +1,7 @@
 package lib.trajectory;
 
 import com.gemsrobotics.lib.math.se2.*;
-import com.gemsrobotics.lib.physics.MotorTransmission;
+import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import com.gemsrobotics.lib.subsystems.drivetrain.Model;
 import com.gemsrobotics.lib.trajectory.MirroredTrajectory;
@@ -62,7 +62,7 @@ public class TestTrajectoryGeneration {
             e.printStackTrace();
         }
 
-        final var transmission = new MotorTransmission(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
+        final var transmission = new MotorModel(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
         final var props = new Model.Properties() {
             {
                 massKg = 63;

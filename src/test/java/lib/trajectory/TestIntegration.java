@@ -4,7 +4,7 @@ import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.physics.MotorTransmission;
+import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.Model;
 import com.gemsrobotics.lib.trajectory.*;
@@ -58,7 +58,7 @@ public class TestIntegration {
             }
         };
 
-        final var transmission = new MotorTransmission(
+        final var transmission = new MotorModel(
                 1.0 / 0.143,
                 (modelProps.wheelRadiusMeters * modelProps.wheelRadiusMeters * modelProps.massKg / 2.0) / 0.02,
                 0.8);

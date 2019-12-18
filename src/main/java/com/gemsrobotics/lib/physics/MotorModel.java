@@ -10,9 +10,9 @@ import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
  * The motor is assumed to be symmetric forward/reverse.
  */
 @SuppressWarnings("WeakerAccess")
-public final class MotorTransmission {
+public final class MotorModel {
     public static class Properties {
-		double speedRadiansPerSecondPerVolt, torquePerVolt, stictionVoltage;
+		public double speedRadiansPerSecondPerVolt, torquePerVolt, stictionVoltage;
 	}
 
 	// all units must be SI
@@ -20,17 +20,7 @@ public final class MotorTransmission {
 	public final double torquePerVolt; // N m per V (stall)
 	public final double stictionVoltage; // V
 
-    public MotorTransmission(final double v, final double a, final double s) {
-        this(new Properties() {
-            {
-                speedRadiansPerSecondPerVolt = v;
-                torquePerVolt = a;
-                stictionVoltage = s;
-            }
-        });
-    }
-
-	public MotorTransmission(final Properties properties) {
+	public MotorModel(final Properties properties) {
 		speedRadiansPerSecondPerVolt = properties.speedRadiansPerSecondPerVolt;
 		torquePerVolt = properties.torquePerVolt;
 		stictionVoltage = properties.stictionVoltage;
