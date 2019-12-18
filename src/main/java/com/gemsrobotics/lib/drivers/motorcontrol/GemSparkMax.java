@@ -18,6 +18,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
     private ControlType m_lastDemandType;
     private double m_lastDemand;
     private double m_lastFeedforward;
+    private double m_conversionFactorPosition, m_conversionFactorVelocity;
     private CANSparkMax m_leader;
     private boolean m_hasMotionProfilingBeenConfigured;
     private int m_selectedProfileID;
@@ -59,9 +60,10 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
     }
 
 	public void set(final ControlType type, final double demand, final double feedforward) {
-		if (demand != m_lastDemand || type != m_lastDemandType) {
+		if (type != m_lastDemandType || demand != m_lastDemand || feedforward != m_lastFeedforward) {
 			m_lastDemandType = type;
 			m_lastDemand = demand;
+			m_lastFeedforward = feedforward;
 			m_controller.setReference(demand, type, m_selectedProfileID, feedforward);
 		}
 	}
@@ -129,7 +131,12 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
         boolean success = true;
 
         success &= runWithRetries(() -> m_encoder.setPositionConversionFactor(rotationsPerMeter));
-        success &= runWithRetries(() -> m_encoder.setVelocityConversionFactor(rotationsPerMeter * 60));
+        success &= runWithRetries(() -> m_encoder.setVelocityConversionFactor(rotationsPerMeter * 60.0));
+
+        if (success) {
+            m_conversionFactorPosition = rotationsPerMeter;
+            m_conversionFactorVelocity = rotationsPerMeter * 60.0;
+        }
 
         return success;
     }
@@ -151,7 +158,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
 
     @Override
     public double getPositionMotorRotations() {
-        return m_encoder.getPosition() / m_encoder.getPositionConversionFactor();
+        return m_encoder.getPosition() / m_conversionFactorPosition;
     }
 
     @Override
@@ -201,7 +208,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
 
     @Override
     public void setVelocityMotorRPM(final double rpm, final double feedforward) {
-        setVelocityMetersPerSecond(rpm / m_encoder.getVelocityConversionFactor(), feedforward);
+        setVelocityMetersPerSecond(rpm / m_conversionFactorVelocity, feedforward);
     }
 
     @Override
@@ -211,7 +218,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
 
     @Override
     public void setPositionRotations(final double rotations, final double feedforward) {
-        setPositionMeters(rotations * m_encoder.getPositionConversionFactor(), feedforward);
+        setPositionMeters(rotations * m_conversionFactorPosition, feedforward);
     }
 
     @Override
@@ -226,7 +233,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
 
     @Override
     public double getVelocityMotorRPM() {
-        return m_encoder.getVelocity() / m_encoder.getVelocityConversionFactor();
+        return m_encoder.getVelocity() / m_conversionFactorVelocity;
     }
 
     private synchronized boolean runWithRetries(final Supplier<CANError> call) {
