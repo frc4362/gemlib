@@ -7,7 +7,7 @@ import com.gemsrobotics.frc2019.util.PIDF;
 
 import static java.lang.Math.*;
 
-@SuppressWarnings({"unused", "WeakerAccess"})
+@SuppressWarnings("unused")
 public class LateralAdjuster {
 	public final double kLatVolts;
 	private final WPI_TalonSRX m_motor;
