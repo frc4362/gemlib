@@ -22,7 +22,7 @@ import static java.lang.Math.abs;
 import static com.gemsrobotics.lib.utils.MathUtils.coerce;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class Elevator extends Subsystem implements Loggable {
+public final class Elevator extends Subsystem implements Loggable {
     private static final int OVERRUN_THRESHOLD = 100;
 
     private static Elevator INSTANCE;
