@@ -12,4 +12,4 @@ Many thanks for inspiration, code and wisdom:
 - FRC2910 https://github.com/FRCTeam2910
 - FRC4028 https://github.com/Team4028
 - FRC5190 https://github.com/FRC5190
-- Oglarg of FRC449 https://github.com/Oblarg
+- Oblarg of FRC449 https://github.com/Oblarg
