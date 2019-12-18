@@ -110,7 +110,7 @@ public final class DifferentialDrive extends Subsystem implements Sendable {
 	private static final double LIMIT = 1.0;
 
 	private static double limit(final double v) {
-		return Math.abs(v) < LIMIT ? v : LIMIT * Math.signum(v);
+		return abs(v) < LIMIT ? v : LIMIT * signum(v);
 	}
 
 	private static double constrain(
