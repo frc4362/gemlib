@@ -76,7 +76,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 	@Override
     public void set(final ControlMode mode, final double value, final DemandType demandType, final double demand) {
         if (mode != m_lastMode || value != m_lastValue || demandType != m_lastDemandType || demand != m_lastDemand) {
-            super.set(mode, value, demandType, demand * 1023); // multiply by 1023 because it wants throttle units on the output
+            super.set(mode, value, demandType, demand); // multiply by 1023 because it wants throttle units on the output
 
             m_lastMode = mode;
             m_lastValue = value;
@@ -131,10 +131,21 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
     public synchronized boolean setCurrentLimit(final int currentLimitAmps) {
 	    boolean success = true;
 
+	    success &= runWithRetries(() -> {
+                enableCurrentLimit(true);
+                return getLastError();
+        });
         success &= runWithRetries(() -> configContinuousCurrentLimit(currentLimitAmps));
         success &= runWithRetries(() -> configPeakCurrentLimit(0));
 
         return success;
+    }
+
+    public synchronized boolean disableCurrentLimit() {
+	    return runWithRetries(() -> {
+            enableCurrentLimit(false);
+            return getLastError();
+        });
     }
 
     @Override
