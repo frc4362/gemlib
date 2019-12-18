@@ -41,7 +41,7 @@ public abstract class DifferentialDrive extends Subsystem {
 
 		public MotorModel.Properties propertiesHighGear;
 		public MotorModel.Properties propertiesLowGear;
-		public Model.Properties propertiesModel;
+		public DifferentialModel.Properties propertiesModel;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
 
@@ -51,7 +51,7 @@ public abstract class DifferentialDrive extends Subsystem {
 	}
 
 	protected final Config m_config;
-    protected final Model m_model;
+    protected final DifferentialModel m_model;
 	protected final OpenLoopDriveHelper m_openLoopHelper;
     protected final TrajectoryGenerator m_generator;
 	protected final DriveMotionPlanner m_motionPlanner;
@@ -90,7 +90,7 @@ public abstract class DifferentialDrive extends Subsystem {
         m_motorsRight.followMaster(false);
 
         m_imu = new NavX();
-		m_model = new Model(
+		m_model = new DifferentialModel(
 		        m_config.propertiesModel,
                 new MotorModel(m_config.propertiesLowGear),
                 new MotorModel(m_config.propertiesHighGear));
@@ -389,7 +389,7 @@ public abstract class DifferentialDrive extends Subsystem {
 	    return m_periodicIO.isTipping;
     }
 
-	public synchronized Model.Dynamics getDynamics() {
+	public synchronized DifferentialModel.Dynamics getDynamics() {
         return m_model.solveInverseDynamics(m_periodicIO.velocityMeters, m_periodicIO.accelerationMeters, m_isHighGear);
 	}
 
@@ -405,7 +405,7 @@ public abstract class DifferentialDrive extends Subsystem {
 	    return Optional.ofNullable(m_periodicIO.trajectoryReference);
     }
 
-    public final Model getModel() {
+    public final DifferentialModel getModel() {
 	    return m_model;
     }
 }

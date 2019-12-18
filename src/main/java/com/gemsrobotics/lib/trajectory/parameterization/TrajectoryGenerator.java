@@ -1,7 +1,7 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
-import com.gemsrobotics.lib.subsystems.drivetrain.Model;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 
 public final class TrajectoryGenerator {
 	private DriveMotionPlanner.MotionConfig m_config;
-	private Model m_model;
+	private DifferentialModel m_model;
 
-	public TrajectoryGenerator(final DriveMotionPlanner.MotionConfig config, final Model model) {
+	public TrajectoryGenerator(final DriveMotionPlanner.MotionConfig config, final DifferentialModel model) {
 		m_config = config;
 		m_model = model;
 	}

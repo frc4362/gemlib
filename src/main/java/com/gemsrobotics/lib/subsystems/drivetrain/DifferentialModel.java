@@ -12,7 +12,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static com.gemsrobotics.lib.utils.MathUtils.Bounds;
 import static java.lang.Math.*;
 
-public class Model {
+public class DifferentialModel {
 	public static class Properties {
         // Equivalent mass when accelerating purely linearly, in kg.
         // This is "equivalent" in that it also absorbs the effects of drivetrain inertia.
@@ -55,7 +55,7 @@ public class Model {
 	public final MotorModel transmissionLow, transmissionHigh;
 
 	// two-speed drive train
-	public Model(final Properties properties, final MotorModel gearLow, final MotorModel gearHigh) {
+	public DifferentialModel(final Properties properties, final MotorModel gearLow, final MotorModel gearHigh) {
 		wheelBaseRadiusMeters = properties.wheelbaseRadiusMeters;
 		angularDragTorquePerRadianPerSecond = properties.angularDragTorquePerRadiansPerSecond;
 		massKg = properties.massKg;
@@ -67,7 +67,7 @@ public class Model {
 	}
 
     // single speed drive train
-    public Model(final Properties properties, final MotorModel transmission) {
+    public DifferentialModel(final Properties properties, final MotorModel transmission) {
         this(properties, transmission, transmission);
     }
 

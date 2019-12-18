@@ -32,15 +32,15 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
     @Log(name="Distance Driven (m)")
     private double m_distanceDriven;
 
-    private final Model m_model;
+    private final DifferentialModel m_model;
 
-    public static FieldToVehicleEstimator withStarting(final Model model, final double startTime, final RigidTransform initialPose) {
+    public static FieldToVehicleEstimator withStarting(final DifferentialModel model, final double startTime, final RigidTransform initialPose) {
         final var ret = new FieldToVehicleEstimator(model);
         ret.reset(startTime, initialPose);
         return ret;
     }
 
-    private FieldToVehicleEstimator(final Model model) {
+    private FieldToVehicleEstimator(final DifferentialModel model) {
         m_model = model;
     }
 

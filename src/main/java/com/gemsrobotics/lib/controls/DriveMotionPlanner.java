@@ -1,7 +1,7 @@
 package com.gemsrobotics.lib.controls;
 
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
-import com.gemsrobotics.lib.subsystems.drivetrain.Model;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -64,7 +64,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		}
 	}
 
-	protected transient final Model m_model;
+	protected transient final DifferentialModel m_model;
 	protected transient final MotionConfig m_config;
 
 	protected FollowerType m_followerType;
@@ -96,7 +96,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 	public DriveMotionPlanner(
 			final MotionConfig config,
-			final Model model,
+			final DifferentialModel model,
 			final FollowerType followerType
 	) {
 		m_config = config;
@@ -178,7 +178,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	}
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
-	protected Output updateRamsete(final double dt, final Model.Dynamics ref, final RigidTransform currentPose, final boolean isHighGear) {
+	protected Output updateRamsete(final double dt, final DifferentialModel.Dynamics ref, final RigidTransform currentPose, final boolean isHighGear) {
 		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linearMeters * ref.chassisVelocity.linearMeters + ref.chassisVelocity.angularRadians * ref.chassisVelocity.angularRadians);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
