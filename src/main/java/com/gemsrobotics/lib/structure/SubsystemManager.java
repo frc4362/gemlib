@@ -46,11 +46,10 @@ public final class SubsystemManager implements Reportable, Loggable {
             }
 
             synchronized (m_lock) {
-                // make it NaN so m_lastUpdateTime is never made null
-                double now = Double.NaN;
+                double now = getFPGATimestamp();
 
                 for (final var subsystem : m_subsystems) {
-                    now = Timer.getFPGATimestamp();
+                    now = getFPGATimestamp();
 
                     try {
                         // provide each subsystem the time, it will update the dt internally
