@@ -5,7 +5,7 @@ import edu.wpi.first.wpilibj.command.Command;
 
 import java.util.function.Supplier;
 
-public final class CurvatureDriveCommand extends Command {
+public final class CurvatureDriveCommand extends EndlessCommand {
     private final DifferentialDrive m_chassis;
     private final Supplier<Double> m_throttle, m_wheel;
     private final Supplier<Boolean> m_isQuickturn;
@@ -26,10 +26,5 @@ public final class CurvatureDriveCommand extends Command {
     @Override
     public void execute() {
         m_chassis.setDriverControl(m_throttle.get(), m_wheel.get(), m_isQuickturn.get());
-    }
-
-    @Override
-    protected boolean isFinished() {
-        return false;
     }
 }
