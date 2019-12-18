@@ -6,7 +6,7 @@ import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
-import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.trajectory.*;
 import com.gemsrobotics.lib.trajectory.parameterization.Parameterizer;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
@@ -48,7 +48,7 @@ public class TestIntegration {
         // Create a trajectory from splines.
         Trajectory<RigidTransformWithCurvature> trajectory = TrajectoryUtils.trajectoryFromSplineWaypoints(waypoints, cfg);
 
-        final var modelProps = new DifferentialModel.Properties() {
+        final var modelProps = new DifferentialDriveModel.Properties() {
             {
                 massKg = 60.0;
                 momentInertiaKgMetersSquared = 80.0;
@@ -64,7 +64,7 @@ public class TestIntegration {
             stictionVoltage = 0.8;
         }});
 
-        final var model = new DifferentialModel(modelProps, transmission, transmission);
+        final var model = new DifferentialDriveModel(modelProps, transmission, transmission);
 
         // Create the constraint that the robot must be able to traverse the trajectory without ever applying more than 10V.
 //        DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> constraints = new DifferentialDriveDynamicsConstraint<>(model, false, 10.0);
@@ -106,7 +106,7 @@ public class TestIntegration {
 
             final TimedState<RigidTransformWithCurvature> state = sample.getState();
 
-            final DifferentialModel.Dynamics dynamics = model.solveInverseDynamics(
+            final DifferentialDriveModel.Dynamics dynamics = model.solveInverseDynamics(
                     new ChassisState(Units.inches2Meters(state.getVelocity()), state.getVelocity() * state.getState().getCurvature()),
                     new ChassisState(Units.inches2Meters(state.getAcceleration()), state.getAcceleration() * state.getState().getCurvature()),
                     false);
