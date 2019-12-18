@@ -3,6 +3,7 @@ package com.gemsrobotics.lib.structure;
 import com.gemsrobotics.lib.telemetry.Pod;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
+import com.gemsrobotics.lib.timing.DeltaTime;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotState;
@@ -27,12 +28,14 @@ public final class SubsystemManager implements Reportable, Loggable {
     private final Object m_lock;
 
     private boolean m_isRunning;
-	private double m_lastUpdateTime, m_dt;
+    private double m_dt;
+	private DeltaTime m_timer;
 
 	public SubsystemManager(final Subsystem... subsystems) {
 		m_subsystems = Arrays.asList(subsystems);
 		m_faultCheckTimer = new ElapsedTimer(1.0);
-		m_lastUpdateTime = Double.NaN;
+		m_dt = Double.NaN;
+		m_timer = new DeltaTime();
 		m_isRunning = false;
 
 		m_lock = new Object();
@@ -63,8 +66,7 @@ public final class SubsystemManager implements Reportable, Loggable {
                 }
 
                 // this is the overall scheduler dt, sum of the subsystems execution times
-                m_dt = now - m_lastUpdateTime;
-                m_lastUpdateTime = now;
+                m_dt = m_timer.update(now);
 
                 if (m_faultCheckTimer.hasElapsed()) {
                     m_subsystems.removeIf(subsystem -> {
@@ -94,10 +96,10 @@ public final class SubsystemManager implements Reportable, Loggable {
 	    final int size;
 
 	    synchronized (m_lock) {
-            m_lastUpdateTime = getFPGATimestamp();
+	        m_timer.reset();
             m_subsystems.forEach(subsystem -> {
                 try {
-                    subsystem.onCreate(m_lastUpdateTime);
+                    subsystem.onCreate(getFPGATimestamp());
                 } catch (final Throwable throwable) {
                     Pod.catchThrowable(subsystem, throwable);
                 }
@@ -112,10 +114,10 @@ public final class SubsystemManager implements Reportable, Loggable {
 	public synchronized void enable() {
 	    if (!m_isRunning) {
             synchronized (m_lock) {
-                m_lastUpdateTime = getFPGATimestamp();
+                m_timer.reset();
                 m_subsystems.forEach(subsystem -> {
                     try {
-                        subsystem.onEnable(m_lastUpdateTime);
+                        subsystem.onEnable(getFPGATimestamp());
                     } catch (final Throwable throwable) {
                         Pod.catchThrowable(subsystem, throwable);
                     }
@@ -132,12 +134,12 @@ public final class SubsystemManager implements Reportable, Loggable {
     public void disable() {
 	    if (m_isRunning) {
             m_updater.stop();
+            m_timer.reset();
 
             synchronized (m_lock) {
-                m_lastUpdateTime = getFPGATimestamp();
                 m_subsystems.forEach(subsystem -> {
                     try {
-                        subsystem.onStop(m_lastUpdateTime);
+                        subsystem.onStop(getFPGATimestamp());
                     } catch (final Throwable throwable) {
                         Pod.catchThrowable(subsystem, throwable);
                     }
@@ -151,7 +153,7 @@ public final class SubsystemManager implements Reportable, Loggable {
     }
 
 	private void estop(final Subsystem subsystem) {
-        report(Kind.ERROR, "E-stopping subsystem \"" + subsystem.getName() + "\".");
+        report(Kind.ERROR, "Estopping subsystem \"" + subsystem.getName() + "\".");
         subsystem.setActive(false);
         subsystem.onStop(getFPGATimestamp());
         subsystem.setSafeState();

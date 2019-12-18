@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.structure;
 
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
+import com.gemsrobotics.lib.timing.DeltaTime;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Config;
 import io.github.oblarg.oblog.annotations.Log;
@@ -36,8 +37,8 @@ public abstract class Subsystem
 
     public abstract void setSafeState();
 
+    private final DeltaTime m_timer = new DeltaTime();
 	private double m_dt = 0.0;
-    private double m_lastUpdateTime = Double.NaN;
 	private boolean m_isActive = false;
 
 	protected synchronized final double dt() {
@@ -66,13 +67,7 @@ public abstract class Subsystem
     protected abstract void onStop(double timestamp);
 
     protected synchronized final void updatePeriodicState(final double timestamp) {
-        if (Double.isNaN(m_lastUpdateTime)) {
-            m_lastUpdateTime = timestamp;
-        }
-
-        m_dt = m_lastUpdateTime - timestamp;
-        m_lastUpdateTime = timestamp;
-
+        m_dt = m_timer.update(timestamp);
         readPeriodicInputs();
     }
 }

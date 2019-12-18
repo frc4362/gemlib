@@ -9,9 +9,11 @@ public class DeltaTime {
         m_lastTime = Double.NaN;
     }
 
-    public double update() {
-        final double now = Timer.getFPGATimestamp();
+    public void reset() {
+        m_lastTime = Double.NaN;
+    }
 
+    public double update(final double now) {
         if (Double.isNaN(m_lastTime)) {
             m_lastTime = now;
         }
