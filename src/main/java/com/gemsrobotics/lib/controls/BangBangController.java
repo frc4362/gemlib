@@ -6,11 +6,11 @@ import static java.lang.Math.signum;
 
 public final class BangBangController extends FeedbackController {
     // the setpoint of the controller
-    protected double m_reference;
+    private double m_reference;
     // the allowed error in the controller
-    protected double m_tolerance;
+    private double m_tolerance;
     // the current offset from the reference
-    protected double m_error;
+    private double m_error;
 
     public BangBangController() {
         m_reference = 0.0;
