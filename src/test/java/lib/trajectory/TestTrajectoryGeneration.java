@@ -62,7 +62,11 @@ public class TestTrajectoryGeneration {
             e.printStackTrace();
         }
 
-        final var transmission = new MotorModel(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
+        final var transmission = new MotorModel(new MotorModel.Properties() {{
+            speedRadiansPerSecondPerVolt = Units.rpm2RadsPerSecond(65.0);
+            torquePerVolt = 0.35;
+            stictionVoltage = 1.0;
+        }});
         final var props = new DifferentialDriveModel.Properties() {
             {
                 massKg = 63;
