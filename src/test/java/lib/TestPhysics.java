@@ -20,7 +20,11 @@ public class TestPhysics {
     public void testMotorTransmission() {
         final double kEpsilon = MathUtils.Epsilon;
         // 100 rpm per V, .2 N*m per V, 1.5V to overcome friction.
-        final var motor = new MotorModel(Units.rpm2RadsPerSecond(100.0), .2, 1.5);
+        final var motor = new MotorModel(new MotorModel.Properties() {{
+            speedRadiansPerSecondPerVolt = Units.rpm2RadsPerSecond(100.0);
+            torquePerVolt = 0.2;
+            stictionVoltage = 1.5;
+        }});
 
         assertThat(Units.rpm2RadsPerSecond(1200.0), closeTo(motor.freeSpeedAtVoltageRadiansPerSecond(12.0 + 1.5), kEpsilon));
         assertThat(Units.rpm2RadsPerSecond(600.0), closeTo(motor.freeSpeedAtVoltageRadiansPerSecond(6.0 + 1.5), kEpsilon));
@@ -59,7 +63,11 @@ public class TestPhysics {
     public void testModel() {
         final double kEpsilon = 1;
 
-        MotorModel transmission = new MotorModel(Units.rpm2RadsPerSecond(65.0), 0.35, 1.0);
+        MotorModel transmission = new MotorModel(new MotorModel.Properties() {{
+            speedRadiansPerSecondPerVolt = Units.rpm2RadsPerSecond(65.0);
+            torquePerVolt = 0.35;
+            stictionVoltage = 1.0;
+        }});
 
         final var props = new DifferentialDriveModel.Properties() {
             {
