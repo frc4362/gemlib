@@ -6,13 +6,12 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import edu.wpi.first.wpilibj.TimedRobot;
 
 public class Chairbot extends TimedRobot {
-    private Gemstick m_leftStick, m_rightStick;
+    private Gemstick m_stick;
     private MotorController m_motorLeft, m_motorRight;
 
     @Override
     public void robotInit() {
-        m_leftStick = new Gemstick(0);
-        m_rightStick = new Gemstick(1);
+        m_stick = new Gemstick(0);
 
         m_motorLeft = MotorControllerFactory.createDefaultTalonSRX(0);
         m_motorLeft.setInvertedOutput(false);
@@ -25,7 +24,7 @@ public class Chairbot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        m_motorLeft.setDutyCycle(m_leftStick.y());
-        m_motorRight.setDutyCycle(m_rightStick.y());
+        m_motorLeft.setDutyCycle(m_stick.y() - m_stick.x());
+        m_motorRight.setDutyCycle(m_stick.y() + m_stick.x());
     }
 }
