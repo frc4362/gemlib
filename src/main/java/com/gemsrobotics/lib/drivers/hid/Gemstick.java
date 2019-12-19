@@ -52,7 +52,7 @@ public final class Gemstick extends Joystick {
 		 */
 		public static Function<Frame, Frame> defaultPipeline() {
 			return Deadbands.makeInverts(false, true, false)
-                    .andThen(Deadbands.makeRectangleDeadband(0.08, 0.08))
+                    .andThen(Deadbands.makeRadialDeadband(0.06))
                     .andThen(Deadbands.makeZDeadband(0.06));
 		}
 
@@ -228,17 +228,6 @@ public final class Gemstick extends Joystick {
 		return HIDType.kHIDJoystick;
 	}
 
-	/**
-	 * @return The most recent relevant joystick values, and/or pulls new ones
-	 */
-	public Frame getRawFrame() {
-		return m_joystickFrame.get();
-	}
-
-	/**
-	 * {@link Gemstick#getRawFrame()} but with the pipeline applied
-	 * @return The filtered and modified frame
-	 */
 	public Frame getFrame() {
 		return m_joystickFrame.get();
 	}
