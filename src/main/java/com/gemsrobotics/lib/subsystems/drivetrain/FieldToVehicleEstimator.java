@@ -12,6 +12,7 @@ import io.github.oblarg.oblog.annotations.Log;
 import java.util.Map;
 
 import static com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind.INFO;
+import static java.lang.Math.abs;
 
 /**
  * FieldToVehicleEstimator keeps track of the poses of various coordinate frames throughout the match. A coordinate frame is simply a
@@ -26,7 +27,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     private static final int kObservationBufferSize = 100;
 
-    // FPGATimestamp -> RigidTransform2d or Rotation2d
+    // FPGATimestamp -> RigidTransform
     private transient InterpolatingTreeMap<InterpolatingDouble, RigidTransform> m_fieldToVehicle;
     private Twist m_velocityPredicted, m_velocityMeasured;
     @Log(name="Distance Driven (m)")
@@ -110,7 +111,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
                 deltaDistance.right,
                 currentRotation);
 
-        m_distanceDriven += delta.dx;
+        m_distanceDriven += abs(delta.dx);
 
         return delta;
     }

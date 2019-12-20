@@ -63,7 +63,7 @@ public abstract class DigitalSignalTrigger {
                 m_pressedLast = pressed;
             }
         }.start();
-}
+    }
 
     public final void onRisingEdge(final Runnable runnable) {
         onRisingEdge(commandOf(runnable));
