@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj.Timer;
 
 import static java.lang.Math.*;
 
-public class NavX {
+public final class NavX {
     private static final byte
             UPDATE_RATE_HZ = (byte) 200;
     public static final double
@@ -39,18 +39,16 @@ public class NavX {
         }
     }
 
-    protected AHRS m_ahrs;
+    private final AHRS m_ahrs;
 
-    protected Rotation m_yawOffset;
-
-    protected double m_yawDegrees;
-    protected double m_fusedHeading;
-    protected double m_yawRateDegreesPerSecond;
-    protected long m_lastSensorTimestamp;
-
-    protected double m_lastAccelerationX;
-    protected double m_lastAccelerationY;
-    protected double m_lastTime;
+    private Rotation m_yawOffset;
+    private double m_yawDegrees;
+    private double m_fusedHeading;
+    private double m_yawRateDegreesPerSecond;
+    private long m_lastSensorTimestamp;
+    private double m_lastAccelerationX;
+    private double m_lastAccelerationY;
+    private double m_lastTime;
 
     public NavX(final SPI.Port spiPort) {
         m_lastSensorTimestamp = INVALID_TIMESTAMP;
