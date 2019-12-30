@@ -8,10 +8,12 @@ import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.trajectory.*;
+import com.gemsrobotics.lib.trajectory.parameterization.DifferentialDriveDynamicsConstraint;
 import com.gemsrobotics.lib.trajectory.parameterization.Parameterizer;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryUtils;
 import com.gemsrobotics.lib.utils.Units;
+import com.google.gson.Gson;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -51,7 +53,7 @@ public class TestIntegration {
         final var modelProps = new DifferentialDriveModel.Properties() {
             {
                 massKg = 60.0;
-                momentInertiaKgMetersSquared = 80.0;
+                angularMomentInertiaKgMetersSquared = 80.0;
                 angularDragTorquePerRadiansPerSecond = 0.0;
                 wheelRadiusMeters = Units.inches2Meters(2.0);
                 wheelbaseRadiusMeters = Units.inches2Meters(26.0 / 2.0);
@@ -67,14 +69,14 @@ public class TestIntegration {
         final var model = new DifferentialDriveModel(modelProps, transmission, transmission);
 
         // Create the constraint that the robot must be able to traverse the trajectory without ever applying more than 10V.
-//        DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> constraints = new DifferentialDriveDynamicsConstraint<>(model, false, 10.0);
+        DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> constraint = new DifferentialDriveDynamicsConstraint<>(model, false, 10.0);
 
         // Generate the timed trajectory.
         Trajectory<TimedState<RigidTransformWithCurvature>> timedTrajectory = Parameterizer.timeParameterizeTrajectory(
                 false,
                 new DistanceView<>(trajectory),
                 1.0,
-                Collections.emptyList(),
+                Collections.singletonList(constraint),
                 cfg,
                 0.0,
                 0.0);
@@ -94,22 +96,20 @@ public class TestIntegration {
 
         TrajectoryIterator<TimedState<RigidTransformWithCurvature>> iterator = new TrajectoryIterator<>(new TimedView<>(timedTrajectory));
 
-        while (!iterator.isDone()) {
-            TrajectorySamplePoint<TimedState<RigidTransformWithCurvature>> sample;
+        final Gson serializer = new Gson();
+        var sample = iterator.getSample();
 
-            if (first) {
-                sample = iterator.getSample();
-                first = false;
-            } else {
-                sample = iterator.advance(dt);
-            }
-
+        do {
             final TimedState<RigidTransformWithCurvature> state = sample.getState();
 
             final DifferentialDriveModel.Dynamics dynamics = model.solveInverseDynamics(
                     new ChassisState(Units.inches2Meters(state.getVelocity()), state.getVelocity() * state.getState().getCurvature()),
                     new ChassisState(Units.inches2Meters(state.getAcceleration()), state.getAcceleration() * state.getState().getCurvature()),
                     false);
-        }
+
+            System.out.println(serializer.toJson(dynamics));
+
+            sample = iterator.advance(dt);
+        } while (!iterator.isDone());
     }
 }

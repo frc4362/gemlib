@@ -72,7 +72,7 @@ public class TestPhysics {
         final var props = new DifferentialDriveModel.Properties() {
             {
                 massKg = 70;
-                momentInertiaKgMetersSquared = 84;
+                angularMomentInertiaKgMetersSquared = 84;
                 angularDragTorquePerRadiansPerSecond = 12.0;
                 wheelRadiusMeters = Units.inches2Meters(2.0);
                 wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
