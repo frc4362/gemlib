@@ -17,9 +17,10 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
     private final List<DriveCharacterizer.VelocityDataPoint> m_velocities;
     private final List<DriveCharacterizer.AccelerationDataPoint> m_accelerations;
 
-    private Optional<MotorFeedforward.Constants> m_output;
+    private MotorFeedforward.Constants m_output;
 
     public CharacterizeDifferentialDrive(final DifferentialDrive chassis, final boolean useHighGear) {
+        m_output = null;
         m_velocities = new ArrayList<>();
         m_accelerations = new ArrayList<>();
 
@@ -31,11 +32,12 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
     }
 
     public Optional<MotorFeedforward.Constants> getCharacterizationConstants() {
-        return m_output;
+        return Optional.ofNullable(m_output);
     }
 
     @Override
     protected void initialize() {
+        m_output = null;
         m_velocities.clear();
         m_accelerations.clear();
     }
@@ -43,7 +45,7 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
     @Override
     protected void end() {
         final MotorFeedforward.Constants constants = DriveCharacterizer.generateCharacterization(m_velocities, m_accelerations);
-        m_output = Optional.of(constants);
+        m_output = constants;
 
         report(Kind.INFO, "Characterization complete", Map.of(
                 "kS", FastDoubleToString.format(constants.kStiction),
