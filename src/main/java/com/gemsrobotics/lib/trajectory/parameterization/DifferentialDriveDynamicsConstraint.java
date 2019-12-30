@@ -26,7 +26,7 @@ public class DifferentialDriveDynamicsConstraint<S extends IRigidTransform2d<S> 
 
     @Override
     public MinMaxAcceleration getMinMaxAcceleration(final S state, final double velocity) {
-        // NOTE: units cancel on angular getVelocity.
+        // NOTE: units cancel on angular velocity.
         final var bounds = m_model.calculateMinMaxAcceleration(
                 new ChassisState(velocity, state.getCurvature() * velocity),
                 state.getCurvature(),
