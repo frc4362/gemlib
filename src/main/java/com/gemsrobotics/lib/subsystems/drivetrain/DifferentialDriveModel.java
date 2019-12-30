@@ -25,15 +25,15 @@ public class DifferentialDriveModel {
 		public double momentInertiaKgMetersSquared;
 
         // Drag torque (proportional to angular velocity) that resists turning, in N*m/rad/s
-        // Empirical testing of our drivebase showed that there was an unexplained loss in torque ~proportional to angular
-        // velocity, likely due to scrub of wheels.
+        // Empirical testing of our drivebase showed that there was an unexplained loss in torque ~proportional to
+		// angular velocity, likely due to scrub of wheels.
 		public double angularDragTorquePerRadiansPerSecond;
 
         // Self-explanatory. Measure by rolling the robot a known distance and counting encoder ticks.
 		public double wheelRadiusMeters;
 
-        // "Effective" kinematic wheelbase radius.  Might be larger than theoretical to compensate for skid steer.  Measure
-        // by turning the robot in place several times and figuring out what the equivalent wheelbase radius is.
+        // "Effective" kinematic wheelbase radius.  Might be larger than theoretical to compensate for skid steer.
+		// Measure by turning the robot in place several times and figuring out what the equivalent wheelbase radius is.
 		public double wheelbaseRadiusMeters;
 	}
 
@@ -51,8 +51,13 @@ public class DifferentialDriveModel {
 		public WheelState torque = new WheelState();
 	}
 
-    public final double wheelBaseRadiusMeters, angularDragTorquePerRadianPerSecond, massKg, momentInertiaKgMetersSquared, wheelRadiusMeters;
 	public final MotorModel transmissionLow, transmissionHigh;
+    public final double
+			wheelBaseRadiusMeters,
+			angularDragTorquePerRadianPerSecond,
+			massKg,
+			momentInertiaKgMetersSquared,
+			wheelRadiusMeters;
 
 	// two-speed drive train
 	public DifferentialDriveModel(final Properties properties, final MotorModel gearLow, final MotorModel gearHigh) {
@@ -210,7 +215,7 @@ public class DifferentialDriveModel {
 		}
 
 		ret.wheelVelocityMetersPerSecond = inverseKinematics(ret.chassisVelocity);
-		ret.wheelAccelerationMetersPerSecondSquared = inverseKinematics(ret.chassisVelocity);
+		ret.wheelAccelerationMetersPerSecondSquared = inverseKinematics(ret.chassisAcceleration);
 
 		ret.torque = new WheelState(
 				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
@@ -305,9 +310,10 @@ public class DifferentialDriveModel {
 				    final double accelerationMetersPerSecondSquared;
 
 					if (Double.isInfinite(curvatureRadiansPerMeter)) {
-						accelerationMetersPerSecondSquared = (left ? -1.0 : 1.0) * (fixedTorque - variableTorque) * wheelBaseRadiusMeters
-                                / (momentInertiaKgMetersSquared * wheelRadiusMeters)
-                                - dragTorque / momentInertiaKgMetersSquared;
+						final double drag = (dragTorque / momentInertiaKgMetersSquared);
+						final double direction = (left ? -1.0 : 1.0);
+						final double torqueDifferential = fixedTorque - variableTorque;
+						accelerationMetersPerSecondSquared = (direction * torqueDifferential * wheelBaseRadiusMeters / (momentInertiaKgMetersSquared * wheelRadiusMeters)) - drag;
 					} else {
 						accelerationMetersPerSecondSquared = (fixedTorque + variableTorque) / (massKg * wheelRadiusMeters);
 					}

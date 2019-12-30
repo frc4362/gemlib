@@ -49,7 +49,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
      * Resets the field to robot transform (robot's position on the field)
      */
     public synchronized void reset(final double startTime, final RigidTransform initialPose) {
-        report(INFO, "Reset @ " + startTime + " with pose " + initialPose.toString());
+        report("Reset @ " + startTime + " with pose " + initialPose.toString());
 
         m_fieldToVehicle = new InterpolatingTreeMap<>(kObservationBufferSize);
         m_fieldToVehicle.put(new InterpolatingDouble(startTime), initialPose);
@@ -82,7 +82,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
     }
 
     public synchronized RigidTransform getPredictedFieldToVehicle(final double lookaheadTime) {
-        return getLatestFieldToVehicle().getValue().transformBy(RigidTransform.ofTwist(m_velocityPredicted.scaled(lookaheadTime)));
+        return getLatestFieldToVehicle().getValue().transformBy(m_velocityPredicted.scaled(lookaheadTime).toRigidTransform());
     }
 
     public synchronized void addFieldToVehicleObservation(final double timestamp, final RigidTransform observation) {
@@ -91,13 +91,13 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     public synchronized void addObservation(
             final double timestamp,
-            final Twist measuredVelocity,
-            final Twist predicted_velocity
+            final Twist velocityMeasured,
+            final Twist velocityPredicted
     ) {
         final var currentPose = getLatestFieldToVehicle().getValue();
-        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(currentPose, measuredVelocity));
-        m_velocityMeasured = measuredVelocity;
-        m_velocityPredicted = predicted_velocity;
+        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(currentPose, velocityMeasured));
+        m_velocityMeasured = velocityMeasured;
+        m_velocityPredicted = velocityPredicted;
     }
 
     public synchronized Twist generateOdometryFromSensors(
