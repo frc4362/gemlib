@@ -22,7 +22,7 @@ public class DifferentialDriveModel {
         // Equivalent moment of inertia when accelerating purely angularly, in kg*m^2.
         // This is "equivalent" in that it also absorbs the effects of drivetrain inertia.
         // Measure by doing drivetrain acceleration characterization while turning in place.
-		public double momentInertiaKgMetersSquared;
+		public double angularMomentInertiaKgMetersSquared;
 
         // Drag torque (proportional to angular velocity) that resists turning, in N*m/rad/s
         // Empirical testing of our drivebase showed that there was an unexplained loss in torque ~proportional to
@@ -56,16 +56,18 @@ public class DifferentialDriveModel {
 			wheelBaseRadiusMeters,
 			angularDragTorquePerRadianPerSecond,
 			massKg,
-			momentInertiaKgMetersSquared,
-			wheelRadiusMeters;
+			angularMomentInertiaKgMetersSquared,
+			wheelRadiusMeters,
+			linearMomentInertiaKgMetersSquared;
 
 	// two-speed drive train
 	public DifferentialDriveModel(final Properties properties, final MotorModel gearLow, final MotorModel gearHigh) {
 		wheelBaseRadiusMeters = properties.wheelbaseRadiusMeters;
 		angularDragTorquePerRadianPerSecond = properties.angularDragTorquePerRadiansPerSecond;
 		massKg = properties.massKg;
-		momentInertiaKgMetersSquared = properties.momentInertiaKgMetersSquared;
+		angularMomentInertiaKgMetersSquared = properties.angularMomentInertiaKgMetersSquared;
 		wheelRadiusMeters = properties.wheelRadiusMeters;
+		linearMomentInertiaKgMetersSquared = massKg * wheelRadiusMeters;
 
 		transmissionLow = gearLow;
 		transmissionHigh = gearHigh;
@@ -173,9 +175,9 @@ public class DifferentialDriveModel {
 				transmission.torqueForVoltage(ret.wheelVelocityMetersPerSecond.right, voltage.right)
 		);
 
-		ret.chassisAcceleration.linearMeters = (ret.torque.left + ret.torque.right) / (wheelRadiusMeters * massKg);
-		ret.chassisAcceleration.angularRadians = wheelBaseRadiusMeters * (ret.torque.right - ret.torque.left) / (wheelRadiusMeters * momentInertiaKgMetersSquared)
-                - (velocityMetersPerSecond.angularRadians * angularDragTorquePerRadianPerSecond / momentInertiaKgMetersSquared);
+		ret.chassisAcceleration.linearMeters = (ret.torque.left + ret.torque.right) / linearMomentInertiaKgMetersSquared;
+		ret.chassisAcceleration.angularRadians = wheelBaseRadiusMeters * (ret.torque.right - ret.torque.left) / (wheelRadiusMeters * angularMomentInertiaKgMetersSquared)
+                - (velocityMetersPerSecond.angularRadians * angularDragTorquePerRadianPerSecond / angularMomentInertiaKgMetersSquared);
 
 		ret.dcurvatureRadiansPerMeterSquared =
                 (ret.chassisAcceleration.angularRadians - ret.chassisAcceleration.linearMeters * ret.curvatureRadiansPerMeter)
@@ -219,10 +221,10 @@ public class DifferentialDriveModel {
 
 		ret.torque = new WheelState(
 				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
-                        - (acceleration.angularRadians * momentInertiaKgMetersSquared / wheelBaseRadiusMeters)
+                        - (acceleration.angularRadians * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
                         - (velocity.angularRadians * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters)),
 				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
-                        + (acceleration.angularRadians * momentInertiaKgMetersSquared / wheelBaseRadiusMeters)
+                        + (acceleration.angularRadians * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
                         + (velocity.angularRadians * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters))
 		);
 
@@ -269,7 +271,7 @@ public class DifferentialDriveModel {
             final boolean isHighGear
 	) {
 		final var transmission = getTransmission(isHighGear);
-		final var result = new Bounds(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY);
+		final var result = new Bounds(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
 		final WheelState wheelVelocitiesMetersPerSecond = inverseKinematics(velocity);
 
@@ -280,8 +282,8 @@ public class DifferentialDriveModel {
 		// 2 equations, 2 unknowns.
 		// Solve for a and (Tl|Tr)
 
-		final double linearTorque = Double.isInfinite(curvatureRadiansPerMeter) ? 0.0 : massKg * wheelBaseRadiusMeters;
-		final double angularTorque = Double.isInfinite(curvatureRadiansPerMeter) ? momentInertiaKgMetersSquared : momentInertiaKgMetersSquared * curvatureRadiansPerMeter;
+		final double linearTorque = Double.isInfinite(curvatureRadiansPerMeter) ? 0.0 : linearMomentInertiaKgMetersSquared;
+		final double angularTorque = Double.isInfinite(curvatureRadiansPerMeter) ? angularMomentInertiaKgMetersSquared : angularMomentInertiaKgMetersSquared * curvatureRadiansPerMeter;
 		final double dragTorque = velocity.angularRadians * angularDragTorquePerRadianPerSecond;
 
 		// Check all four cases and record the min and max valid accelerations.
@@ -296,11 +298,9 @@ public class DifferentialDriveModel {
 				// Leaving this "as is" for code release so as not to be disingenuous, but this whole function needs
 				// revisiting in the future... its probably good enough lol
 				if (left) {
-					variableTorque = ((-dragTorque) * massKg * wheelRadiusMeters + fixedTorque * (linearTorque + angularTorque))
-                            / (linearTorque - angularTorque);
+					variableTorque = ((-dragTorque) * linearMomentInertiaKgMetersSquared + fixedTorque * (linearTorque + angularTorque)) / (linearTorque - angularTorque);
 				} else {
-					variableTorque = ((+dragTorque) * massKg * wheelRadiusMeters + fixedTorque * (linearTorque - angularTorque))
-                            / (linearTorque + angularTorque);
+					variableTorque = ((+dragTorque) * linearMomentInertiaKgMetersSquared + fixedTorque * (linearTorque - angularTorque)) / (linearTorque + angularTorque);
 				}
 
 				final double otherWheelSpeedMetersPerSecond = left ? wheelVelocitiesMetersPerSecond.right : wheelVelocitiesMetersPerSecond.left;
@@ -310,12 +310,12 @@ public class DifferentialDriveModel {
 				    final double accelerationMetersPerSecondSquared;
 
 					if (Double.isInfinite(curvatureRadiansPerMeter)) {
-						final double drag = (dragTorque / momentInertiaKgMetersSquared);
+						final double drag = (dragTorque / angularMomentInertiaKgMetersSquared);
 						final double direction = (left ? -1.0 : 1.0);
 						final double torqueDifferential = fixedTorque - variableTorque;
-						accelerationMetersPerSecondSquared = (direction * torqueDifferential * wheelBaseRadiusMeters / (momentInertiaKgMetersSquared * wheelRadiusMeters)) - drag;
+						accelerationMetersPerSecondSquared = (direction * torqueDifferential * wheelBaseRadiusMeters / (angularMomentInertiaKgMetersSquared * wheelRadiusMeters)) - drag;
 					} else {
-						accelerationMetersPerSecondSquared = (fixedTorque + variableTorque) / (massKg * wheelRadiusMeters);
+						accelerationMetersPerSecondSquared = (fixedTorque + variableTorque) / linearMomentInertiaKgMetersSquared;
 					}
 
 					result.min = min(result.min, accelerationMetersPerSecondSquared);
