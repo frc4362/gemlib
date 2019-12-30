@@ -11,7 +11,7 @@ public interface TimingConstraint<S extends State<S>> {
         protected final double m_accelerationMin;
         protected final double m_accelerationMax;
 
-        public static MinMaxAcceleration NO_LIMITS = new MinMaxAcceleration();
+        public static final MinMaxAcceleration NO_LIMITS = new MinMaxAcceleration();
 
         public MinMaxAcceleration() {
             // No limits.
@@ -33,7 +33,7 @@ public interface TimingConstraint<S extends State<S>> {
         }
 
         public boolean isValid() {
-            return getAccelerationMin() <= getAccelerationMax();
+            return m_accelerationMin <= m_accelerationMax;
         }
 
         @Override
