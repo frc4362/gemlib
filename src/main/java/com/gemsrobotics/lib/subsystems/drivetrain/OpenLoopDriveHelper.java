@@ -11,21 +11,21 @@ import static java.lang.Math.*;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class OpenLoopDriveHelper {
 	public static class Config {
-		boolean useSineAttack;
+		public boolean useSineAttack;
 
-		double zNonLinearityHighGear, zNonLinearityLowGear;
-		double sensitivityHighGear, sensitivityLowGear;
+		public double zNonLinearityHighGear, zNonLinearityLowGear;
+		public double sensitivityHighGear, sensitivityLowGear;
 
-		double negativeInertiaScalarHigh;
+		public double negativeInertiaScalarHigh;
 
-		double negativeInertiaThresholdLow;
-		double negativeInertiaTurnScalarLow;
-		double negativeInertiaCloseScalarLow;
-		double negativeInertiaFarScalarLow;
+		public double negativeInertiaThresholdLow;
+		public double negativeInertiaTurnScalarLow;
+		public double negativeInertiaCloseScalarLow;
+		public double negativeInertiaFarScalarLow;
 
-		double quickStopDeadband;
-		double quickStopWeight;
-		double quickStopScalar;
+		public double quickStopDeadband;
+		public double quickStopWeight;
+		public double quickStopScalar;
 	}
 
 	protected final transient OpenLoopDriveHelper.Config m_cfg;

@@ -1,9 +1,12 @@
 package lib.trajectory;
 
+import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.math.se2.*;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.OpenLoopDriveHelper;
 import com.gemsrobotics.lib.trajectory.MirroredTrajectory;
 import com.gemsrobotics.lib.trajectory.TimedView;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
@@ -55,22 +58,81 @@ public class TestTrajectoryGeneration {
 
     @Test
     public void test() {
-        try {
-            final var raw = String.join("", Files.readAllLines(Path.of("D:\\gemlib\\src\\main\\deploy\\drivetrain_properties.json")));
-            cfg = new Gson().fromJson(raw, DifferentialDrive.Config.class);
-        } catch (final IOException e) {
-            e.printStackTrace();
-        }
+        final var cfg = new DifferentialDrive.Config() {
+            {
+                rotationsToMeters = 0.00072;
+                maxVoltage = 12.0;
+                secondsToMaxVoltage = 0.2;
+
+                motionConfig = new DriveMotionPlanner.MotionConfig() {
+                    {
+                        beta = 2.0;
+                        zeta = 0.7;
+                        maxDx = 0.0508;
+                        maxDy = 0.00127;
+                        maxDtheta = 0.1;
+                        maxVoltage = 10.0;
+                        maxVelocity = 3.96;
+                        maxAcceleration = 5.0;
+                        maxCentripetalAcceleration = 1.57;
+                    }
+                };
+
+                gainsLowGear = new PIDFController.Gains(0.002, 0.0, 0.0, 0.0225);
+                gainsHighGear = gainsLowGear;
+
+                propertiesLowGear = new MotorModel.Properties() {
+                    {
+                        stictionVoltage = 0.3017;
+                        speedRadiansPerSecondPerVolt = 0.1862;
+                        torquePerVolt = 0.0086739979;
+                    }
+                };
+                propertiesHighGear = propertiesLowGear;
+
+                propertiesModel = new DifferentialDriveModel.Properties() {
+                    {
+                        massKg = 63.5;
+                        angularMomentInertiaKgMetersSquared = 4.0;
+                        angularDragTorquePerRadiansPerSecond = 1.2;
+                        wheelRadiusMeters = 0.0482;
+                        wheelbaseRadiusMeters = 0.8763;
+                    }
+                };
+
+                openLoopConfig = new OpenLoopDriveHelper.Config() {
+                    {
+                        useSineAttack = true;
+                        zNonLinearityHighGear = 1.0;
+                        zNonLinearityLowGear = 1.0;
+
+                        sensitivityHighGear = 0.65;
+                        sensitivityLowGear = 1.0;
+
+                        negativeInertiaScalarHigh = 4.0;
+                        negativeInertiaThresholdLow = 0.65;
+                        negativeInertiaTurnScalarLow = 3.5;
+                        negativeInertiaCloseScalarLow = 4.0;
+                        negativeInertiaFarScalarLow = 5.0;
+
+                        quickStopDeadband = 0.5;
+                        quickStopScalar = 5.0;
+                        quickStopWeight = 0.1;
+                    }
+                };
+            }
+        };
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
             speedRadiansPerSecondPerVolt = Units.rpm2RadsPerSecond(65.0);
             torquePerVolt = 0.35;
             stictionVoltage = 1.0;
         }});
+
         final var props = new DifferentialDriveModel.Properties() {
             {
                 massKg = 63;
-                momentInertiaKgMetersSquared = 84;
+                angularMomentInertiaKgMetersSquared = 84;
                 angularDragTorquePerRadiansPerSecond = 12.0;
                 wheelRadiusMeters = Units.inches2Meters(2.0);
                 wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;

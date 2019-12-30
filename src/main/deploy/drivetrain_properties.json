@@ -14,10 +14,6 @@
     "maxAcceleration": 5,
     "maxCentripetalAcceleration": 1.57
   },
-  "collisionThresholds": {
-    "collisionJerkThreshold": 950,
-    "tipThresholdDegrees": 11
-  },
   "gainsLowGear": {
     "kP": 0.002,
     "kI": 0.0,
@@ -40,7 +36,7 @@
     "torquePerVolt": 0.008674,
     "stictionVoltage": 0.3017
   },
-  "model": {
+  "propertiesModel": {
     "mass": 63.5,
     "momentInertia": 4.0,
     "angularDrag": -1.2,
