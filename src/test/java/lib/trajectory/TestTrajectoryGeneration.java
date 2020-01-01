@@ -148,11 +148,13 @@ public class TestTrajectoryGeneration {
 
         final var trajectory = generator.generateTrajectory(
                 false,
-                reversed,
+                false,
                 Arrays.asList(
                         RigidTransform.identity(),
-                        new RigidTransform(100 * 0.0254, 0, Rotation.degrees(0)),
-                        new RigidTransform(140, 36, Rotation.degrees(0))),
+                        new RigidTransform(10.0, 0.0, Rotation.identity()),
+                        new RigidTransform(15, 5.0, Rotation.degrees(90)),
+                        new RigidTransform(20.0, 0.0, Rotation.identity())
+                ),
                 Collections.emptyList(),
                 0.0,
                 0.0);
