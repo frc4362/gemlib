@@ -59,7 +59,7 @@ public final class SubsystemManager implements Reportable, Loggable {
                         Pod.catchThrowable(subsystem, throwable);
                     }
 
-                    if (RobotState.isEnabled() && subsystem.isActive()) {
+                    if (subsystem.isActive()) {
                         subsystem.onUpdate(now);
                     }
                 }
@@ -86,6 +86,8 @@ public final class SubsystemManager implements Reportable, Loggable {
                                 return false;
                         }
                     });
+
+                    m_faultCheckTimer.reset();
                 }
             }
         });

@@ -120,7 +120,7 @@ public abstract class DifferentialDrive extends Subsystem {
         TRAJECTORY_TRACKING
 	}
 
-	private class PeriodicIO implements Loggable {
+	protected final class PeriodicIO implements Loggable {
 		// Inputs
         @Log.ToString(name="Wheel Position (m, m)")
 		public WheelState positionMeters = new WheelState();
@@ -209,7 +209,7 @@ public abstract class DifferentialDrive extends Subsystem {
         }
     }
 
-	public synchronized void setDriverControl(final double throttle, final double wheel, final boolean isQuickTurn) {
+	public synchronized void setCurvatureDrive(final double throttle, final double wheel, final boolean isQuickTurn) {
 		configureControlMode(ControlMode.OPEN_LOOP);
 		m_periodicIO.demand = m_openLoopHelper.drive(throttle, wheel, isQuickTurn, m_periodicIO.isHighGear);
 	}

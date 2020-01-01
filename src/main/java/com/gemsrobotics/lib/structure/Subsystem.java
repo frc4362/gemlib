@@ -41,6 +41,7 @@ public abstract class Subsystem
 	private double m_dt = 0.0;
 	private boolean m_isActive = false;
 
+	// seconds
 	protected synchronized final double dt() {
         return m_dt;
     }
@@ -50,20 +51,23 @@ public abstract class Subsystem
 	    m_isActive = active;
     }
 
-    public final boolean isInactive() {
-        return !isActive();
-    }
-
     @Log.BooleanBox(name="Enabled?")
     public final boolean isActive() {
 	    return m_isActive;
     }
 
+    // should update the local PeriodicIO class's members
     protected abstract void readPeriodicInputs();
 
+	// called once everything has been initialized
+	// designed for things which must be initialized very late
+	// or are dependant on other subsystems
     protected abstract void onCreate(double timestamp);
+    // called whenever an opmode is enabled; important to consider that this is going to be called twice in competition
     protected abstract void onEnable(double timestamp);
+    // called every 10ms while the subsystem is enabled
     protected abstract void onUpdate(double timestamp);
+    // called when the robot is disabled
     protected abstract void onStop(double timestamp);
 
     protected synchronized final void updatePeriodicState(final double timestamp) {

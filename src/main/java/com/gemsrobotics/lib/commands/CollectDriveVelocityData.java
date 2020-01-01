@@ -37,7 +37,7 @@ public final class CollectDriveVelocityData extends Command {
     @Override
     public void execute() {
         m_power = RAMP_RATE * timeSinceInitialized();
-        m_chassis.setDriverControl(m_power, 0, false);
+        m_chassis.setCurvatureDrive(m_power, 0, false);
 
         final var velocities = m_chassis.getWheelProperty(MotorController::getVelocityAngular);
         m_data.add(new DriveCharacterizer.VelocityDataPoint(abs(velocities.left) + abs(velocities.right), m_power * 12.0));

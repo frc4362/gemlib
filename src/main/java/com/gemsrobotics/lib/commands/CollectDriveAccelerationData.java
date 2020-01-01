@@ -31,7 +31,7 @@ public class CollectDriveAccelerationData extends Command {
     public void initialize() {
         m_lastTime = Double.NaN;
         m_lastVelocity = Double.NaN;
-        m_chassis.setDriverControl(POWER, 0, false);
+        m_chassis.setCurvatureDrive(POWER, 0, false);
     }
 
     @Override

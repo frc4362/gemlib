@@ -234,7 +234,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 
     @Override
     public void setVoltage(final double voltage, final double feedforward) {
-        setDutyCycle(voltage, feedforward);
+        setDutyCycle(voltage / 12.0, feedforward);
     }
 
     @Override

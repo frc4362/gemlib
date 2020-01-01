@@ -198,7 +198,7 @@ public final class GemSparkMax extends CANSparkMax implements MotorController, R
 
     @Override
     public void setVoltage(final double voltage, final double feedforward) {
-        set(ControlType.kVoltage, voltage, feedforward);
+        setDutyCycle(voltage / 12.0, feedforward);
     }
 
     @Override

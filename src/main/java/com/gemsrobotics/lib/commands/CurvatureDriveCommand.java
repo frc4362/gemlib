@@ -1,7 +1,6 @@
 package com.gemsrobotics.lib.commands;
 
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
-import edu.wpi.first.wpilibj.command.Command;
 
 import java.util.function.Supplier;
 
@@ -25,6 +24,6 @@ public final class CurvatureDriveCommand extends EndlessCommand {
 
     @Override
     public void execute() {
-        m_chassis.setDriverControl(m_throttle.get(), m_wheel.get(), m_isQuickturn.get());
+        m_chassis.setCurvatureDrive(m_throttle.get(), m_wheel.get(), m_isQuickturn.get());
     }
 }
