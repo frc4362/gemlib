@@ -284,7 +284,7 @@ public abstract class DifferentialDrive extends Subsystem {
            if (!m_forceFinishTrajectory) {
                // convert from radians/second to meters/second
                // please note that we cannot use setVelocityRPM as the calculated rad/s are for the wheel, not the motor
-               m_periodicIO.demand = output.velocity.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
+               m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
 
                // convert from volts to % output, then use D term to calculate additional gain based on acceleration (dv/dt)
                final var kD = m_config.velocityGainsForGear(m_periodicIO.isHighGear).kD;

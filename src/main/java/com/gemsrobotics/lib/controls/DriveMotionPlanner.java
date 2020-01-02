@@ -51,15 +51,15 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 	public static class Output implements Loggable {
 	    @Log.ToString(name="Velocity (rad per s, rad per s)")
-		public WheelState velocity; // rad/s
+		public WheelState velocityRadiansPerSecond;
         @Log.ToString(name="Acceleration (rad per s^2, rad per s^2)")
-		public WheelState acceleration; // rad/s^2
+		public WheelState accelerationRadiansPerSecondSquared;
         @Log.ToString(name="Feedforward (V, V)")
-		public WheelState feedforwardVoltage; // volts
+		public WheelState feedforwardVoltage;
 
 		public void flip() {
-			velocity.flip();
-			acceleration.flip();
+			velocityRadiansPerSecond.flip();
+			accelerationRadiansPerSecondSquared.flip();
 			feedforwardVoltage.flip();
 		}
 	}
@@ -162,8 +162,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 			switch (m_followerType) {
                 case FEEDFORWARD:
-                    m_output.velocity = setpointDynamics.wheelVelocityRadiansPerSecond;
-                    m_output.acceleration = setpointDynamics.wheelAccelerationRadiansPerSecondSquared;
+                    m_output.velocityRadiansPerSecond = setpointDynamics.wheelVelocityRadiansPerSecond;
+                    m_output.accelerationRadiansPerSecondSquared = setpointDynamics.wheelAccelerationRadiansPerSecondSquared;
                     m_output.feedforwardVoltage = setpointDynamics.voltage;
                     break;
 				case RAMSETE:
@@ -209,8 +209,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		m_previousVelocity = ref.chassisVelocity;
 
 		final var output = new Output();
-		output.velocity = ref.wheelVelocityRadiansPerSecond;
-		output.acceleration = ref.wheelAccelerationRadiansPerSecondSquared;
+		output.velocityRadiansPerSecond = ref.wheelVelocityRadiansPerSecond;
+		output.accelerationRadiansPerSecondSquared = ref.wheelAccelerationRadiansPerSecondSquared;
 		output.feedforwardVoltage = m_model.solveInverseDynamics(ref.chassisVelocity, ref.chassisAcceleration, isHighGear).voltage;
 		return output;
 	}
