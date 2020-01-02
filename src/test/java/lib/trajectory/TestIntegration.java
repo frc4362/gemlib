@@ -4,7 +4,6 @@ import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
@@ -13,8 +12,6 @@ import com.gemsrobotics.lib.trajectory.parameterization.DifferentialDriveDynamic
 import com.gemsrobotics.lib.trajectory.parameterization.Parameterizer;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryUtils;
-import com.gemsrobotics.lib.utils.Units;
-import com.google.gson.Gson;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,7 +28,7 @@ public class TestIntegration {
         // Specify desired waypoints.
         final List<RigidTransform> waypoints = Arrays.asList(
                 RigidTransform.identity(),
-                new RigidTransform(1, 1, Rotation.degrees(0)));
+                new RigidTransform(100, 0, Rotation.degrees(0)));
 
         final var cfg = new DriveMotionPlanner.MotionConfig() {
             {
@@ -53,13 +50,13 @@ public class TestIntegration {
                 massKg = 60;
                 angularMomentInertiaKgMetersSquared = 9.6;
                 angularDragTorquePerRadiansPerSecond = 12.0;
-                wheelRadiusMeters = 4.0 * 0.0254 / 2.0;
+                wheelRadiusMeters = 0.0508;
                 wheelbaseRadiusMeters = 0.3489513;
             }
         };
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
-            speedRadiansPerSecondPerVolt = 0.14046082943;
+            speedRadiansPerSecondPerVolt = 7.11942257233;
             torquePerVolt = 6.4516;
             stictionVoltage = 1.3;
         }});
@@ -103,7 +100,7 @@ public class TestIntegration {
                     new ChassisState(state.getAcceleration(), state.getAcceleration() * state.getState().getCurvature()),
                     false);
 
-            System.out.println(dynamics.voltage);
+            System.out.println(dynamics.voltage.map(v -> v / 12.0));
 
             sample = iterator.advance(dt);
         } while (!iterator.isDone());

@@ -125,32 +125,32 @@ public class TestPhysics {
         DifferentialDriveModel.Dynamics d1 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(0.0, 0.0), false);
         assertThat(0.0, closeTo(d1.torque.left, kEpsilon));
         assertThat(0.0, closeTo(d1.torque.right, kEpsilon));
-        assertThat(0.0, closeTo(d1.wheelAccelerationMetersPerSecondSquared.left, kEpsilon));
-        assertThat(0.0, closeTo(d1.wheelAccelerationMetersPerSecondSquared.right, kEpsilon));
+        assertThat(0.0, closeTo(d1.wheelAccelerationRadiansPerSecondSquared.left, kEpsilon));
+        assertThat(0.0, closeTo(d1.wheelAccelerationRadiansPerSecondSquared.right, kEpsilon));
         assertThat(0.0, closeTo(d1.chassisAcceleration.linearMeters, kEpsilon));
         assertThat(0.0, closeTo(d1.chassisAcceleration.angularRadians, kEpsilon));
 
         DifferentialDriveModel.Dynamics d2 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(12.0, 12.0), false);
         assertThat(11.0 * .35, closeTo(d2.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d2.torque.right, kEpsilon));
-        assertThat(0.0, lessThan(d2.wheelAccelerationMetersPerSecondSquared.left));
-        assertThat(0.0, lessThan(d2.wheelAccelerationMetersPerSecondSquared.right));
+        assertThat(0.0, lessThan(d2.wheelAccelerationRadiansPerSecondSquared.left));
+        assertThat(0.0, lessThan(d2.wheelAccelerationRadiansPerSecondSquared.right));
         assertThat(2.0, lessThan(d2.chassisAcceleration.linearMeters));
         assertThat(0.0, closeTo(d2.chassisAcceleration.angularRadians, kEpsilon));
 
         DifferentialDriveModel.Dynamics d3 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, -12.0), false);
         assertThat(-11.0 * .35, closeTo(d3.torque.left, kEpsilon));
         assertThat(-11.0 * .35, closeTo(d3.torque.right, kEpsilon));
-        assertThat(0.0, greaterThan(d3.wheelAccelerationMetersPerSecondSquared.left));
-        assertThat(0.0, greaterThan(d3.wheelAccelerationMetersPerSecondSquared.right));
+        assertThat(0.0, greaterThan(d3.wheelAccelerationRadiansPerSecondSquared.left));
+        assertThat(0.0, greaterThan(d3.wheelAccelerationRadiansPerSecondSquared.right));
         assertThat(0.0, greaterThan(d3.chassisAcceleration.linearMeters));
         assertThat(0.0, closeTo(d3.chassisAcceleration.angularRadians, kEpsilon));
 
         DifferentialDriveModel.Dynamics d4 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, 12.0), false);
         assertThat(-11.0 * .35, closeTo(d4.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d4.torque.right, kEpsilon));
-        assertThat(0.0, greaterThan(d4.wheelAccelerationMetersPerSecondSquared.left));
-        assertThat(0.0, lessThan(d4.wheelAccelerationMetersPerSecondSquared.right));
+        assertThat(0.0, greaterThan(d4.wheelAccelerationRadiansPerSecondSquared.left));
+        assertThat(0.0, lessThan(d4.wheelAccelerationRadiansPerSecondSquared.right));
         assertThat(0.0, closeTo(d4.chassisAcceleration.linearMeters, kEpsilon));
         assertThat(0.0, lessThan(d4.chassisAcceleration.angularRadians));
 

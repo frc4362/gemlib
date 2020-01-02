@@ -162,8 +162,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 			switch (m_followerType) {
                 case FEEDFORWARD:
-                    m_output.velocity = setpointDynamics.wheelVelocityMetersPerSecond;
-                    m_output.acceleration = setpointDynamics.wheelAccelerationMetersPerSecondSquared;
+                    m_output.velocity = setpointDynamics.wheelVelocityRadiansPerSecond;
+                    m_output.acceleration = setpointDynamics.wheelAccelerationRadiansPerSecondSquared;
                     m_output.feedforwardVoltage = setpointDynamics.voltage;
                     break;
 				case RAMSETE:
@@ -192,7 +192,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 		ref.chassisVelocity = adjustedVelocity;
 		// this is where everything goes from meters to wheel radians/s!!
-		ref.wheelVelocityMetersPerSecond = m_model.inverseKinematics(adjustedVelocity);
+		ref.wheelVelocityRadiansPerSecond = m_model.inverseKinematics(adjustedVelocity);
 
 		if (dt == 0.0) {
 			ref.chassisAcceleration.linearMeters = 0.0;
@@ -209,8 +209,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		m_previousVelocity = ref.chassisVelocity;
 
 		final var output = new Output();
-		output.velocity = ref.wheelVelocityMetersPerSecond;
-		output.acceleration = ref.wheelAccelerationMetersPerSecondSquared;
+		output.velocity = ref.wheelVelocityRadiansPerSecond;
+		output.acceleration = ref.wheelAccelerationRadiansPerSecondSquared;
 		output.feedforwardVoltage = m_model.solveInverseDynamics(ref.chassisVelocity, ref.chassisAcceleration, isHighGear).voltage;
 		return output;
 	}

@@ -288,7 +288,7 @@ public abstract class DifferentialDrive extends Subsystem {
 
                // convert from volts to % output, then use D term to calculate additional gain based on acceleration (dv/dt)
                final var kD = m_config.velocityGainsForGear(m_periodicIO.isHighGear).kD;
-               m_periodicIO.feedforward = output.feedforwardVoltage.map(v -> v / 12.0).sum(output.acceleration.map(a -> a * kD));
+               m_periodicIO.feedforward = output.feedforwardVoltage.map(v -> v / 12.0);
            }
 		} else {
 			report(Kind.ERROR, "Tried to update trajectory following in bad control state: " + m_controlMode.toString());
