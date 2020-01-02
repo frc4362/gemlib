@@ -49,6 +49,17 @@ public class DifferentialDriveModel {
 
 		public WheelState voltage = new WheelState();
 		public WheelState torque = new WheelState();
+
+		public String getChassisString() {
+			return "[" + chassisVelocity.toString()
+					   + ", " + chassisAcceleration.toAccelerationString() + "]";
+		}
+
+		public String getWheelString() {
+			return "[" + wheelVelocityMetersPerSecond.toString()
+					   + ", " + wheelAccelerationMetersPerSecondSquared.toString()
+					   + ", " + voltage.toString() + "]";
+		}
 	}
 
 	public final MotorModel transmissionLow, transmissionHigh;

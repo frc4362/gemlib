@@ -167,7 +167,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
                     m_output.feedforwardVoltage = setpointDynamics.voltage;
                     break;
 				case RAMSETE:
-					m_output = updateRamsete(dt, setpointDynamics, currentPose, isHighGear);
+					m_output = updateRamsete(dt, setpointDynamics, isHighGear);
 					break;
 			}
 		} else {
@@ -178,7 +178,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 	}
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
-	protected Output updateRamsete(final double dt, final DifferentialDriveModel.Dynamics ref, final RigidTransform currentPose, final boolean isHighGear) {
+	protected Output updateRamsete(final double dt, final DifferentialDriveModel.Dynamics ref, final boolean isHighGear) {
 		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linearMeters * ref.chassisVelocity.linearMeters + ref.chassisVelocity.angularRadians * ref.chassisVelocity.angularRadians);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
@@ -203,8 +203,8 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		}
 
 		// store previous velocity, allows the user to only have to worry about passing the new state
-        // this is superior to passing velocity and acceleration in, like 1678 does, since it allows the user to worry about fewer calculations up front
-        // and works fine with a variant dt. However, where it lacks is in application-
+        // this is superior to passing velocity and acceleration in, like 1678 does, since it allows the user to worry
+		// about fewer calculations up front and works fine with a variant dt. However, where it lacks is in application-
         // our Ramsete controller is highly coupled. This should be fine. - Ethan, 9/24/19
 		m_previousVelocity = ref.chassisVelocity;
 

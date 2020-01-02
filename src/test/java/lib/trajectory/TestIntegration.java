@@ -4,6 +4,7 @@ import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
+import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
@@ -29,21 +30,18 @@ public class TestIntegration {
     public void testSplineTrajectoryGenerator() {
         // Specify desired waypoints.
         final List<RigidTransform> waypoints = Arrays.asList(
-                new RigidTransform(0.0, 0.0, Rotation.degrees(0.0)),
-                new RigidTransform(36.0, 0.0, Rotation.degrees(0.0)),
-                new RigidTransform(60.0, 100, Rotation.degrees(0.0)),
-                new RigidTransform(160.0, 100.0, Rotation.degrees(0.0)),
-                new RigidTransform(200.0, 70, Rotation.degrees(45.0)));
+                RigidTransform.identity(),
+                new RigidTransform(1, 1, Rotation.degrees(0)));
 
         final var cfg = new DriveMotionPlanner.MotionConfig() {
             {
-                maxDx = 2.0;
-                maxDy = 0.2;
+                maxDx = 0.0508;
+                maxDy = 0.00127;
                 maxDtheta = Math.toRadians(5.0);
                 maxVoltage = 12.0;
-                maxVelocity = 12 * 14;
-                maxAcceleration = 12 * 10;
-                maxCentripetalAcceleration = 15 * 12;
+                maxVelocity = 4.0;
+                maxAcceleration = 3.0;
+                maxCentripetalAcceleration = 1.0;
             }
         };
 
@@ -52,18 +50,18 @@ public class TestIntegration {
 
         final var modelProps = new DifferentialDriveModel.Properties() {
             {
-                massKg = 60.0;
-                angularMomentInertiaKgMetersSquared = 80.0;
-                angularDragTorquePerRadiansPerSecond = 0.0;
-                wheelRadiusMeters = Units.inches2Meters(2.0);
-                wheelbaseRadiusMeters = Units.inches2Meters(26.0 / 2.0);
+                massKg = 60;
+                angularMomentInertiaKgMetersSquared = 9.6;
+                angularDragTorquePerRadiansPerSecond = 12.0;
+                wheelRadiusMeters = 4.0 * 0.0254 / 2.0;
+                wheelbaseRadiusMeters = 0.3489513;
             }
         };
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
-            speedRadiansPerSecondPerVolt = 1.0 / 0.143;
-            torquePerVolt = (modelProps.wheelRadiusMeters * modelProps.wheelRadiusMeters * modelProps.massKg / 2.0) / 0.02;
-            stictionVoltage = 0.8;
+            speedRadiansPerSecondPerVolt = 0.14046082943;
+            torquePerVolt = 6.4516;
+            stictionVoltage = 1.3;
         }});
 
         final var model = new DifferentialDriveModel(modelProps, transmission, transmission);
@@ -92,22 +90,20 @@ public class TestIntegration {
 
         // "Follow" the trajectory.
         final double dt = 0.01;
-        boolean first = true;
 
         TrajectoryIterator<TimedState<RigidTransformWithCurvature>> iterator = new TrajectoryIterator<>(new TimedView<>(timedTrajectory));
 
-        final Gson serializer = new Gson();
         var sample = iterator.getSample();
 
         do {
             final TimedState<RigidTransformWithCurvature> state = sample.getState();
 
             final DifferentialDriveModel.Dynamics dynamics = model.solveInverseDynamics(
-                    new ChassisState(Units.inches2Meters(state.getVelocity()), state.getVelocity() * state.getState().getCurvature()),
-                    new ChassisState(Units.inches2Meters(state.getAcceleration()), state.getAcceleration() * state.getState().getCurvature()),
+                    new ChassisState(state.getVelocity(), state.getVelocity() * state.getState().getCurvature()),
+                    new ChassisState(state.getAcceleration(), state.getAcceleration() * state.getState().getCurvature()),
                     false);
 
-            System.out.println(serializer.toJson(dynamics));
+            System.out.println(dynamics.voltage);
 
             sample = iterator.advance(dt);
         } while (!iterator.isDone());

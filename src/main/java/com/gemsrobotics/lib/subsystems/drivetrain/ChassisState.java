@@ -19,4 +19,8 @@ public class ChassisState {
     public String toString() {
         return "[vx: " + FastDoubleToString.format(linearMeters, 3) + ", omega: " + FastDoubleToString.format(angularRadians, 3) + "]";
     }
+
+    public String toAccelerationString() {
+        return "[vx^2: " + FastDoubleToString.format(linearMeters, 3) + ", omega^2: " + FastDoubleToString.format(angularRadians, 3) + "]";
+    }
 }
