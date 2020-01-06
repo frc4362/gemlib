@@ -229,7 +229,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 
     @Override
     public void setDutyCycle(final double cycle, final double feedforward) {
-        set(ControlMode.PercentOutput, cycle, DemandType.ArbitraryFeedForward, feedforward / 12.0);
+        set(ControlMode.PercentOutput, cycle, DemandType.ArbitraryFeedForward, feedforward);
     }
 
     @Override
@@ -282,7 +282,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
 	    boolean success = true;
 
 	    success &= setNominalOutputForward(forward);
-	    success &= setNominalOutputReverse(forward);
+	    success &= setNominalOutputReverse(reverse);
 
 	    return success;
     }
@@ -291,7 +291,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
         boolean success = true;
 
         success &= setPeakOutputForward(forward);
-        success &= setPeakOutputReverse(forward);
+        success &= setPeakOutputReverse(reverse);
 
         return success;
     }
