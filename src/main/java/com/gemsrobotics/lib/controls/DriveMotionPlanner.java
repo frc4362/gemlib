@@ -183,16 +183,15 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
 
-		final var adjustedVelocity = new ChassisState(
+		// adjust for error
+		ref.chassisVelocity = new ChassisState(
 				ref.chassisVelocity.linearMeters * m_error.getRotation().cos()
-                        + k * m_error.getTranslation().x(),
+						+ k * m_error.getTranslation().x(),
 				ref.chassisVelocity.angularRadians
-					    + k * angularErrorRadians
-					    + ref.chassisVelocity.linearMeters * m_config.beta * sinc(m_error.getRotation().getRadians(), 0.01) * m_error.getTranslation().y());
-
-		ref.chassisVelocity = adjustedVelocity;
+						+ k * angularErrorRadians
+						+ ref.chassisVelocity.linearMeters * m_config.beta * sinc(angularErrorRadians, 0.01) * m_error.getTranslation().y());
 		// this is where everything goes from meters to wheel radians/s!!
-		ref.wheelVelocityRadiansPerSecond = m_model.inverseKinematics(adjustedVelocity);
+		ref.wheelVelocityRadiansPerSecond = m_model.inverseKinematics(ref.chassisVelocity);
 
 		if (dt == 0.0) {
 			ref.chassisAcceleration.linearMeters = 0.0;
