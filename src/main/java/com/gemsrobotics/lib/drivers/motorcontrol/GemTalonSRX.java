@@ -202,7 +202,7 @@ public class GemTalonSRX extends TalonSRX implements MotorController, Reportable
     }
 
     @Override
-    public synchronized boolean setPIDF(PIDFController.Gains gains) {
+    public synchronized boolean setPIDF(final PIDFController.Gains gains) {
 	    boolean success = true;
 
 	    success &= runWithRetries(() -> config_kP(m_selectedProfileID, gains.kP, TIMEOUT_MS));
