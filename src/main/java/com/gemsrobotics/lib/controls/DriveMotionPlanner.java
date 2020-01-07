@@ -56,12 +56,6 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		public WheelState accelerationRadiansPerSecondSquared;
         @Log.ToString(name="Feedforward (V, V)")
 		public WheelState feedforwardVoltage;
-
-		public void flip() {
-			velocityRadiansPerSecond.flip();
-			accelerationRadiansPerSecondSquared.flip();
-			feedforwardVoltage.flip();
-		}
 	}
 
 	protected transient final DifferentialDriveModel m_model;
