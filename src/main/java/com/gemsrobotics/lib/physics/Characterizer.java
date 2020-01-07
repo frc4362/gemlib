@@ -8,8 +8,7 @@ import com.gemsrobotics.lib.utils.MathUtils;
 import java.util.List;
 import java.util.Objects;
 
-public final class DriveCharacterizer implements Reportable {
-
+public final class Characterizer implements Reportable {
     public static class VelocityDataPoint {
         protected final double velocity, power;
 
