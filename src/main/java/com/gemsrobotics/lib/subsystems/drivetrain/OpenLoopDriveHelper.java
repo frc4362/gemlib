@@ -3,7 +3,6 @@ package com.gemsrobotics.lib.subsystems.drivetrain;
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.limit;
 
-import com.gemsrobotics.lib.utils.MathUtils;
 import com.google.gson.annotations.SerializedName;
 
 import static java.lang.Math.*;
@@ -110,21 +109,21 @@ public class OpenLoopDriveHelper {
 		}
 
 		final ChassisState powers = new ChassisState();
-		powers.linearMeters = throttle;
+		powers.linear = throttle;
 
 		final double overPower;
 
 		if (isQuickTurn) {
-			if (abs(powers.linearMeters) < m_cfg.quickStopDeadband) {
+			if (abs(powers.linear) < m_cfg.quickStopDeadband) {
 				m_quickStopAccumulator = (1.0 - m_cfg.quickStopWeight) * m_quickStopAccumulator;
 				m_quickStopAccumulator += m_cfg.quickStopWeight * limit(wheel, 1.0) * m_cfg.quickStopScalar;
 			}
 
 			overPower = 1.0;
-			powers.angularRadians = wheel;
+			powers.angular = wheel;
 		} else  {
 			overPower = 0.0;
-			powers.angularRadians = abs(throttle) * (wheel * signum(throttle)) * sensitivity - m_quickStopAccumulator;
+			powers.angular = abs(throttle) * (wheel * signum(throttle)) * sensitivity - m_quickStopAccumulator;
 
 			if (m_quickStopAccumulator > 1.0) {
 				m_quickStopAccumulator -= 1.0;
@@ -135,7 +134,7 @@ public class OpenLoopDriveHelper {
 			}
 		}
 
-        final WheelState output = new WheelState(powers.linearMeters - powers.angularRadians, powers.linearMeters + powers.angularRadians);
+        final WheelState output = new WheelState(powers.linear - powers.angular, powers.linear + powers.angular);
 
         if (output.left > 1.0) {
             output.right -= overPower * (output.left - 1.0);

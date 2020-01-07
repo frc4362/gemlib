@@ -217,8 +217,8 @@ public abstract class DifferentialDrive extends Subsystem {
 	public synchronized void setOpenLoop(final ChassisState chassisState) {
 	    configureControlMode(ControlMode.OPEN_LOOP);
 	    m_periodicIO.demand = new WheelState(
-	            chassisState.linearMeters - chassisState.angularRadians,
-                chassisState.linearMeters + chassisState.angularRadians
+	            chassisState.linear - chassisState.angular,
+                chassisState.linear + chassisState.angular
         );
     }
 

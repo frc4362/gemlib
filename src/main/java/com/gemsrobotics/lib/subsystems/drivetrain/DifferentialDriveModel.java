@@ -101,8 +101,8 @@ public class DifferentialDriveModel {
 	// Input/demand could be either getVelocity or getAcceleration...the math is the same.
 	public ChassisState forwardKinematics(final WheelState wheels) {
 	    final var ret = new ChassisState();
-	    ret.linearMeters = (wheels.left + wheels.right) / 2 * wheelRadiusMeters;
-	    ret.angularRadians = (wheels.right - wheels.left) / (2 * wheelBaseRadiusMeters) * wheelRadiusMeters;
+	    ret.linear = (wheels.left + wheels.right) / 2 * wheelRadiusMeters;
+	    ret.angular = (wheels.right - wheels.left) / (2 * wheelBaseRadiusMeters) * wheelRadiusMeters;
 		return ret;
 	}
 
@@ -153,8 +153,8 @@ public class DifferentialDriveModel {
     // THIS IS WHERE EVERYTHING GOES FROM METERS TO RADIANS PER SECOND
 	public WheelState inverseKinematics(final ChassisState chassis) {
 		return new WheelState(
-				(chassis.linearMeters - chassis.angularRadians * wheelBaseRadiusMeters) / wheelRadiusMeters,
-				(chassis.linearMeters + chassis.angularRadians * wheelBaseRadiusMeters) / wheelRadiusMeters
+				(chassis.linear - chassis.angular * wheelBaseRadiusMeters) / wheelRadiusMeters,
+				(chassis.linear + chassis.angular * wheelBaseRadiusMeters) / wheelRadiusMeters
 		);
 	}
 
@@ -175,7 +175,7 @@ public class DifferentialDriveModel {
 			return ret;
 		}
 
-		ret.curvatureRadiansPerMeter = ret.chassisVelocity.angularRadians / ret.chassisVelocity.linearMeters;
+		ret.curvatureRadiansPerMeter = ret.chassisVelocity.angular / ret.chassisVelocity.linear;
 
 		if (Double.isNaN(ret.curvatureRadiansPerMeter)) {
 			ret.curvatureRadiansPerMeter = 0.0;
@@ -186,20 +186,20 @@ public class DifferentialDriveModel {
 				transmission.torqueForVoltage(ret.wheelVelocityRadiansPerSecond.right, voltage.right)
 		);
 
-		ret.chassisAcceleration.linearMeters = (ret.torque.left + ret.torque.right) / linearMomentInertiaKgMetersSquared;
-		ret.chassisAcceleration.angularRadians = wheelBaseRadiusMeters * (ret.torque.right - ret.torque.left) / (wheelRadiusMeters * angularMomentInertiaKgMetersSquared)
-                - (velocityMetersPerSecond.angularRadians * angularDragTorquePerRadianPerSecond / angularMomentInertiaKgMetersSquared);
+		ret.chassisAcceleration.linear = (ret.torque.left + ret.torque.right) / linearMomentInertiaKgMetersSquared;
+		ret.chassisAcceleration.angular = wheelBaseRadiusMeters * (ret.torque.right - ret.torque.left) / (wheelRadiusMeters * angularMomentInertiaKgMetersSquared)
+                - (velocityMetersPerSecond.angular * angularDragTorquePerRadianPerSecond / angularMomentInertiaKgMetersSquared);
 
 		ret.dcurvatureRadiansPerMeterSquared =
-                (ret.chassisAcceleration.angularRadians - ret.chassisAcceleration.linearMeters * ret.curvatureRadiansPerMeter)
-                / (ret.chassisVelocity.linearMeters * ret.chassisVelocity.linearMeters);
+                (ret.chassisAcceleration.angular - ret.chassisAcceleration.linear * ret.curvatureRadiansPerMeter)
+                / (ret.chassisVelocity.linear * ret.chassisVelocity.linear);
 
 		if (Double.isNaN(ret.dcurvatureRadiansPerMeterSquared)) {
 			ret.dcurvatureRadiansPerMeterSquared = 0.0;
 		}
 
-		ret.wheelAccelerationRadiansPerSecondSquared.left = ret.chassisAcceleration.linearMeters - ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
-		ret.wheelAccelerationRadiansPerSecondSquared.right = ret.chassisAcceleration.linearMeters + ret.chassisAcceleration.angularRadians * wheelBaseRadiusMeters;
+		ret.wheelAccelerationRadiansPerSecondSquared.left = ret.chassisAcceleration.linear - ret.chassisAcceleration.angular * wheelBaseRadiusMeters;
+		ret.wheelAccelerationRadiansPerSecondSquared.right = ret.chassisAcceleration.linear + ret.chassisAcceleration.angular * wheelBaseRadiusMeters;
 
 		return ret;
 	}
@@ -213,15 +213,15 @@ public class DifferentialDriveModel {
 		final var ret = new Dynamics();
 
 		ret.chassisVelocity = velocity;
-		ret.curvatureRadiansPerMeter = ret.chassisVelocity.angularRadians / ret.chassisVelocity.linearMeters;
+		ret.curvatureRadiansPerMeter = ret.chassisVelocity.angular / ret.chassisVelocity.linear;
 
 		if (Double.isNaN(ret.curvatureRadiansPerMeter)) {
 			ret.curvatureRadiansPerMeter = 0.0;
 		}
 
 		ret.chassisAcceleration = acceleration;
-		ret.dcurvatureRadiansPerMeterSquared = (ret.chassisAcceleration.angularRadians - ret.chassisAcceleration.linearMeters * ret.curvatureRadiansPerMeter)
-                / (ret.chassisVelocity.linearMeters * ret.chassisVelocity.linearMeters);
+		ret.dcurvatureRadiansPerMeterSquared = (ret.chassisAcceleration.angular - ret.chassisAcceleration.linear * ret.curvatureRadiansPerMeter)
+                / (ret.chassisVelocity.linear * ret.chassisVelocity.linear);
 
 		if (Double.isNaN(ret.dcurvatureRadiansPerMeterSquared)) {
 			ret.dcurvatureRadiansPerMeterSquared = 0.0;
@@ -231,12 +231,12 @@ public class DifferentialDriveModel {
 		ret.wheelAccelerationRadiansPerSecondSquared = inverseKinematics(ret.chassisAcceleration);
 
 		ret.torque = new WheelState(
-				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
-                        - (acceleration.angularRadians * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
-                        - (velocity.angularRadians * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters)),
-				0.5 * wheelRadiusMeters * ((acceleration.linearMeters * massKg)
-                        + (acceleration.angularRadians * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
-                        + (velocity.angularRadians * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters))
+				0.5 * wheelRadiusMeters * ((acceleration.linear * massKg)
+                        - (acceleration.angular * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
+                        - (velocity.angular * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters)),
+				0.5 * wheelRadiusMeters * ((acceleration.linear * massKg)
+                        + (acceleration.angular * angularMomentInertiaKgMetersSquared / wheelBaseRadiusMeters)
+                        + (velocity.angular * angularDragTorquePerRadianPerSecond / wheelBaseRadiusMeters))
 		);
 
         final var transmission = getTransmission(isHighGear);
@@ -295,7 +295,7 @@ public class DifferentialDriveModel {
 
 		final double linearTorque = Double.isInfinite(curvatureRadiansPerMeter) ? 0.0 : linearMomentInertiaKgMetersSquared;
 		final double angularTorque = Double.isInfinite(curvatureRadiansPerMeter) ? angularMomentInertiaKgMetersSquared : angularMomentInertiaKgMetersSquared * curvatureRadiansPerMeter;
-		final double dragTorque = velocity.angularRadians * angularDragTorquePerRadianPerSecond;
+		final double dragTorque = velocity.angular * angularDragTorquePerRadianPerSecond;
 
 		// Check all four cases and record the min and max valid accelerations.
 		for (final boolean left : Arrays.asList(false, true)) {

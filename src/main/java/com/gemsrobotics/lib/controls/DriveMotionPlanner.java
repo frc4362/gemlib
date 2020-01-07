@@ -179,26 +179,26 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
 	protected Output updateRamsete(final double dt, final DifferentialDriveModel.Dynamics ref, final boolean isHighGear) {
-		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linearMeters * ref.chassisVelocity.linearMeters + ref.chassisVelocity.angularRadians * ref.chassisVelocity.angularRadians);
+		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linear * ref.chassisVelocity.linear + ref.chassisVelocity.angular * ref.chassisVelocity.angular);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
 
 		// adjust for error
 		ref.chassisVelocity = new ChassisState(
-				ref.chassisVelocity.linearMeters * m_error.getRotation().cos()
+				ref.chassisVelocity.linear * m_error.getRotation().cos()
 						+ k * m_error.getTranslation().x(),
-				ref.chassisVelocity.angularRadians
+				ref.chassisVelocity.angular
 						+ k * angularErrorRadians
-						+ ref.chassisVelocity.linearMeters * m_config.beta * sinc(angularErrorRadians, 0.01) * m_error.getTranslation().y());
+						+ ref.chassisVelocity.linear * m_config.beta * sinc(angularErrorRadians, 0.01) * m_error.getTranslation().y());
 		// this is where everything goes from meters to wheel radians/s!!
 		ref.wheelVelocityRadiansPerSecond = m_model.inverseKinematics(ref.chassisVelocity);
 
 		if (dt == 0.0) {
-			ref.chassisAcceleration.linearMeters = 0.0;
-			ref.chassisAcceleration.angularRadians = 0.0;
+			ref.chassisAcceleration.linear = 0.0;
+			ref.chassisAcceleration.angular = 0.0;
 		} else {
-			ref.chassisAcceleration.linearMeters = (ref.chassisVelocity.linearMeters - m_previousVelocity.linearMeters) / dt;
-			ref.chassisAcceleration.angularRadians = (ref.chassisVelocity.angularRadians - m_previousVelocity.angularRadians) / dt;
+			ref.chassisAcceleration.linear = (ref.chassisVelocity.linear - m_previousVelocity.linear) / dt;
+			ref.chassisAcceleration.angular = (ref.chassisVelocity.angular - m_previousVelocity.angular) / dt;
 		}
 
 		// store previous velocity, allows the user to only have to worry about passing the new state

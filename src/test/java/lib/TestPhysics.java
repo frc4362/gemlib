@@ -82,40 +82,40 @@ public class TestPhysics {
         DifferentialDriveModel drive = new DifferentialDriveModel(props, transmission);
 //        // Kinematics
         ChassisState v1 = drive.forwardKinematics(new WheelState(0.0, 0.0));
-        assertThat(0.0, closeTo(v1.linearMeters, kEpsilon));
-        assertThat(0.0, closeTo(v1.angularRadians, kEpsilon));
+        assertThat(0.0, closeTo(v1.linear, kEpsilon));
+        assertThat(0.0, closeTo(v1.angular, kEpsilon));
 
         WheelState w1 = drive.inverseKinematics(v1);
         assertThat(0.0, closeTo(w1.left, kEpsilon));
         assertThat(0.0, closeTo(w1.right, kEpsilon));
 
         ChassisState v2 = drive.forwardKinematics(new WheelState(Units.rpm2RadsPerSecond(65.0 * 10.0), Units.rpm2RadsPerSecond(65.0 * 10.0)));
-        assertThat(11.0, closeTo(Units.meters2Feet(v2.linearMeters), kEpsilon));
-        assertThat(0.0, is(v2.angularRadians));
+        assertThat(11.0, closeTo(Units.meters2Feet(v2.linear), kEpsilon));
+        assertThat(0.0, is(v2.angular));
 
         WheelState w2 = drive.inverseKinematics(v2);
         assertThat(Units.rpm2RadsPerSecond(65.0 * 10.0), is(w2.left));
         assertThat(Units.rpm2RadsPerSecond(65.0 * 10.0), is(w2.right));
 
         ChassisState v3 = drive.forwardKinematics(new WheelState(Units.rpm2RadsPerSecond(65.0 * -10.0), Units.rpm2RadsPerSecond(65.0 * -10.0)));
-        assertThat(-11.0, closeTo(Units.meters2Feet(v3.linearMeters), 1.0));
-        assertThat(0.0, is(v3.angularRadians));
+        assertThat(-11.0, closeTo(Units.meters2Feet(v3.linear), 1.0));
+        assertThat(0.0, is(v3.angular));
 
         WheelState w3 = drive.inverseKinematics(v3);
         assertThat(Units.rpm2RadsPerSecond(-65.0 * 10.0), closeTo(w3.left, kEpsilon));
         assertThat(Units.rpm2RadsPerSecond(-65.0 * 10.0), closeTo(w3.right, kEpsilon));
 
         ChassisState v4 = drive.forwardKinematics(new WheelState(Units.rpm2RadsPerSecond(-65.0 * 10.0), Units.rpm2RadsPerSecond(65.0 * 10.0)));
-        assertThat(0.0, closeTo(Units.meters2Feet(v4.linearMeters), kEpsilon));
-        assertThat(10.0, closeTo(v4.angularRadians, kEpsilon));
+        assertThat(0.0, closeTo(Units.meters2Feet(v4.linear), kEpsilon));
+        assertThat(10.0, closeTo(v4.angular, kEpsilon));
 
         WheelState w4 = drive.inverseKinematics(v4);
         assertThat(Units.rpm2RadsPerSecond(-65.0 * 10.0), closeTo(w4.left, kEpsilon));
         assertThat(Units.rpm2RadsPerSecond(65.0 * 10.0), closeTo(w4.right, kEpsilon));
 
         ChassisState v5 = drive.forwardKinematics(new WheelState(Units.rpm2RadsPerSecond(65.0 * 5.0), Units.rpm2RadsPerSecond(-65.0 * 5.0)));
-        assertThat(0.0, closeTo(Units.meters2Feet(v5.linearMeters), kEpsilon));
-        assertThat(-5.0, closeTo(v5.angularRadians, kEpsilon));
+        assertThat(0.0, closeTo(Units.meters2Feet(v5.linear), kEpsilon));
+        assertThat(-5.0, closeTo(v5.angular, kEpsilon));
 
         WheelState w5 = drive.inverseKinematics(v5);
         assertThat(Units.rpm2RadsPerSecond(65.0 * 5.0), closeTo(w5.left, kEpsilon));
@@ -127,32 +127,32 @@ public class TestPhysics {
         assertThat(0.0, closeTo(d1.torque.right, kEpsilon));
         assertThat(0.0, closeTo(d1.wheelAccelerationRadiansPerSecondSquared.left, kEpsilon));
         assertThat(0.0, closeTo(d1.wheelAccelerationRadiansPerSecondSquared.right, kEpsilon));
-        assertThat(0.0, closeTo(d1.chassisAcceleration.linearMeters, kEpsilon));
-        assertThat(0.0, closeTo(d1.chassisAcceleration.angularRadians, kEpsilon));
+        assertThat(0.0, closeTo(d1.chassisAcceleration.linear, kEpsilon));
+        assertThat(0.0, closeTo(d1.chassisAcceleration.angular, kEpsilon));
 
         DifferentialDriveModel.Dynamics d2 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(12.0, 12.0), false);
         assertThat(11.0 * .35, closeTo(d2.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d2.torque.right, kEpsilon));
         assertThat(0.0, lessThan(d2.wheelAccelerationRadiansPerSecondSquared.left));
         assertThat(0.0, lessThan(d2.wheelAccelerationRadiansPerSecondSquared.right));
-        assertThat(2.0, lessThan(d2.chassisAcceleration.linearMeters));
-        assertThat(0.0, closeTo(d2.chassisAcceleration.angularRadians, kEpsilon));
+        assertThat(2.0, lessThan(d2.chassisAcceleration.linear));
+        assertThat(0.0, closeTo(d2.chassisAcceleration.angular, kEpsilon));
 
         DifferentialDriveModel.Dynamics d3 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, -12.0), false);
         assertThat(-11.0 * .35, closeTo(d3.torque.left, kEpsilon));
         assertThat(-11.0 * .35, closeTo(d3.torque.right, kEpsilon));
         assertThat(0.0, greaterThan(d3.wheelAccelerationRadiansPerSecondSquared.left));
         assertThat(0.0, greaterThan(d3.wheelAccelerationRadiansPerSecondSquared.right));
-        assertThat(0.0, greaterThan(d3.chassisAcceleration.linearMeters));
-        assertThat(0.0, closeTo(d3.chassisAcceleration.angularRadians, kEpsilon));
+        assertThat(0.0, greaterThan(d3.chassisAcceleration.linear));
+        assertThat(0.0, closeTo(d3.chassisAcceleration.angular, kEpsilon));
 
         DifferentialDriveModel.Dynamics d4 = drive.solveForwardDynamics(new ChassisState(0.0, 0.0), new WheelState(-12.0, 12.0), false);
         assertThat(-11.0 * .35, closeTo(d4.torque.left, kEpsilon));
         assertThat(11.0 * .35, closeTo(d4.torque.right, kEpsilon));
         assertThat(0.0, greaterThan(d4.wheelAccelerationRadiansPerSecondSquared.left));
         assertThat(0.0, lessThan(d4.wheelAccelerationRadiansPerSecondSquared.right));
-        assertThat(0.0, closeTo(d4.chassisAcceleration.linearMeters, kEpsilon));
-        assertThat(0.0, lessThan(d4.chassisAcceleration.angularRadians));
+        assertThat(0.0, closeTo(d4.chassisAcceleration.linear, kEpsilon));
+        assertThat(0.0, lessThan(d4.chassisAcceleration.angular));
 
         // Inverse dynamics.
         DifferentialDriveModel.Dynamics d5 = drive.solveInverseDynamics(new ChassisState(0.0, 0.0), new ChassisState(0.0, 0.0), false);
