@@ -60,7 +60,6 @@ public class TestTrajectoryGeneration {
     public void test() {
         final var cfg = new DifferentialDrive.Config() {
             {
-                rotationsToMeters = 0.00072;
                 maxVoltage = 12.0;
                 secondsToMaxVoltage = 0.2;
 

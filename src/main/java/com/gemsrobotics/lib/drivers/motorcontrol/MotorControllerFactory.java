@@ -62,7 +62,7 @@ public final class MotorControllerFactory {
     };
 
     private static void handleCANError(final int id, final CANError error, final String message) {
-        if (error != CANError.kOK) {
+        if (error != CANError.kOk) {
             DriverStation.reportError("Could not configure spark id: " + id + " error: " + error.toString() + " " + message, false);
         }
     }

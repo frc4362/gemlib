@@ -229,7 +229,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 	    int tries = 0;
 
 	    do {
-	        success = call.get() == CANError.kOK;
+	        success = call.get() == CANError.kOk;
         } while (!success && tries++ < MAX_TRIES);
 
 	    if (tries >= MAX_TRIES || !success) {
