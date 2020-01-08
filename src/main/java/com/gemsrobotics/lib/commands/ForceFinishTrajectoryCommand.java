@@ -4,9 +4,9 @@ import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import edu.wpi.first.wpilibj.command.InstantCommand;
 
 public final class ForceFinishTrajectoryCommand extends InstantCommand {
-    private final DifferentialDrive m_chassis;
+    private final DifferentialDrive<?> m_chassis;
 
-    public ForceFinishTrajectoryCommand(final DifferentialDrive chassis) {
+    public ForceFinishTrajectoryCommand(final DifferentialDrive<?> chassis) {
         m_chassis = chassis;
     }
 

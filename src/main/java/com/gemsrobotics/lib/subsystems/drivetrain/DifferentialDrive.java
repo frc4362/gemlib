@@ -5,6 +5,7 @@ import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.imu.NavX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
+import com.gemsrobotics.lib.drivers.transmission.DualSpeedTransmission;
 import com.gemsrobotics.lib.drivers.transmission.Transmission;
 import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -25,16 +26,16 @@ import java.util.function.Function;
 
 // just copy what was done here
 // https://github.com/frc1678/robot-code-public/blob/master/c2019/subsystems/drivetrain/drivetrain_base.cpp
-// when extending it for a given year
+// when extending it for a given implementation
 @SuppressWarnings({"unused", "WeakerAccess", "OverlyCoupledClass"})
-public abstract class DifferentialDrive extends Subsystem {
+public abstract class DifferentialDrive<T> extends Subsystem {
     // This config as one class allows for deserialization from a JSON file to describe nearly the entire drive train
     public static class Config {
-		public double rotationsToMeters;
 		public double maxVoltage;
 		public double secondsToMaxVoltage;
 
-		public DriveMotionPlanner.MotionConfig motionConfig;
+		public MotorController.GearingParameters gearingLowGear;
+		public MotorController.GearingParameters gearingHighGear;
 
 		public PIDFController.Gains gainsLowGear;
 		public PIDFController.Gains gainsHighGear;
@@ -42,12 +43,17 @@ public abstract class DifferentialDrive extends Subsystem {
 		public MotorModel.Properties propertiesHighGear;
 		public MotorModel.Properties propertiesLowGear;
 		public DifferentialDriveModel.Properties propertiesModel;
+		public DriveMotionPlanner.MotionConfig motionConfig;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
 
 		private PIDFController.Gains velocityGainsForGear(final boolean highGear) {
 		    return highGear ? gainsHighGear : gainsLowGear;
         }
+
+        private MotorController.GearingParameters gearingForGear(final boolean highGear) {
+			return highGear ? gearingHighGear : gearingLowGear;
+		}
 	}
 
 	protected final Config m_config;
@@ -57,9 +63,8 @@ public abstract class DifferentialDrive extends Subsystem {
 	protected final DriveMotionPlanner m_motionPlanner;
 
     protected final NavX m_imu;
-	protected final MotorControllerGroup m_motorsLeft, m_motorsRight;
-    protected final MotorController m_masterMotorLeft;
-    protected final MotorController m_masterMotorRight;
+	protected final MotorControllerGroup<T> m_motorsLeft, m_motorsRight;
+    protected final MotorController<T> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
     protected final PeriodicIO m_periodicIO;
 
@@ -70,8 +75,8 @@ public abstract class DifferentialDrive extends Subsystem {
 
     protected abstract Config getConfig();
     // Invert motors BEFORE passing them into the method...
-    protected abstract MotorControllerGroup getMotorControllersLeft();
-    protected abstract MotorControllerGroup getMotorControllersRight();
+    protected abstract MotorControllerGroup<T> getMotorControllersLeft();
+    protected abstract MotorControllerGroup<T> getMotorControllersRight();
     protected abstract Transmission getTransmission();
 
 	protected DifferentialDrive() {
@@ -104,8 +109,9 @@ public abstract class DifferentialDrive extends Subsystem {
     }
 
 	private void configureMotorController(final MotorController controller) {
-		controller.setRotationsPerMeter(m_config.rotationsToMeters);
 		controller.setOpenLoopVoltageRampRate(m_config.secondsToMaxVoltage);
+		controller.setGearingParameters(m_config.gearingForGear(m_transmission instanceof DualSpeedTransmission
+																&& ((DualSpeedTransmission) m_transmission).isInverted()));
 
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);
@@ -165,6 +171,9 @@ public abstract class DifferentialDrive extends Subsystem {
             final int profile = slotForGear(wantsHighGear);
             m_masterMotorLeft.setSelectedProfile(profile);
             m_masterMotorRight.setSelectedProfile(profile);
+            final MotorController.GearingParameters gearingParameters = m_config.gearingForGear(wantsHighGear);
+            m_masterMotorLeft.setGearingParameters(gearingParameters);
+            m_masterMotorRight.setGearingParameters(gearingParameters);
 		}
 	}
 
@@ -367,7 +376,7 @@ public abstract class DifferentialDrive extends Subsystem {
 		}
 	}
 
-	public WheelState getWheelProperty(final Function<MotorController, Double> getter) {
+	public WheelState getWheelProperty(final Function<MotorController<?>, Double> getter) {
 		return new WheelState(getter.apply(m_masterMotorLeft), getter.apply(m_masterMotorRight));
 	}
 

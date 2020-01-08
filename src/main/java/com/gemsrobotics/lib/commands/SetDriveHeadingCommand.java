@@ -5,10 +5,10 @@ import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import edu.wpi.first.wpilibj.command.InstantCommand;
 
 public final class SetDriveHeadingCommand extends InstantCommand {
-    private final DifferentialDrive m_chassis;
+    private final DifferentialDrive<?> m_chassis;
     private final Rotation m_targetHeading;
 
-    public SetDriveHeadingCommand(final DifferentialDrive chassis, final Rotation heading) {
+    public SetDriveHeadingCommand(final DifferentialDrive<?> chassis, final Rotation heading) {
         m_chassis = chassis;
         m_targetHeading = heading;
     }

@@ -5,34 +5,34 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public final class MotorControllerGroup {
-    private final MotorController m_master;
-    private final List<MotorController> m_slaves;
+public final class MotorControllerGroup<T> {
+    private final MotorController<T> m_master;
+    private final List<MotorController<T>> m_slaves;
 
-    public MotorControllerGroup(final MotorController master, final MotorController... slaves) {
+    public MotorControllerGroup(final MotorController<T> master, final MotorController<T>... slaves) {
         m_master = master;
         m_slaves = Arrays.asList(slaves);
     }
 
-    public MotorController getMaster() {
+    public MotorController<T> getMaster() {
         return m_master;
     }
 
-    public List<MotorController> getSlaves() {
+    public List<MotorController<T>> getSlaves() {
         return m_slaves;
     }
 
-    public void forEach(final Consumer<MotorController> action) {
+    public void forEach(final Consumer<MotorController<T>> action) {
         action.accept(m_master);
         m_slaves.forEach(action);
     }
 
-    public boolean forEachAttempt(final Function<MotorController, Boolean> action) {
+    public boolean forEachAttempt(final Function<MotorController<T>, Boolean> action) {
         boolean success = true;
 
         success &= action.apply(m_master);
 
-        for (final MotorController slave : m_slaves) {
+        for (final MotorController<T> slave : m_slaves) {
             success &= action.apply(slave);
         }
 
@@ -44,6 +44,6 @@ public final class MotorControllerGroup {
     }
 
     public void setSafe() {
-        forEach(motor -> motor.setVoltage(0.0));
+        forEach(MotorController::setNeutral);
     }
 }

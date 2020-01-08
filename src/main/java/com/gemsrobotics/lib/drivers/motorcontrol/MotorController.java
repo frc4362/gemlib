@@ -3,14 +3,25 @@ package com.gemsrobotics.lib.drivers.motorcontrol;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.utils.Units;
 
-public interface MotorController {
+public interface MotorController<T> {
+    T getInternalController();
+
     class MotionParameters {
-        double acceleration, cruiseVelocity, allowableError;
+        final double acceleration, cruiseVelocity, allowableError;
 
         public MotionParameters(final double maxAcceleration, final double cruiseVelocity, final double allowableError) {
             this.acceleration = maxAcceleration;
             this.cruiseVelocity = cruiseVelocity;
             this.allowableError = allowableError;
+        }
+    }
+
+    class GearingParameters {
+        final double cylinderToEncoderReduction, cylinderRadiusMeters;
+
+        public GearingParameters(final double reduction, final double cylinderRadiusMeters) {
+            this.cylinderToEncoderReduction = reduction;
+            this.cylinderRadiusMeters = cylinderRadiusMeters;
         }
     }
 
@@ -48,7 +59,9 @@ public interface MotorController {
      * @param invert Whether or not to reverse the output direction of the followed motor
      * @return If the operation was successful
      */
-    boolean follow(MotorController other, boolean invert);
+    boolean follow(MotorController<T> other, boolean invert);
+
+    MotorController<T> getLeader();
 
     /**
      * @param currentLimitAmps The allowed sustained current in amps of the motor controller
@@ -68,17 +81,16 @@ public interface MotorController {
      */
     boolean setNeutralBehaviour(NeutralBehaviour mode);
 
-    /**
-     * @param rotationsPerMeter The linear movement provided on the output shaft by each rotation of the motor
-     * @return If the operation was successful
-     */
-    boolean setRotationsPerMeter(double rotationsPerMeter);
+    boolean setGearingParameters(GearingParameters gearingParameters);
+    default boolean setGearingParameters(final double reduction, final double cylinderRadiusMeters) {
+        return setGearingParameters(new GearingParameters(reduction, cylinderRadiusMeters));
+    }
 
     /**
      * @param position Forces the encoder to set its current position
      * @return If the operation was successful
      */
-    boolean setEncoderPosition(double position);
+    boolean setEncoderRotations(double position);
 
     /**
      * @param timeToRamp The amount of time, in seconds, to change 12V of the output
@@ -97,13 +109,24 @@ public interface MotorController {
         return setMotionParameters(new MotionParameters(maxAcceleration, cruiseVelocity, allowableError));
     }
 
+    /**
+     * Zero-power
+     */
     void setNeutral();
 
+    /**
+     * @param cycle % of voltage input to apply to motor
+     * @param feedforward
+     */
     void setDutyCycle(double cycle, double feedforward);
     default void setDutyCycle(final double cycle) {
         setDutyCycle(cycle, 0.0);
     }
 
+    /**
+     * @param voltage Voltage to apply [-12.0, +12.0]
+     * @param feedforward Feedforward duty cycle [-1.0, +1.0]
+     */
     void setVoltage(double voltage, double feedforward);
     default void setVoltage(final double voltage) {
         setVoltage(voltage, 0.0);
@@ -114,13 +137,13 @@ public interface MotorController {
         setVelocityMetersPerSecond(velocity, 0.0);
     }
 
-    void setVelocityMotorRPM(double rpm, double feedforward);
-    default void setVelocityMotorRPM(double rpm) {
-        setVelocityMotorRPM(rpm, 0.0);
+    void setVelocityRPM(double rpm, double feedforward);
+    default void setVelocityRPM(double rpm) {
+        setVelocityRPM(rpm, 0.0);
     }
 
-    default void setVelocityMotorRadiansPerSecond(final double radiansPerSecond) {
-        setVelocityMotorRPM(Units.radsPerSec2Rpm(radiansPerSecond));
+    default void setVelocityRadiansPerSecond(final double radiansPerSecond) {
+        setVelocityRPM(Units.radsPerSec2Rpm(radiansPerSecond));
     }
 
     void setPositionMeters(double position, double feedforward);
@@ -134,18 +157,18 @@ public interface MotorController {
     }
 
     double getPositionMeters();
-    double getPositionMotorRotations();
+    double getPositionRotations();
 
     /**
      * @return Current linear velocity in m/s
      */
     double getVelocityLinearMetersPerSecond();
-    double getVelocityMotorRPM();
+    double getVelocityAngularRPM();
 
     /**
      * @return radians/s of the motor
      */
-    default double getVelocityAngular() {
-        return Units.rpm2RadsPerSecond(getVelocityMotorRPM());
+    default double getVelocityAngularRadiansPerSecond() {
+        return Units.rpm2RadsPerSecond(getVelocityAngularRPM());
     }
 }

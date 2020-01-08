@@ -2,7 +2,9 @@ package com.gemsrobotics.lib.drivers.motorcontrol;
 
 import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.*;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.CANError;
+import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel;
 import com.revrobotics.ControlType;
@@ -66,11 +68,9 @@ public final class MotorControllerFactory {
     }
 
     public static GemSparkMax createSparkMax(final int port, final SparkConfiguration config) {
-        final GemSparkMax sparkMax = new GemSparkMax(port);
+        final CANSparkMax sparkMax = new CANSparkMax(port, CANSparkMaxLowLevel.MotorType.kBrushless);
 
         sparkMax.setCANTimeout(200);
-
-        sparkMax.set(ControlType.kDutyCycle, 0.0);
 
         handleCANError(port, sparkMax.setPeriodicFramePeriod(CANSparkMaxLowLevel.PeriodicFrame.kStatus0, config.STATUS_FRAME_0_RATE_MS), "set status0 rate");
         handleCANError(port, sparkMax.setPeriodicFramePeriod(CANSparkMaxLowLevel.PeriodicFrame.kStatus1, config.STATUS_FRAME_1_RATE_MS), "set status1 rate");
@@ -89,7 +89,7 @@ public final class MotorControllerFactory {
             handleCANError(port, sparkMax.disableVoltageCompensation(), "voltage compensation");
         }
 
-        return sparkMax;
+        return new GemSparkMax(sparkMax);
     }
 
     public static class TalonConfiguration {
@@ -182,7 +182,7 @@ public final class MotorControllerFactory {
     };
 
     private static GemTalonSRX createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
-        final var talon = new GemTalonSRX(port, isSlave);
+        final var talon = new TalonSRX(port);
 
         talon.set(ControlMode.PercentOutput, 0.0);
 
@@ -242,7 +242,7 @@ public final class MotorControllerFactory {
 
         talon.setControlFramePeriod(ControlFrame.Control_3_General, config.CONTROL_FRAME_PERIOD_MS);
 
-        return talon;
+        return new GemTalonSRX(talon, isSlave);
     }
 
     public static GemTalonSRX createTalonSRX(final int port, final TalonConfiguration config) {

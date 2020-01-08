@@ -28,7 +28,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
     }
 
 	public static class MotionConfig implements Loggable {
-        @Log(name="Beta (Aggression)(0, +Infinity)")
+        @Config(name="Beta (Aggression)(0, +Infinity)")
         public double beta; // aggression coefficient, >0
         @Config(name="Zeta (Dampening)[0, 1]")
         public double zeta; // dampening coefficient, [0, 1]

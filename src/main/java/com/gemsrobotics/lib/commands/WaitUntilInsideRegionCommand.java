@@ -11,7 +11,7 @@ public class WaitUntilInsideRegionCommand extends Command {
     protected final Translation m_cornerLeftBottom, m_cornerRightTop;
 
     public WaitUntilInsideRegionCommand(
-            final DifferentialDrive chassis,
+            final DifferentialDrive<?> chassis,
             final Translation bottomLeft,
             final Translation topRight,
             final boolean flip

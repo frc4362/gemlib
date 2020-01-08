@@ -22,6 +22,10 @@ public class DualSpeedTransmission implements Transmission {
         m_inverted = inverted;
     }
 
+    public boolean isInverted() {
+        return m_inverted;
+    }
+
     @Override
     public void setHighGear(final boolean useHighGear) {
         m_solenoid.set(useHighGear ^ m_inverted);
