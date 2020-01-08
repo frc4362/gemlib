@@ -1,5 +1,3 @@
-import edu.wpi.first.gradlerio.GradleRIOPlugin
-
 plugins {
     id "java"
     id "idea"
