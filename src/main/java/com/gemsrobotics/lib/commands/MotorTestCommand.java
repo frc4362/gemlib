@@ -44,7 +44,7 @@ public final class MotorTestCommand extends Command implements Reportable {
 	@Override
 	public void execute() {
 		if (timeSinceInitialized() > m_config.waitTime) {
-			m_rpms.add(m_motor.getVelocityMotorRPM());
+			m_rpms.add(m_motor.getVelocityAngularRPM());
 			m_currents.add(m_motor.getDrawnCurrent());
 		}
 	}

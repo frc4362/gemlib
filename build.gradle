@@ -10,7 +10,7 @@ wrapper {
     gradleVersion = "5.4"
 }
 
-def ROBOT_MAIN_CLASS = "com.gemsrobotics.chairbot.Main"
+def ROBOT_MAIN_CLASS = ""
 def TEAM_NUMBER = 4362
 
 // Define my targets (RoboRIO) and artifacts (deployable files)
