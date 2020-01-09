@@ -292,19 +292,19 @@ public class GemTalonSRX implements MotorController<TalonSRX>, Reportable {
         return success;
     }
 
-    private double nativeUnits2Rotations(final double nativeUnits) {
+    private static double nativeUnits2Rotations(final double nativeUnits) {
 	    return nativeUnits / TICKS_PER_ROTATION;
     }
 
-    private double nativeUnits2RPM(final double nativeUnits) {
+    private static double nativeUnits2RPM(final double nativeUnits) {
 	    return nativeUnits / TICKS_PER_ROTATION * 600.0;
     }
 
-    private int rotations2NativeUnits(final double rotations) {
+    private static int rotations2NativeUnits(final double rotations) {
 	    return (int) (rotations * TICKS_PER_ROTATION);
     }
 
-    private int RPM2NativeUnitsPer100Ms(final double rpm) {
+    private static int RPM2NativeUnitsPer100Ms(final double rpm) {
 	    return (int) (rpm * TICKS_PER_ROTATION / 600.0);
     }
 
