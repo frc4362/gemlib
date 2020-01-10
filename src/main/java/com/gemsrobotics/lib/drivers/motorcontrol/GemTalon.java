@@ -44,13 +44,12 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	protected GemTalon(final TalonType talon, final boolean isSlave) {
 		m_internal = talon;
+		m_internal.enableVoltageCompensation(true);
+		runWithRetries(() -> m_internal.configVoltageCompSaturation(12.0, TIMEOUT_MS));
 
 		final boolean isFX = talon instanceof TalonFX;
 
 		m_name = "Talon" + (isFX ? "FX" : "SRX") + "-" + (isSlave ? "Slave-" : "") + talon.getDeviceID();
-
-		m_internal.enableVoltageCompensation(true);
-		runWithRetries(() -> m_internal.configVoltageCompSaturation(12.0, TIMEOUT_MS));
 
 		if (isFX) {
 			m_isEncoderPresent = new CachedBoolean(Double.POSITIVE_INFINITY, () -> true);
