@@ -247,9 +247,7 @@ public final class MotorControllerFactory {
 
     private static GemTalon<TalonSRX> createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
         final var talon = new TalonSRX(port);
-
-
-
+        configureTalon(talon, config);
         return new GemTalon<>(talon, isSlave);
     }
 
@@ -263,9 +261,7 @@ public final class MotorControllerFactory {
 
     public static GemTalon<TalonFX> createTalonFX(final int port, final TalonConfiguration config, final boolean isSlave) {
         final var talon = new TalonFX(port);
-
         configureTalon(talon, config);
-
         return new GemTalon<>(talon, isSlave);
     }
 
