@@ -79,7 +79,7 @@ public class GemTalonSRX implements MotorController<TalonSRX>, Reportable {
 
     @Override
     public double getDrawnCurrent() {
-        return m_internal.getOutputCurrent();
+        return m_internal.getStatorCurrent();
     }
 
 	@Override
@@ -105,7 +105,7 @@ public class GemTalonSRX implements MotorController<TalonSRX>, Reportable {
 	@Override
     public synchronized boolean follow(final MotorController<TalonSRX> other, final boolean invert) {
 		m_internal.setInverted(invert ? InvertType.OpposeMaster : InvertType.FollowMaster);
-		m_internal.set(ControlMode.Follower, ((TalonSRX) other).getDeviceID());
+		m_internal.set(ControlMode.Follower, other.getDeviceID());
 		m_leader = other;
 		return true;
     }
