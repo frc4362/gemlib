@@ -5,6 +5,7 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.DemandType;
 import com.ctre.phoenix.motorcontrol.InvertType;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
+import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -17,11 +18,10 @@ import java.util.function.Supplier;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
-public class GemTalonFX implements MotorController<TalonFX>, Reportable {
+public class GemTalon<TalonType extends BaseTalon> implements MotorController<TalonType>, Reportable {
 	private static final int
 			MAX_TRIES = 3,
-			TIMEOUT_MS = 10,
-			TICKS_PER_ROTATION = 2048;
+			TIMEOUT_MS = 10;
 
 	@Override
 	public String getName() {
@@ -29,7 +29,9 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 	}
 
 	private final String m_name;
-	private final TalonFX m_internal;
+	private final TalonType m_internal;
+	private final CachedBoolean m_isEncoderPresent;
+	private final double m_ticksPerRotation;
 
 	private ControlMode m_lastMode;
 	private DemandType m_lastDemandType;
@@ -37,19 +39,29 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 	private double m_lastValue, m_lastDemand;
 
 	private double m_cylinderToEncoderReduction, m_cylinderRadiusMeters;
-	private boolean m_hasMotionProfilingBeenConfigured;
-	private MotorController<TalonFX> m_leader;
+	private boolean m_isMotionProfilingConfigured;
+	private MotorController<TalonType> m_leader;
 
-	protected GemTalonFX(final TalonFX talon, final boolean isSlave) {
+	protected GemTalon(final TalonType talon, final boolean isSlave) {
 		m_internal = talon;
 
-		m_name = "TalonSRX-" + (isSlave ? "Slave-" : "") + talon.getDeviceID();
+		final boolean isFX = talon instanceof TalonFX;
+
+		m_name = "Talon" + (isFX ? "FX" : "SRX") + "-" + (isSlave ? "Slave-" : "") + talon.getDeviceID();
 
 		m_internal.enableVoltageCompensation(true);
 		runWithRetries(() -> m_internal.configVoltageCompSaturation(12.0, TIMEOUT_MS));
 
+		if (isFX) {
+			m_isEncoderPresent = new CachedBoolean(Double.POSITIVE_INFINITY, () -> true);
+			m_ticksPerRotation = 2048;
+		} else {
+			m_isEncoderPresent = new CachedBoolean(0.05, () -> TalonUtils.isEncoderPresent((TalonSRX) m_internal));
+			m_ticksPerRotation = 4096;
+		}
+
 		m_selectedProfileID = 0;
-		m_hasMotionProfilingBeenConfigured = false;
+		m_isMotionProfilingConfigured = false;
 
 		m_lastMode = null;
 		m_lastDemandType = null;
@@ -57,12 +69,12 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 		m_lastDemand = Double.NaN;
 	}
 
-	public GemTalonFX(final TalonFX talon) {
+	public GemTalon(final TalonType talon) {
 		this(talon, false);
 	}
 
 	@Override
-	public TalonFX getInternalController() {
+	public TalonType getInternalController() {
 		return m_internal;
 	}
 
@@ -88,7 +100,7 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 
 	@Override
 	public boolean isEncoderPresent() {
-		return true;
+		return m_isEncoderPresent.get();
 	}
 
 	@Override
@@ -97,12 +109,12 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 	}
 
 	@Override
-	public MotorController<TalonFX> getLeader() {
+	public MotorController<TalonType> getLeader() {
 		return m_leader;
 	}
 
 	@Override
-	public synchronized boolean follow(final MotorController<TalonFX> other, final boolean invert) {
+	public synchronized boolean follow(final MotorController<TalonType> other, final boolean invert) {
 		m_internal.setInverted(invert ? InvertType.OpposeMaster : InvertType.FollowMaster);
 		m_internal.set(ControlMode.Follower, other.getDeviceID());
 		m_leader = other;
@@ -126,13 +138,14 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 //		boolean success = true;
 //
 //		success &= runWithRetries(() -> {
-//			m_internal.configSupplyCurrentLimit(true);
+//			m_internal.enableCurrentLimit(true);
 //			return m_internal.getLastError();
 //		});
 //		success &= runWithRetries(() -> m_internal.configContinuousCurrentLimit(currentLimitAmps));
 //		success &= runWithRetries(() -> m_internal.configPeakCurrentLimit(0));
 //
 //		return success;
+
 		return false;
 	}
 
@@ -141,7 +154,8 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 //			m_internal.enableCurrentLimit(false);
 //			return m_internal.getLastError();
 //		});
-		return false;
+
+		return true;
 	}
 
 	@Override
@@ -218,13 +232,17 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 
 	@Override
 	public synchronized boolean setMotionParameters(final MotionParameters vars) {
+		final var cruiseVelocityNativeUnits = RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
+		final var accelerationNativeUnits = RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
+		final var toleranceNativeUnits = rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
+
 		boolean success = true;
 
-		success &= runWithRetries(() -> m_internal.configMotionAcceleration((int) vars.acceleration, TIMEOUT_MS));
-		success &= runWithRetries(() -> m_internal.configMotionCruiseVelocity((int) vars.cruiseVelocity, TIMEOUT_MS));
-		success &= runWithRetries(() -> m_internal.configAllowableClosedloopError(m_selectedProfileID, (int) vars.allowableError, TIMEOUT_MS));
+		success &= runWithRetries(() -> m_internal.configMotionAcceleration(cruiseVelocityNativeUnits, TIMEOUT_MS));
+		success &= runWithRetries(() -> m_internal.configMotionCruiseVelocity(accelerationNativeUnits, TIMEOUT_MS));
+		success &= runWithRetries(() -> m_internal.configAllowableClosedloopError(m_selectedProfileID, toleranceNativeUnits, TIMEOUT_MS));
 
-		m_hasMotionProfilingBeenConfigured = success;
+		m_isMotionProfilingConfigured = success;
 
 		return success;
 	}
@@ -246,7 +264,7 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 
 	@Override
 	public void setVelocityRPM(final double rpm, final double feedforward) {
-		set(ControlMode.Velocity, RPM2NativeUnitsPer100Ms(rpm), DemandType.ArbitraryFeedForward, feedforward);
+		set(ControlMode.Velocity, RPM2NativeUnitsPer100ms(rpm), DemandType.ArbitraryFeedForward, feedforward);
 	}
 
 	@Override
@@ -256,7 +274,7 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 
 	@Override
 	public synchronized void setPositionRotations(final double rotations, final double feedforward) {
-		set(m_hasMotionProfilingBeenConfigured ? ControlMode.MotionMagic : ControlMode.Position, rotations2NativeUnits(rotations / m_cylinderToEncoderReduction), DemandType.ArbitraryFeedForward, feedforward);
+		set(m_isMotionProfilingConfigured ? ControlMode.MotionMagic : ControlMode.Position, rotations2NativeUnits(rotations / m_cylinderToEncoderReduction), DemandType.ArbitraryFeedForward, feedforward);
 	}
 
 	public boolean setNominalOutputForward(final double percentOut) {
@@ -293,20 +311,24 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 		return success;
 	}
 
-	private static double nativeUnits2Rotations(final double nativeUnits) {
-		return nativeUnits / TICKS_PER_ROTATION;
+	private double meters2NativeUnits(final double meters) {
+		return rotations2NativeUnits(meters / (Tau * m_cylinderRadiusMeters) * 60);
 	}
 
-	private static double nativeUnits2RPM(final double nativeUnits) {
-		return nativeUnits / TICKS_PER_ROTATION * 600.0;
+	private double nativeUnits2Rotations(final double nativeUnits) {
+		return nativeUnits / m_ticksPerRotation;
 	}
 
-	private static int rotations2NativeUnits(final double rotations) {
-		return (int) (rotations * TICKS_PER_ROTATION);
+	private double nativeUnits2RPM(final double nativeUnits) {
+		return nativeUnits / m_ticksPerRotation * 600.0;
 	}
 
-	private static int RPM2NativeUnitsPer100Ms(final double rpm) {
-		return (int) (rpm * TICKS_PER_ROTATION / 600.0);
+	private int rotations2NativeUnits(final double rotations) {
+		return (int) (rotations * m_ticksPerRotation);
+	}
+
+	private int RPM2NativeUnitsPer100ms(final double rpm) {
+		return (int) (rpm * m_ticksPerRotation / 600.0);
 	}
 
 	private synchronized boolean runWithRetries(final Supplier<ErrorCode> call) {
@@ -319,7 +341,7 @@ public class GemTalonFX implements MotorController<TalonFX>, Reportable {
 		} while (!success && tries++ < MAX_TRIES);
 
 		if (tries >= MAX_TRIES || !success) {
-			report(ReportingEndpoint.Event.Kind.ERROR, "Failed to configure TalonFX on Port " + m_internal.getDeviceID() + "!!");
+			report(ReportingEndpoint.Event.Kind.ERROR, "Failed to configure TalonSRX on Port " + m_internal.getDeviceID() + "!!");
 			return false;
 		} else {
 			return true;

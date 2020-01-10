@@ -2,6 +2,7 @@ package com.gemsrobotics.lib.drivers.motorcontrol;
 
 import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.*;
+import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.CANError;
@@ -182,9 +183,7 @@ public final class MotorControllerFactory {
         }
     };
 
-    private static GemTalonSRX createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
-        final var talon = new TalonSRX(port);
-
+    private static void configureTalon(final BaseTalon talon, final TalonConfiguration config) {
         talon.set(ControlMode.PercentOutput, 0.0);
 
         talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
@@ -197,7 +196,7 @@ public final class MotorControllerFactory {
         talon.configReverseLimitSwitchSource(LimitSwitchSource.FeedbackConnector, LimitSwitchNormal.Disabled, TIMEOUT_MS);
         talon.overrideLimitSwitchesEnable(config.ENABLE_LIMIT_SWITCH);
 
-        // Turn off re-zeroing by default.
+        // Turn off re:zeroing by default.
         talon.configSetParameter(ParamEnum.eClearPositionOnLimitF, 0, 0, 0, TIMEOUT_MS);
         talon.configSetParameter(ParamEnum.eClearPositionOnLimitR, 0, 0, 0, TIMEOUT_MS);
 
@@ -232,7 +231,9 @@ public final class MotorControllerFactory {
         talon.configVoltageMeasurementFilter(32, TIMEOUT_MS);
         talon.enableVoltageCompensation(false);
 
-        talon.enableCurrentLimit(config.ENABLE_CURRENT_LIMIT);
+        if (talon instanceof TalonSRX) {
+            ((TalonSRX) talon).enableCurrentLimit(false);
+        }
 
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, config.GENERAL_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, config.FEEDBACK_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
@@ -242,91 +243,37 @@ public final class MotorControllerFactory {
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, config.PULSE_WIDTH_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
 
         talon.setControlFramePeriod(ControlFrame.Control_3_General, config.CONTROL_FRAME_PERIOD_MS);
-
-        return new GemTalonSRX(talon, isSlave);
     }
 
-    public static GemTalonSRX createTalonSRX(final int port, final TalonConfiguration config) {
-        return createTalonSRX(port, config, false);
+    private static GemTalon<TalonSRX> createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
+        final var talon = new TalonSRX(port);
+
+
+
+        return new GemTalon<>(talon, isSlave);
     }
 
-    public static GemTalonSRX createDefaultTalonSRX(final int port) {
+    public static GemTalon<TalonSRX> createDefaultTalonSRX(final int port) {
         return createTalonSRX(port, DEFAULT_TALON_CONFIG, false);
     }
 
-    public static GemTalonSRX createSlaveTalonSRX(final int port) {
+    public static GemTalon<TalonSRX> createSlaveTalonSRX(final int port) {
         return createTalonSRX(port, SLAVE_TALON_CONFIG, true);
     }
 
-    public static GemTalonFX createTalonFX(final int port, final TalonConfiguration config, final boolean isSlave) {
+    public static GemTalon<TalonFX> createTalonFX(final int port, final TalonConfiguration config, final boolean isSlave) {
         final var talon = new TalonFX(port);
 
-        talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
-        talon.clearMotionProfileHasUnderrun(TIMEOUT_MS);
-        talon.clearMotionProfileTrajectories();
+        configureTalon(talon, config);
 
-        talon.clearStickyFaults(TIMEOUT_MS);
-
-        talon.configForwardLimitSwitchSource(LimitSwitchSource.FeedbackConnector, LimitSwitchNormal.Disabled, TIMEOUT_MS);
-        talon.configReverseLimitSwitchSource(LimitSwitchSource.FeedbackConnector, LimitSwitchNormal.Disabled, TIMEOUT_MS);
-        talon.overrideLimitSwitchesEnable(config.ENABLE_LIMIT_SWITCH);
-
-        // Turn off re-zeroing by default.
-        talon.configSetParameter(ParamEnum.eClearPositionOnLimitF, 0, 0, 0, TIMEOUT_MS);
-        talon.configSetParameter(ParamEnum.eClearPositionOnLimitR, 0, 0, 0, TIMEOUT_MS);
-
-        talon.configNominalOutputForward(0, TIMEOUT_MS);
-        talon.configNominalOutputReverse(0, TIMEOUT_MS);
-        talon.configNeutralDeadband(config.NEUTRAL_DEADBAND, TIMEOUT_MS);
-
-        talon.configPeakOutputForward(1.0, TIMEOUT_MS);
-        talon.configPeakOutputReverse(-1.0, TIMEOUT_MS);
-
-        talon.setNeutralMode(config.NEUTRAL_MODE);
-
-        talon.configForwardSoftLimitThreshold(config.FORWARD_SOFT_LIMIT, TIMEOUT_MS);
-        talon.configForwardSoftLimitEnable(config.ENABLE_SOFT_LIMIT, TIMEOUT_MS);
-
-        talon.configReverseSoftLimitThreshold(config.REVERSE_SOFT_LIMIT, TIMEOUT_MS);
-        talon.configReverseSoftLimitEnable(config.ENABLE_SOFT_LIMIT, TIMEOUT_MS);
-        talon.overrideSoftLimitsEnable(config.ENABLE_SOFT_LIMIT);
-
-        talon.setInverted(config.INVERTED);
-        talon.setSensorPhase(config.SENSOR_PHASE);
-
-        talon.selectProfileSlot(0, 0);
-
-        talon.configVelocityMeasurementPeriod(config.VELOCITY_MEASUREMENT_PERIOD, TIMEOUT_MS);
-        talon.configVelocityMeasurementWindow(config.VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW, TIMEOUT_MS);
-
-        talon.configOpenloopRamp(config.OPEN_LOOP_RAMP_RATE, TIMEOUT_MS);
-        talon.configClosedloopRamp(config.CLOSED_LOOP_RAMP_RATE, TIMEOUT_MS);
-
-        talon.configVoltageCompSaturation(0.0, TIMEOUT_MS);
-        talon.configVoltageMeasurementFilter(32, TIMEOUT_MS);
-        talon.enableVoltageCompensation(false);
-
-        talon.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, config.GENERAL_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-        talon.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, config.FEEDBACK_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-
-        talon.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, config.QUAD_ENCODER_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-        talon.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, config.ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-        talon.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, config.PULSE_WIDTH_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-
-        talon.setControlFramePeriod(ControlFrame.Control_3_General, config.CONTROL_FRAME_PERIOD_MS);
-
-        return new GemTalonFX(talon, isSlave);
+        return new GemTalon<>(talon, isSlave);
     }
 
-    public static GemTalonFX createTalonFX(final int port, final TalonConfiguration config) {
-        return createTalonFX(port, config, false);
-    }
-
-    public static GemTalonFX createDefaultTalonFX(final int port) {
+    public static GemTalon<TalonFX> createDefaultTalonFX(final int port) {
         return createTalonFX(port, DEFAULT_TALON_CONFIG, false);
     }
 
-    public static GemTalonFX createSlaveTalonFX(final int port) {
+    public static GemTalon<TalonFX> createSlaveTalonFX(final int port) {
         return createTalonFX(port, SLAVE_TALON_CONFIG, true);
     }
 }

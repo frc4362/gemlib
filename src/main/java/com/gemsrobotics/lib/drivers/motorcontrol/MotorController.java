@@ -7,12 +7,12 @@ public interface MotorController<T> {
     T getInternalController();
 
     class MotionParameters {
-        final double acceleration, cruiseVelocity, allowableError;
+        final double acceleration, cruiseVelocity, tolerance;
 
         public MotionParameters(final double maxAcceleration, final double cruiseVelocity, final double allowableError) {
             this.acceleration = maxAcceleration;
             this.cruiseVelocity = cruiseVelocity;
-            this.allowableError = allowableError;
+            this.tolerance = allowableError;
         }
     }
 

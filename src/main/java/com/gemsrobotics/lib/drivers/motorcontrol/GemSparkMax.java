@@ -171,7 +171,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 
         success &= runWithRetries(() -> m_controller.setSmartMotionMaxAccel(vars.acceleration, m_selectedProfileID));
         success &= runWithRetries(() -> m_controller.setSmartMotionMaxVelocity(vars.cruiseVelocity, m_selectedProfileID));
-        success &= runWithRetries(() -> m_controller.setSmartMotionAllowedClosedLoopError(vars.allowableError, m_selectedProfileID));
+        success &= runWithRetries(() -> m_controller.setSmartMotionAllowedClosedLoopError(vars.tolerance, m_selectedProfileID));
 
         m_hasMotionProfilingBeenConfigured = success;
 
