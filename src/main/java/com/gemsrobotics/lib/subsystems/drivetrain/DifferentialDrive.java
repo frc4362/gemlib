@@ -83,7 +83,7 @@ public abstract class DifferentialDrive<T> extends Subsystem {
         m_config = getConfig();
 		m_transmission = getTransmission();
         m_motorsLeft = getMotorControllersLeft();
-        m_motorsRight = getMotorControllersLeft();
+        m_motorsRight = getMotorControllersRight();
 
         m_masterMotorLeft = m_motorsLeft.getMaster();
         m_masterMotorRight = m_motorsRight.getMaster();
