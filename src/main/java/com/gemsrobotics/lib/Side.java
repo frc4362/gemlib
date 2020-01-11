@@ -16,4 +16,5 @@ public enum Side {
     public boolean isRight() {
         return !isLeft();
     }
+    // comment somewhere or something
 }
