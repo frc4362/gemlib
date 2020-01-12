@@ -28,7 +28,7 @@ import java.util.function.Function;
 // https://github.com/frc1678/robot-code-public/blob/master/c2019/subsystems/drivetrain/drivetrain_base.cpp
 // when extending it for a given implementation
 @SuppressWarnings({"unused", "WeakerAccess", "OverlyCoupledClass"})
-public abstract class DifferentialDrive<T> extends Subsystem {
+public abstract class DifferentialDrive<MotorType> extends Subsystem {
     // This config as one class allows for deserialization from a JSON file to describe nearly the entire drive train
     public static class Config {
 		public double maxVoltage;
@@ -63,8 +63,8 @@ public abstract class DifferentialDrive<T> extends Subsystem {
 	protected final DriveMotionPlanner m_motionPlanner;
 
     protected final NavX m_imu;
-	protected final MotorControllerGroup<T> m_motorsLeft, m_motorsRight;
-    protected final MotorController<T> m_masterMotorLeft, m_masterMotorRight;
+	protected final MotorControllerGroup<MotorType> m_motorsLeft, m_motorsRight;
+    protected final MotorController<MotorType> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
     protected final PeriodicIO m_periodicIO;
 
@@ -75,8 +75,8 @@ public abstract class DifferentialDrive<T> extends Subsystem {
 
     protected abstract Config getConfig();
     // Invert motors BEFORE passing them into the method...
-    protected abstract MotorControllerGroup<T> getMotorControllersLeft();
-    protected abstract MotorControllerGroup<T> getMotorControllersRight();
+    protected abstract MotorControllerGroup<MotorType> getMotorControllersLeft();
+    protected abstract MotorControllerGroup<MotorType> getMotorControllersRight();
     protected abstract Transmission getTransmission();
 
 	protected DifferentialDrive() {
@@ -376,7 +376,7 @@ public abstract class DifferentialDrive<T> extends Subsystem {
 		}
 	}
 
-	public WheelState getWheelProperty(final Function<MotorController<?>, Double> getter) {
+	public WheelState getWheelProperty(final Function<MotorController<MotorType>, Double> getter) {
 		return new WheelState(getter.apply(m_masterMotorLeft), getter.apply(m_masterMotorRight));
 	}
 
