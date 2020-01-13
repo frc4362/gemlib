@@ -91,12 +91,12 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     public synchronized void addObservation(
             final double timestamp,
-            final Twist velocityMeasured,
+            final Twist displacement,
             final Twist velocityPredicted
     ) {
         final var currentPose = getLatestFieldToVehicle().getValue();
-        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(currentPose, velocityMeasured));
-        m_velocityMeasured = velocityMeasured;
+        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(currentPose, displacement));
+        m_velocityMeasured = displacement;
         m_velocityPredicted = velocityPredicted;
     }
 
@@ -118,13 +118,5 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     public synchronized double getDistanceDriven() {
         return m_distanceDriven;
-    }
-
-    public synchronized Twist getPredictedVelocity() {
-        return m_velocityPredicted;
-    }
-
-    public synchronized Twist getMeasuredVelocity() {
-        return m_velocityMeasured;
     }
 }
