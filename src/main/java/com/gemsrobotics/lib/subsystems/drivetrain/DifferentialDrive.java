@@ -183,31 +183,28 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	protected synchronized void configureControlMode(final ControlMode newControlMode) {
 	    if (newControlMode != m_controlMode) {
+	    	m_periodicIO.demand = new WheelState();
+			m_periodicIO.feedforward = new WheelState();
+			m_periodicIO.trackingError = RigidTransform.identity();
+			m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
+
 	        switch (newControlMode) {
                 case DISABLED:
+					setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
                     m_masterMotorLeft.setNeutral();
                     m_masterMotorRight.setNeutral();
 
-                    m_periodicIO.demand = new WheelState();
-                    m_periodicIO.feedforward = new WheelState();
-                    m_periodicIO.trackingError = RigidTransform.identity();
-                    m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
-
-                    m_controlMode = DifferentialDrive.ControlMode.DISABLED;
+                    m_controlMode = ControlMode.DISABLED;
                     break;
                 case OPEN_LOOP:
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-
-                    m_periodicIO.feedforward = new WheelState();
-                    m_periodicIO.trackingError = RigidTransform.identity();
-                    m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
 
                     m_controlMode = ControlMode.OPEN_LOOP;
                     break;
                 case TRAJECTORY_TRACKING:
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-                    m_forceFinishTrajectory = false;
 
+                    m_forceFinishTrajectory = false;
                     m_motionPlanner.reset();
 
                     m_controlMode = ControlMode.TRAJECTORY_TRACKING;
@@ -332,7 +329,6 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	public void setSafeState() {
 		setDisabled();
 		setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-		driveOpenLoop(new WheelState());
 	}
 
 	@Override
