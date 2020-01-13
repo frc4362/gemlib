@@ -202,8 +202,6 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_periodicIO.trackingError = RigidTransform.identity();
                     m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
 
-                    m_openLoopHelper.reset();
-
                     m_controlMode = ControlMode.OPEN_LOOP;
                     break;
                 case TRAJECTORY_TRACKING:
