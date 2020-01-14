@@ -246,7 +246,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void readPeriodicInputs() {
+	protected synchronized void readPeriodicInputs(final double timestamp) {
         m_periodicIO.demandType = m_controlMode;
 
         // Position calculations

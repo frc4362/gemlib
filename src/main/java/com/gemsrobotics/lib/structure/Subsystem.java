@@ -57,7 +57,7 @@ public abstract class Subsystem
     }
 
     // should update the local PeriodicIO class's members
-    protected abstract void readPeriodicInputs();
+    protected abstract void readPeriodicInputs(double timestamp);
 
 	// called once everything has been initialized
 	// designed for things which must be initialized very late
@@ -72,6 +72,6 @@ public abstract class Subsystem
 
     protected synchronized final void updatePeriodicState(final double timestamp) {
         m_dt = m_timer.update(timestamp);
-        readPeriodicInputs();
+        readPeriodicInputs(timestamp);
     }
 }

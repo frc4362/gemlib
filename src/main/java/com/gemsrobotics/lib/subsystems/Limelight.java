@@ -7,6 +7,7 @@ import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.Timer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +19,10 @@ import static java.lang.Math.min;
 public abstract class Limelight extends Subsystem {
     private static final String DEFAULT_NAME = "limelight";
 
-	private static final double IMAGE_CAPTURE_LATENCY_S = 11e-3;
+    protected static final Rotation FOV_HORIZONTAL_DEGREES = Rotation.degrees(54.0);
+    protected static final Rotation FOV_VERTICAL = Rotation.degrees(41.0);
+
+	protected static final double IMAGE_CAPTURE_LATENCY_S = 11e-3;
 
     private final NetworkTable m_table;
     private final NetworkTableEntry
@@ -69,6 +73,7 @@ public abstract class Limelight extends Subsystem {
     protected static class PeriodicIO {
         // INPUTS
         public double latency = IMAGE_CAPTURE_LATENCY_S;
+        public double timestamp = Double.NaN;
         public boolean targetPresent = false;
         public Rotation offsetHorizontal = Rotation.identity();
         public Rotation offsetVertical = Rotation.identity();
@@ -83,9 +88,10 @@ public abstract class Limelight extends Subsystem {
     }
 
     @Override
-    protected synchronized final void readPeriodicInputs() {
+    protected synchronized final void readPeriodicInputs(final double now) {
         // INPUTS
         m_periodicIO.latency = IMAGE_CAPTURE_LATENCY_S + (m_latencyEntry.getDouble(Double.POSITIVE_INFINITY) * 1e-3);
+        m_periodicIO.timestamp = now - m_periodicIO.latency;
         m_periodicIO.targetPresent = m_existsEntry.getDouble(0) == 1.0;
         // invert this so it is CCW-positive
         m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0)).inverse();
