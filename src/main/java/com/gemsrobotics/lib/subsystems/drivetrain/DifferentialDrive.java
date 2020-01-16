@@ -271,10 +271,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	}
 
 	protected void updateStateEstimation(final double timestamp) {
-		final var measuredVelocity = m_odometer.generateOdometryFromSensors(m_periodicIO.positionDeltaMeters, m_periodicIO.heading);
 		final var predictedVelocity = m_model.forwardKinematics(m_periodicIO.velocityMeters.left, m_periodicIO.velocityMeters.right);
-
-		m_odometer.addObservation(timestamp, measuredVelocity, predictedVelocity);
+		m_odometer.addObservation(timestamp, m_periodicIO.positionDeltaMeters, m_periodicIO.heading, predictedVelocity);
 	}
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
