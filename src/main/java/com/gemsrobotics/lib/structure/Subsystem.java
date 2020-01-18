@@ -63,8 +63,6 @@ public abstract class Subsystem
 	// designed for things which must be initialized very late
 	// or are dependant on other subsystems
     protected abstract void onCreate(double timestamp);
-    // called whenever an opmode is enabled; important to consider that this is going to be called twice in competition
-    protected abstract void onEnable(double timestamp);
     // called every 10ms while the subsystem is enabled
     protected abstract void onUpdate(double timestamp);
     // called when the robot is disabled

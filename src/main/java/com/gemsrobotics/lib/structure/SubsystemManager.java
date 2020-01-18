@@ -6,8 +6,6 @@ import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.timing.DeltaTime;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 import edu.wpi.first.wpilibj.Notifier;
-import edu.wpi.first.wpilibj.RobotState;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
@@ -79,7 +77,7 @@ public final class SubsystemManager implements Reportable, Loggable {
                                 report(Kind.HARDWARE_FAULT, "Located unrecoverable systematic fault in subsystem \"" + subsystem.getName() + "\", KILLING ROBOT.");
                                 estop(subsystem);
                                 Scheduler.getInstance().disable();
-                                disable();
+                                stop();
                                 return true;
                             case NONE:
                             default:
@@ -93,7 +91,7 @@ public final class SubsystemManager implements Reportable, Loggable {
         });
 	}
 
-    public synchronized void init() {
+    public synchronized void start() {
 	    final int size;
 
 	    synchronized (m_lock) {
@@ -112,27 +110,7 @@ public final class SubsystemManager implements Reportable, Loggable {
 		report("Initializing with " + size + " registered subsystems.");
     }
 
-	public synchronized void enable() {
-	    if (!m_isRunning) {
-            synchronized (m_lock) {
-                m_timer.reset();
-                m_subsystems.forEach(subsystem -> {
-                    try {
-                        subsystem.onEnable(getFPGATimestamp());
-                    } catch (final Throwable throwable) {
-                        Pod.catchThrowable(subsystem, throwable);
-                    }
-                });
-            }
-
-            m_updater.startPeriodic(PERIOD);
-            m_isRunning = true;
-
-            report("Enabling subsystems.");
-        }
-    }
-
-    public void disable() {
+    public void stop() {
 	    if (m_isRunning) {
             m_updater.stop();
             m_timer.reset();
