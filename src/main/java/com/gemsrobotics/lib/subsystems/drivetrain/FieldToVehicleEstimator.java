@@ -91,29 +91,22 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     public synchronized void addObservation(
             final double timestamp,
-            final Twist displacement,
+            final WheelState deltaDistance,
+            final Rotation currentRotation,
             final Twist velocityPredicted
     ) {
-        final var currentPose = getLatestFieldToVehicle().getValue();
-        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(currentPose, displacement));
-        m_velocityMeasured = displacement;
-        m_velocityPredicted = velocityPredicted;
-    }
-
-    public synchronized Twist generateOdometryFromSensors(
-            final WheelState deltaDistance,
-            final Rotation currentRotation
-    ) {
-        final var lastRotation = getLatestFieldToVehicle().getValue().getRotation();
-        final Twist delta = m_model.forwardKinematics(
-                lastRotation,
+        final var latestPose = getLatestFieldToVehicle().getValue();
+        final Twist displacement = m_model.forwardKinematics(
+                latestPose.getRotation(),
                 deltaDistance.left,
                 deltaDistance.right,
                 currentRotation);
 
-        m_distanceDriven += abs(delta.dx);
+        addFieldToVehicleObservation(timestamp, m_model.solveForwardKinematics(latestPose, displacement));
 
-        return delta;
+        m_velocityMeasured = displacement;
+        m_velocityPredicted = velocityPredicted;
+        m_distanceDriven += abs(displacement.dx);
     }
 
     public synchronized double getDistanceDriven() {
