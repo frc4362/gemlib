@@ -123,6 +123,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	public enum ControlMode {
 		DISABLED,
 		OPEN_LOOP,
+		VELOCITY,
         TRAJECTORY_TRACKING
 	}
 
@@ -201,6 +202,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
                     m_controlMode = ControlMode.OPEN_LOOP;
                     break;
+				case VELOCITY:
                 case TRAJECTORY_TRACKING:
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 
@@ -227,12 +229,18 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     }
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
-		if (!Objects.isNull(m_motionPlanner)) {
-		    configureControlMode(ControlMode.TRAJECTORY_TRACKING);
-            m_motionPlanner.setTrajectory(trajectory);
-		} else {
-		    configureControlMode(ControlMode.DISABLED);
-        }
+		configureControlMode(ControlMode.TRAJECTORY_TRACKING);
+		m_motionPlanner.setTrajectory(trajectory);
+		m_motionPlanner.reset();
+	}
+
+	public synchronized void setDriveVelocity(final WheelState velocities) {
+		configureControlMode(ControlMode.VELOCITY);
+		m_periodicIO.demand = velocities;
+	}
+
+	public synchronized void setHoldCurrentSpeeds() {
+		setDriveVelocity(m_periodicIO.velocityMeters);
 	}
 
 	protected final void driveOpenLoop(final WheelState demandDutyCycle) {
@@ -288,8 +296,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                // please note that we cannot use setVelocityRPM as the calculated rad/s are for the wheel, not the motor
                m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
 
-               // convert from volts to % output, then use D term to calculate additional gain based on acceleration (dv/dt)
-               final var kD = m_config.velocityGainsForGear(m_periodicIO.isHighGear).kD;
+               // convert from volts to duty cycle
                m_periodicIO.feedforward = output.feedforwardVoltage.map(v -> v / 12.0);
            }
 		} else {
@@ -299,8 +306,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	@Override
 	protected final synchronized void onCreate(final double timestamp) {
-        m_odometer = FieldToVehicleEstimator.withStarting(m_model, timestamp, RigidTransform.identity());
-        setDisabled();
+		m_odometer = FieldToVehicleEstimator.withStarting(m_model, timestamp, RigidTransform.identity());
+		setDisabled();
 	}
 
 	@Override
@@ -318,6 +325,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
             case TRAJECTORY_TRACKING:
                 // This makes sense, since the demands are updated in this method
                 updateTrajectoryFollowingDemands(timestamp);
+			case VELOCITY: // please note fallthrough
                 driveVelocity(m_periodicIO.demand, m_periodicIO.feedforward);
                 break;
         }
