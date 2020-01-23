@@ -3,13 +3,13 @@ import edu.wpi.first.gradlerio.GradleRIOPlugin
 plugins {
     id "java"
     id "idea"
-    id "edu.wpi.first.GradleRIO" version "2020.1.2"
+    id "edu.wpi.first.GradleRIO" version "2020.2.2"
 }
 
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
-def ROBOT_MAIN_CLASS = ""
+def ROBOT_MAIN_CLASS = "com.gemsrobotics.frc2020.Main"
 def TEAM_NUMBER = 4362
 
 // Define my targets (RoboRIO) and artifacts (deployable files)
@@ -54,13 +54,15 @@ repositories {
 // some CSVing from the community, and logging from the man Oblarg
 dependencies {
     implementation wpi.deps.wpilib()
-    implementation wpi.deps.vendor.java()
+    nativeZip wpi.deps.wpilibJni(wpi.platforms.roborio)
+    nativeDesktopZip wpi.deps.wpilibJni(wpi.platforms.desktop)
 
+    implementation wpi.deps.vendor.java()
     nativeZip wpi.deps.vendor.jni(wpi.platforms.roborio)
     nativeDesktopZip wpi.deps.vendor.jni(wpi.platforms.desktop)
 
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.hamcrest:hamcrest-all:1.3'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.hamcrest:hamcrest-all:1.3'
 
     implementation 'com.moandjiezana.toml:toml4j:0.7.2'
     implementation 'gov.nist.math:jama:1.0.3'
