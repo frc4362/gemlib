@@ -11,12 +11,12 @@ import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.CommandGroup;
 
-public class DriveTrajectoryCommand extends Command implements Reportable {
+public class TrackTrajectoryCommand extends Command implements Reportable {
     protected final DifferentialDrive<?> m_chassis;
     protected final boolean m_usesHighGear;
     protected final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> m_trajectory;
 
-    public DriveTrajectoryCommand(final DifferentialDrive<?> chassis, final TrajectoryContainer<RigidTransformWithCurvature> path) {
+    public TrackTrajectoryCommand(final DifferentialDrive<?> chassis, final TrajectoryContainer<RigidTransformWithCurvature> path) {
         setName("FollowTrajectory");
         requires(chassis);
 
@@ -25,7 +25,7 @@ public class DriveTrajectoryCommand extends Command implements Reportable {
         m_trajectory = path.getTrajectory();
     }
 
-    public DriveTrajectoryCommand(final DifferentialDrive<?> chassis, final Trajectory<TimedState<RigidTransformWithCurvature>> trajectory) {
+    public TrackTrajectoryCommand(final DifferentialDrive<?> chassis, final Trajectory<TimedState<RigidTransformWithCurvature>> trajectory) {
         this(chassis, new TrajectoryContainer<>(false, trajectory));
     }
 
@@ -44,6 +44,7 @@ public class DriveTrajectoryCommand extends Command implements Reportable {
     public void end() {
         report("Finished.");
         report(Kind.INQUIRY, "Did it work?");
+        m_chassis.setDisabled();
     }
 
     @Override
