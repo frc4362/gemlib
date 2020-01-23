@@ -190,8 +190,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	    if (newControlMode != m_controlMode) {
 	    	m_periodicIO.demand = new WheelState();
 			m_periodicIO.feedforward = new WheelState();
-			m_periodicIO.trackingError = RigidTransform.identity();
-			m_periodicIO.trackingReference = new TimedState<>(RigidTransformWithCurvature.identity());
+			m_periodicIO.trackingError = null;
+			m_periodicIO.trackingReference = null;
 
 	        switch (newControlMode) {
                 case DISABLED:
@@ -286,16 +286,17 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
 		final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
-				.orElse(new DriveMotionPlanner.Output());
+								   .orElse(new DriveMotionPlanner.Output());
 
 		m_periodicIO.trackingError = m_motionPlanner.getError();
 		m_periodicIO.trackingReference = m_motionPlanner.getReference();
 
-		if (!m_forceFinishTrajectory) {
-		   // convert from radians/second to meters/second
-		   m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
+		if (m_forceFinishTrajectory) {
+			setDisabled();
 		} else {
-			m_periodicIO.demand = new WheelState();
+			// convert from radians/second to meters/second
+			m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
+
 		}
 	}
 
