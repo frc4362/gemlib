@@ -143,7 +143,10 @@ public interface MotorController<T> {
     }
 
     default void setVelocityRadiansPerSecond(final double radiansPerSecond) {
-        setVelocityRPM(Units.radsPerSec2Rpm(radiansPerSecond));
+        setVelocityRadiansPerSecond(radiansPerSecond, 0.0);
+    }
+    default void setVelocityRadiansPerSecond(final double radiansPerSecond, final double feedforward) {
+        setVelocityRPM(Units.radsPerSec2Rpm(radiansPerSecond), feedforward);
     }
 
     void setPositionMeters(double position, double feedforward);

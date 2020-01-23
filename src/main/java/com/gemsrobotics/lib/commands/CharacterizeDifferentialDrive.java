@@ -47,10 +47,8 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
         final MotorFeedforward.Constants constants = Characterizer.generateCharacterization(m_velocities, m_accelerations);
         m_output = constants;
 
-        report(Kind.INFO, "Characterization complete", Map.of(
-                "kS", FastDoubleToString.format(constants.kStiction),
-                "kV", FastDoubleToString.format(constants.kV),
-                "kA", FastDoubleToString.format(constants.kA))
-        );
+        System.out.println("Characterization complete: " + "kS: " + FastDoubleToString.format(constants.kStiction) + ", "
+                + "kV: " + FastDoubleToString.format(constants.kV) +
+                "kA: " + FastDoubleToString.format(constants.kA));
     }
 }

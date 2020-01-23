@@ -9,9 +9,9 @@ public final class MotorControllerGroup<T> {
     private final MotorController<T> m_master;
     private final List<MotorController<T>> m_slaves;
 
-    public MotorControllerGroup(final MotorController<T> master, final MotorController<T>... slaves) {
+    public MotorControllerGroup(final MotorController<T> master, final List<MotorController<T>> slaves) {
         m_master = master;
-        m_slaves = Arrays.asList(slaves);
+        m_slaves = slaves;
     }
 
     public MotorController<T> getMaster() {

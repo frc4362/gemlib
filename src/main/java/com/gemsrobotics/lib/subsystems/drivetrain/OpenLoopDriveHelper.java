@@ -59,7 +59,7 @@ public class OpenLoopDriveHelper {
 		if (m_cfg.useSineAttack) {
 			final double zNonLinearity;
 
-            // Apply a sin function s scaled to make it feel better.
+            // Apply a sin function scaled to make it feel better.
 			if (isHighGear) {
 				zNonLinearity = m_cfg.zNonLinearityHighGear;
 

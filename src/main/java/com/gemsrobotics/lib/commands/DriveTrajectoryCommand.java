@@ -1,6 +1,6 @@
 package com.gemsrobotics.lib.commands;
 
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
+import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
@@ -43,7 +43,7 @@ public class DriveTrajectoryCommand extends Command implements Reportable {
     @Override
     public void end() {
         report("Finished.");
-        report(ReportingEndpoint.Event.Kind.INQUIRY, "Did it work?");
+        report(Kind.INQUIRY, "Did it work?");
     }
 
     @Override

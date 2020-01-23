@@ -17,6 +17,8 @@ import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner.FollowerType;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryGenerator;
+import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -40,8 +42,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		public PIDFController.Gains gainsLowGear;
 		public PIDFController.Gains gainsHighGear;
 
-		public MotorModel.Properties propertiesHighGear;
 		public MotorModel.Properties propertiesLowGear;
+		public MotorModel.Properties propertiesHighGear;
 		public DifferentialDriveModel.Properties propertiesModel;
 		public DriveMotionPlanner.MotionConfig motionConfig;
 
@@ -66,7 +68,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	protected final MotorControllerGroup<MotorType> m_motorsLeft, m_motorsRight;
     protected final MotorController<MotorType> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
-    protected final PeriodicIO m_periodicIO;
+    public final PeriodicIO m_periodicIO;
 
     protected FieldToVehicleEstimator m_odometer;
     protected boolean m_isHighGear, m_forceFinishTrajectory;
@@ -104,6 +106,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);
         m_periodicIO = new PeriodicIO();
 
+		m_odometer = FieldToVehicleEstimator.withStarting(m_model, 0.0, RigidTransform.identity());
         m_headingOffset = Rotation.identity();
 		m_forceFinishTrajectory = false;
     }
@@ -118,6 +121,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 		controller.setSelectedProfile(slotForGear(true));
 		controller.setPIDF(m_config.gainsHighGear);
+
+		controller.setEncoderRotations(0.0);
 	}
 
 	public enum ControlMode {
@@ -127,7 +132,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
         TRAJECTORY_TRACKING
 	}
 
-	protected final class PeriodicIO implements Loggable {
+	public final class PeriodicIO implements Loggable {
 		// Inputs
         @Log.ToString(name="Wheel Position (m, m)")
 		public WheelState positionMeters = new WheelState();
@@ -209,7 +214,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_forceFinishTrajectory = false;
                     m_motionPlanner.reset();
 
-                    m_controlMode = ControlMode.TRAJECTORY_TRACKING;
+                    m_controlMode = newControlMode;
                     break;
             }
         }
@@ -222,10 +227,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	public synchronized void setOpenLoop(final ChassisState chassisState) {
 	    configureControlMode(ControlMode.OPEN_LOOP);
-	    m_periodicIO.demand = new WheelState(
-	            chassisState.linear - chassisState.angular,
-                chassisState.linear + chassisState.angular
-        );
+	    m_periodicIO.demand = new WheelState(chassisState.linear - chassisState.angular, chassisState.linear + chassisState.angular);
     }
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
@@ -293,7 +295,6 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
            if (!m_forceFinishTrajectory) {
                // convert from radians/second to meters/second
-               // please note that we cannot use setVelocityRPM as the calculated rad/s are for the wheel, not the motor
                m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
 
                // convert from volts to duty cycle
@@ -306,7 +307,6 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	@Override
 	protected final synchronized void onCreate(final double timestamp) {
-		m_odometer = FieldToVehicleEstimator.withStarting(m_model, timestamp, RigidTransform.identity());
 		setDisabled();
 	}
 
@@ -325,7 +325,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
             case TRAJECTORY_TRACKING:
                 // This makes sense, since the demands are updated in this method
                 updateTrajectoryFollowingDemands(timestamp);
-			case VELOCITY: // please note fallthrough
+			case VELOCITY: // Please note fallthrough
+				final var targetAcceleration = m_periodicIO.demand.difference(m_periodicIO.velocityMeters).map(v -> v / dt());
+				final var targetDynamics = m_model.solveInverseDynamics(m_periodicIO.demand, targetAcceleration, m_periodicIO.isHighGear);
+				m_periodicIO.feedforward = targetDynamics.voltage.map(v -> v / 12.0);
                 driveVelocity(m_periodicIO.demand, m_periodicIO.feedforward);
                 break;
         }
@@ -399,7 +402,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     }
 
 	public synchronized DifferentialDriveModel.Dynamics getDynamics() {
-        return m_model.solveInverseDynamics(m_periodicIO.velocityMeters, m_periodicIO.accelerationMeters, m_isHighGear);
+        return m_model.solveForwardDynamics(
+				m_model.forwardKinematics(m_periodicIO.velocityMeters),
+				getWheelProperty(MotorController::getVoltageOutput),
+				m_periodicIO.isHighGear);
 	}
 
 	public final FieldToVehicleEstimator getOdometer() {

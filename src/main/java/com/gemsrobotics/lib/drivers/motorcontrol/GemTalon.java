@@ -13,6 +13,7 @@ import com.gemsrobotics.lib.data.CachedBoolean;
 import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import com.gemsrobotics.lib.utils.TalonUtils;
+import com.gemsrobotics.lib.utils.Units;
 
 import java.util.function.Supplier;
 
@@ -30,6 +31,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	private final String m_name;
 	private final TalonType m_internal;
+	private final boolean m_isFX;
 	private final CachedBoolean m_isEncoderPresent;
 	private final double m_ticksPerRotation;
 
@@ -38,6 +40,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	private int m_selectedProfileID;
 	private double m_lastValue, m_lastDemand;
 
+	private boolean m_inverted;
 	private double m_cylinderToEncoderReduction, m_cylinderRadiusMeters;
 	private boolean m_isMotionProfilingConfigured;
 	private MotorController<TalonType> m_leader;
@@ -47,11 +50,11 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		m_internal.enableVoltageCompensation(true);
 		runWithRetries(() -> m_internal.configVoltageCompSaturation(12.0, TIMEOUT_MS));
 
-		final boolean isFX = m_internal instanceof TalonFX;
+		m_isFX = m_internal instanceof TalonFX;
 
-		m_name = "Talon" + (isFX ? "FX" : "SRX") + "-" + (isSlave ? "Slave-" : "") + m_internal.getDeviceID();
+		m_name = "Talon" + (m_isFX ? "FX" : "SRX") + "-" + (isSlave ? "Slave-" : "") + m_internal.getDeviceID();
 
-		if (isFX) {
+		if (m_isFX) {
 			m_isEncoderPresent = new CachedBoolean(Double.POSITIVE_INFINITY, () -> true);
 			m_ticksPerRotation = 2048;
 		} else {
@@ -59,6 +62,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 			m_ticksPerRotation = 4096;
 		}
 
+		m_inverted = false;
 		m_selectedProfileID = 0;
 		m_isMotionProfilingConfigured = false;
 
@@ -159,6 +163,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public boolean setInvertedOutput(final boolean inverted) {
+		m_inverted = inverted;
 		m_internal.setInverted(inverted);
 		return true;
 	}
@@ -198,22 +203,22 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public double getPositionMeters() {
-		return getPositionRotations() * m_cylinderRadiusMeters;
+		return getPositionRotations() * (Tau * m_cylinderRadiusMeters);
 	}
 
 	@Override
 	public double getPositionRotations() {
-		return nativeUnits2Rotations(m_internal.getSelectedSensorPosition(m_selectedProfileID));
+		return nativeUnits2Rotations(getEncoderMultiplier() * m_internal.getSelectedSensorPosition(m_selectedProfileID));
 	}
 
 	@Override
 	public synchronized double getVelocityLinearMetersPerSecond() {
-		return (getVelocityAngularRPM() / 60) * m_cylinderRadiusMeters;
+		return (getVelocityAngularRPM() / 60) * (Tau * m_cylinderRadiusMeters);
 	}
 
 	@Override
 	public synchronized double getVelocityAngularRPM() {
-		return nativeUnits2RPM(m_internal.getSelectedSensorVelocity(m_selectedProfileID));
+		return nativeUnits2RPM(getEncoderMultiplier() * m_internal.getSelectedSensorVelocity(m_selectedProfileID));
 	}
 
 	@Override
@@ -231,9 +236,9 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public synchronized boolean setMotionParameters(final MotionParameters vars) {
-		final var cruiseVelocityNativeUnits = RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
-		final var accelerationNativeUnits = RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
-		final var toleranceNativeUnits = rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
+		final var cruiseVelocityNativeUnits = getEncoderMultiplier() * RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
+		final var accelerationNativeUnits = getEncoderMultiplier() * RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
+		final var toleranceNativeUnits = getEncoderMultiplier() * rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
 
 		boolean success = true;
 
@@ -258,12 +263,15 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public void setVelocityMetersPerSecond(final double velocity, final double feedforward) {
-		setVelocityRPM(velocity / m_cylinderRadiusMeters * 60, feedforward);
+		setVelocityRadiansPerSecond(velocity / m_cylinderRadiusMeters, feedforward);
 	}
 
 	@Override
 	public void setVelocityRPM(final double rpm, final double feedforward) {
-		set(ControlMode.Velocity, RPM2NativeUnitsPer100ms(rpm), DemandType.ArbitraryFeedForward, feedforward);
+		set(ControlMode.Velocity,
+			RPM2NativeUnitsPer100ms(rpm),
+			DemandType.ArbitraryFeedForward,
+			feedforward);
 	}
 
 	@Override
@@ -273,7 +281,9 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public synchronized void setPositionRotations(final double rotations, final double feedforward) {
-		set(m_isMotionProfilingConfigured ? ControlMode.MotionMagic : ControlMode.Position, rotations2NativeUnits(rotations / m_cylinderToEncoderReduction), DemandType.ArbitraryFeedForward, feedforward);
+		set(m_isMotionProfilingConfigured ? ControlMode.MotionMagic : ControlMode.Position,
+				getEncoderMultiplier() *  rotations2NativeUnits(rotations / m_cylinderToEncoderReduction),
+				DemandType.ArbitraryFeedForward, feedforward);
 	}
 
 	public boolean setNominalOutputForward(final double percentOut) {
@@ -310,24 +320,32 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		return success;
 	}
 
-	private double meters2NativeUnits(final double meters) {
-		return rotations2NativeUnits(meters / (Tau * m_cylinderRadiusMeters) * 60);
-	}
+//	private double meters2NativeUnits(final double meters) {
+//		return rotations2NativeUnits(meters / (Tau * m_cylinderRadiusMeters) * 60);
+//	}
 
 	private double nativeUnits2Rotations(final double nativeUnits) {
-		return nativeUnits / m_ticksPerRotation;
+		return nativeUnits * m_cylinderToEncoderReduction / m_ticksPerRotation;
 	}
 
 	private double nativeUnits2RPM(final double nativeUnits) {
-		return nativeUnits / m_ticksPerRotation * 600.0;
+		return nativeUnits * m_cylinderToEncoderReduction / m_ticksPerRotation * 600.0;
 	}
 
 	private int rotations2NativeUnits(final double rotations) {
-		return (int) (rotations * m_ticksPerRotation);
+		return (int) (rotations * m_ticksPerRotation / m_cylinderToEncoderReduction);
 	}
 
 	private int RPM2NativeUnitsPer100ms(final double rpm) {
-		return (int) (rpm * m_ticksPerRotation / 600.0);
+		return radiansPerSecond2NativeUnitsPer100ms(Units.rpm2RadsPerSecond(rpm));
+	}
+
+	private int radiansPerSecond2NativeUnitsPer100ms(final double rps) {
+		return (int) (rps / Tau * m_ticksPerRotation / 10.0);
+	}
+
+	private int getEncoderMultiplier() {
+		return (m_inverted && m_isFX ? -1 : 1);
 	}
 
 	private synchronized boolean runWithRetries(final Supplier<ErrorCode> call) {

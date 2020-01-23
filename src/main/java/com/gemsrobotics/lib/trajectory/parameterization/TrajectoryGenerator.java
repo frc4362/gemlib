@@ -74,7 +74,7 @@ public final class TrajectoryGenerator {
 		// Create the constraint that the robot must be able to traverse the trajectory without ever applying more
 		// than the specified voltage.
 		final DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> drivingConstraints =
-				new	DifferentialDriveDynamicsConstraint<>(m_model, highGear, m_config.maxVoltage    );
+				new	DifferentialDriveDynamicsConstraint<>(m_model, highGear, m_config.maxVoltage);
 
         final CentripetalAccelerationConstraint centripetalAccelerationConstraints =
                 new CentripetalAccelerationConstraint(m_config.maxCentripetalAcceleration);
@@ -88,7 +88,7 @@ public final class TrajectoryGenerator {
 		}
 
 		// Generate the timed trajectory.
-		return new TrajectoryContainer<RigidTransformWithCurvature>(
+		return new TrajectoryContainer<>(
 		        highGear,
                 Parameterizer.timeParameterizeTrajectory(
                     reversed,
