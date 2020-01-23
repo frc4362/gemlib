@@ -17,8 +17,6 @@ import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner.FollowerType;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryGenerator;
-import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -161,7 +159,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		public WheelState feedforward = new WheelState();
 
 		public RigidTransform trackingError = new RigidTransform();
-		public TimedState<RigidTransformWithCurvature> trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
+		public TimedState<RigidTransformWithCurvature> trackingReference = new TimedState<>(RigidTransformWithCurvature.identity());
 	}
 
     public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
@@ -177,6 +175,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
             final int profile = slotForGear(wantsHighGear);
             m_masterMotorLeft.setSelectedProfile(profile);
             m_masterMotorRight.setSelectedProfile(profile);
+
             final MotorController.GearingParameters gearingParameters = m_config.gearingForGear(wantsHighGear);
             m_masterMotorLeft.setGearingParameters(gearingParameters);
             m_masterMotorRight.setGearingParameters(gearingParameters);
@@ -192,7 +191,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	    	m_periodicIO.demand = new WheelState();
 			m_periodicIO.feedforward = new WheelState();
 			m_periodicIO.trackingError = RigidTransform.identity();
-			m_periodicIO.trajectoryReference = new TimedState<>(RigidTransformWithCurvature.identity());
+			m_periodicIO.trackingReference = new TimedState<>(RigidTransformWithCurvature.identity());
 
 	        switch (newControlMode) {
                 case DISABLED:
@@ -286,22 +285,17 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	}
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
-		if (m_controlMode == ControlMode.TRAJECTORY_TRACKING) {
-			final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
-                    .orElse(new DriveMotionPlanner.Output());
+		final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
+				.orElse(new DriveMotionPlanner.Output());
 
-			m_periodicIO.trackingError = m_motionPlanner.getError();
-			m_periodicIO.trajectoryReference = m_motionPlanner.getSetpoint();
+		m_periodicIO.trackingError = m_motionPlanner.getError();
+		m_periodicIO.trackingReference = m_motionPlanner.getReference();
 
-           if (!m_forceFinishTrajectory) {
-               // convert from radians/second to meters/second
-               m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
-
-               // convert from volts to duty cycle
-               m_periodicIO.feedforward = output.feedforwardVoltage.map(v -> v / 12.0);
-           }
+		if (!m_forceFinishTrajectory) {
+		   // convert from radians/second to meters/second
+		   m_periodicIO.demand = output.velocityRadiansPerSecond.map(radiansPerSecond -> (m_config.propertiesModel.wheelRadiusMeters * radiansPerSecond));
 		} else {
-			report(Kind.ERROR, "Tried to update trajectory following in bad control state: " + m_controlMode.toString());
+			m_periodicIO.demand = new WheelState();
 		}
 	}
 
@@ -326,8 +320,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 // This makes sense, since the demands are updated in this method
                 updateTrajectoryFollowingDemands(timestamp);
 			case VELOCITY: // Please note fallthrough
-				final var targetAcceleration = m_periodicIO.demand.difference(m_periodicIO.velocityMeters).map(v -> v / dt());
-				final var targetDynamics = m_model.solveInverseDynamics(m_periodicIO.demand, targetAcceleration, m_periodicIO.isHighGear);
+				final var targetSpeed = m_periodicIO.demand.map(m -> m / m_model.wheelRadiusMeters);
+				final var currentSpeed = m_periodicIO.velocityMeters.map(m -> m / m_model.wheelRadiusMeters);
+				final var targetAcceleration = targetSpeed.difference(currentSpeed).map(v -> v / dt());
+				final var targetDynamics = m_model.solveInverseDynamics(targetSpeed, targetAcceleration, m_periodicIO.isHighGear);
 				m_periodicIO.feedforward = targetDynamics.voltage.map(v -> v / 12.0);
                 driveVelocity(m_periodicIO.demand, m_periodicIO.feedforward);
                 break;
@@ -416,8 +412,12 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	    return m_generator;
     }
 
-    public synchronized final Optional<TimedState<RigidTransformWithCurvature>> getTrajectoryReference() {
-	    return Optional.ofNullable(m_periodicIO.trajectoryReference);
+    public synchronized final Optional<RigidTransform> getTrackingError() {
+		return Optional.ofNullable(m_periodicIO.trackingError);
+	}
+
+    public synchronized final Optional<TimedState<RigidTransformWithCurvature>> getTrackingReference() {
+	    return Optional.ofNullable(m_periodicIO.trackingReference);
     }
 
     public final DifferentialDriveModel getModel() {

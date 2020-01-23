@@ -208,7 +208,7 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 		return output;
 	}
 
-    public final TimedState<RigidTransformWithCurvature> getSetpoint() {
+    public final TimedState<RigidTransformWithCurvature> getReference() {
         return m_setpoint;
     }
 
