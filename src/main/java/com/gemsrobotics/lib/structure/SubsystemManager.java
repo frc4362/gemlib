@@ -43,8 +43,8 @@ public final class SubsystemManager implements Reportable, Loggable {
                 return;
             }
 
-            synchronized (m_lock) {
-                double now = getFPGATimestamp();
+			synchronized (m_lock) {
+				double now = getFPGATimestamp();
 
                 for (final var subsystem : m_subsystems) {
                     now = getFPGATimestamp();
@@ -89,6 +89,8 @@ public final class SubsystemManager implements Reportable, Loggable {
                 }
             }
         });
+
+		m_updater.startPeriodic(PERIOD);
 	}
 
     public synchronized void start() {
@@ -105,6 +107,8 @@ public final class SubsystemManager implements Reportable, Loggable {
             });
 
             size = m_subsystems.size();
+
+			m_isRunning = true;
         }
 
 		report("Initializing with " + size + " registered subsystems.");
@@ -112,7 +116,6 @@ public final class SubsystemManager implements Reportable, Loggable {
 
     public void stop() {
 	    if (m_isRunning) {
-            m_updater.stop();
             m_timer.reset();
 
             synchronized (m_lock) {

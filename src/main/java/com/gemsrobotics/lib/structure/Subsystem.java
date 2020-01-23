@@ -39,10 +39,10 @@ public abstract class Subsystem
 
     private final DeltaTime m_timer = new DeltaTime();
 	private double m_dt = 0.0;
-	private boolean m_isActive = false;
+	private boolean m_isActive = true;
 
 	// seconds
-	protected synchronized final double dt() {
+	public synchronized final double dt() {
         return m_dt;
     }
 
