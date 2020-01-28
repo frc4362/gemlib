@@ -39,7 +39,7 @@ public class CollectDriveAccelerationData extends Command {
     @Override
     public void execute() {
         final var velocities = m_chassis.getWheelProperty(MotorController::getVelocityAngularRadiansPerSecond);
-        final var currentVelocity = abs(velocities.left) + abs(velocities.right);
+        final var currentVelocity = (abs(velocities.left) + abs(velocities.right)) / 2.0;
 
         //don't calculate acceleration until we've populated prevTime and prevVelocity
         if (Double.isNaN(m_lastTime)) {

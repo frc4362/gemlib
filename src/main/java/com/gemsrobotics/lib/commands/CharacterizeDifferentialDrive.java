@@ -19,7 +19,7 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
 
     private MotorFeedforward.Constants m_output;
 
-    public CharacterizeDifferentialDrive(final DifferentialDrive chassis, final boolean useHighGear) {
+    public CharacterizeDifferentialDrive(final DifferentialDrive<?> chassis, final boolean useHighGear) {
         m_output = null;
         m_velocities = new ArrayList<>();
         m_accelerations = new ArrayList<>();
@@ -47,8 +47,8 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
         final MotorFeedforward.Constants constants = Characterizer.generateCharacterization(m_velocities, m_accelerations);
         m_output = constants;
 
-        System.out.println("Characterization complete: " + "kS: " + FastDoubleToString.format(constants.kStiction) + ", "
-                + "kV: " + FastDoubleToString.format(constants.kV) +
-                "kA: " + FastDoubleToString.format(constants.kA));
+        System.out.println("Characterization complete: " + "kS: " + FastDoubleToString.format(constants.kStiction,6) + ", "
+                + "kV: " + FastDoubleToString.format(constants.kV, 6) +
+                "kA: " + FastDoubleToString.format(constants.kA, 6));
     }
 }

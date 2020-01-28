@@ -51,11 +51,11 @@ public class DriveMotionPlanner implements Reportable, Loggable {
 
 	public static class Output implements Loggable {
 	    @Log.ToString(name="Velocity (rad per s, rad per s)")
-		public WheelState velocityRadiansPerSecond;
+		public WheelState velocityRadiansPerSecond = new WheelState();
         @Log.ToString(name="Acceleration (rad per s^2, rad per s^2)")
-		public WheelState accelerationRadiansPerSecondSquared;
+		public WheelState accelerationRadiansPerSecondSquared = new WheelState();
         @Log.ToString(name="Feedforward (V, V)")
-		public WheelState feedforwardVoltage;
+		public WheelState feedforwardVoltage = new WheelState();
 	}
 
 	protected transient final DifferentialDriveModel m_model;

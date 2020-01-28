@@ -40,11 +40,11 @@ public final class CollectDriveVelocityData extends Command {
         m_power = RAMP_RATE * timeSinceInitialized();
         m_chassis.setOpenLoop(new ChassisState(m_power, 0));
 
-        final WheelState wheelVoltages = m_chassis.getWheelProperty(MotorController::getVoltageOutput);
-        final double averageVoltage = (wheelVoltages.left + wheelVoltages.right) / 2.0;
+        final WheelState wheelVoltages = m_chassis.getWheelProperty(MotorController::getVoltageInput);
+        final double systemVoltage = (wheelVoltages.left + wheelVoltages.right) / 2.0;
 
         final var velocities = m_chassis.getWheelProperty(MotorController::getVelocityAngularRadiansPerSecond);
-        m_data.add(new Characterizer.VelocityDataPoint(abs(velocities.left) + abs(velocities.right), m_power * averageVoltage));
+        m_data.add(new Characterizer.VelocityDataPoint((abs(velocities.left) + abs(velocities.right)) / 2.0, m_power * systemVoltage));
     }
 
     @Override

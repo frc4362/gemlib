@@ -9,16 +9,22 @@ public class MotorFeedforward {
         public double kA; // v / rad/s^2
     }
 
-    protected final Constants m_constants;
+    protected final double kS, kV, kA;
 
     public MotorFeedforward(final Constants constants) {
-        m_constants = constants;
+        this(constants.kStiction, constants.kV, constants.kA);
+    }
+
+    public MotorFeedforward(final double kS, final double kV, final double kA) {
+        this.kS = kS;
+        this.kV = kV;
+        this.kA = kA;
     }
 
     public double calculateVolts(final double velocityRadiansPerSecond, final double accelerationRadiansPerSecondPerSecond) {
-        return m_constants.kStiction * signum(velocityRadiansPerSecond)
-               + m_constants.kV * velocityRadiansPerSecond
-               + m_constants.kA * accelerationRadiansPerSecondPerSecond;
+        return kS * signum(velocityRadiansPerSecond)
+               + kV * velocityRadiansPerSecond
+               + kA * accelerationRadiansPerSecondPerSecond;
     }
 
     public double calculateVolts(final double velocityRadiansPerSecond) {
