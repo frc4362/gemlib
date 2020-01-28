@@ -46,7 +46,7 @@ public abstract class Subsystem
         return m_dt;
     }
 
-    @Config.ToggleSwitch(defaultValue=false)
+    @Config.ToggleSwitch(defaultValue=true)
     public final void setActive(final boolean active) {
 	    m_isActive = active;
     }
