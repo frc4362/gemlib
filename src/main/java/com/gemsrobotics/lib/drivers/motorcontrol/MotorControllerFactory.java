@@ -5,6 +5,7 @@ import com.ctre.phoenix.motorcontrol.*;
 import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANError;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
@@ -140,12 +141,12 @@ public final class MotorControllerFactory {
              CONTROL_FRAME_PERIOD_MS = 5;
              MOTION_CONTROL_FRAME_PERIOD_MS = 100;
              GENERAL_STATUS_FRAME_RATE_MS = 5;
-             FEEDBACK_STATUS_FRAME_RATE_MS = 100;
+             FEEDBACK_STATUS_FRAME_RATE_MS = 10;
              QUAD_ENCODER_STATUS_FRAME_RATE_MS = 1000;
              ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 1000;
              PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
 
-             VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_100Ms;
+             VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_10Ms;
              VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 64;
 
              OPEN_LOOP_RAMP_RATE = 0.0;
@@ -262,10 +263,12 @@ public final class MotorControllerFactory {
     public static GemTalon<TalonFX> createTalonFX(final int port, final TalonConfiguration config, final boolean isSlave) {
         final var talon = new TalonFX(port);
         configureTalon(talon, config);
+        talon.configSelectedFeedbackSensor(TalonFXFeedbackDevice.IntegratedSensor, 0, TIMEOUT_MS);
         return new GemTalon<>(talon, isSlave);
     }
 
     public static GemTalon<TalonFX> createDefaultTalonFX(final int port) {
+        WPI_TalonFX a = null;
         return createTalonFX(port, DEFAULT_TALON_CONFIG, false);
     }
 
