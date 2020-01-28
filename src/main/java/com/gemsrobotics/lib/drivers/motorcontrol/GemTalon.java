@@ -14,6 +14,7 @@ import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import com.gemsrobotics.lib.utils.TalonUtils;
 import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.RobotController;
 
 import java.util.function.Supplier;
 
@@ -208,7 +209,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public double getPositionRotations() {
-		return nativeUnits2Rotations(getEncoderMultiplier() * m_internal.getSelectedSensorPosition(m_selectedProfileID));
+		return nativeUnits2Rotations(getInversionMultiplier() * m_internal.getSelectedSensorPosition(m_selectedProfileID));
 	}
 
 	@Override
@@ -218,7 +219,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public synchronized double getVelocityAngularRPM() {
-		return nativeUnits2RPM(getEncoderMultiplier() * m_internal.getSelectedSensorVelocity(m_selectedProfileID));
+		return nativeUnits2RPM(getInversionMultiplier() * m_internal.getSelectedSensorVelocity(m_selectedProfileID));
 	}
 
 	@Override
@@ -236,9 +237,9 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public synchronized boolean setMotionParameters(final MotionParameters vars) {
-		final var cruiseVelocityNativeUnits = getEncoderMultiplier() * RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
-		final var accelerationNativeUnits = getEncoderMultiplier() * RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
-		final var toleranceNativeUnits = getEncoderMultiplier() * rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
+		final var cruiseVelocityNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
+		final var accelerationNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
+		final var toleranceNativeUnits = getInversionMultiplier() * rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
 
 		boolean success = true;
 
@@ -258,7 +259,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public void setVoltage(final double voltage, final double feedforward) {
-		setDutyCycle(voltage / 12.0, feedforward);
+		setDutyCycle(voltage / RobotController.getBatteryVoltage(), feedforward);
 	}
 
 	@Override
@@ -282,7 +283,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	@Override
 	public synchronized void setPositionRotations(final double rotations, final double feedforward) {
 		set(m_isMotionProfilingConfigured ? ControlMode.MotionMagic : ControlMode.Position,
-				getEncoderMultiplier() *  rotations2NativeUnits(rotations / m_cylinderToEncoderReduction),
+				getInversionMultiplier() *  rotations2NativeUnits(rotations / m_cylinderToEncoderReduction),
 				DemandType.ArbitraryFeedForward, feedforward);
 	}
 
@@ -328,7 +329,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		return nativeUnits * m_cylinderToEncoderReduction / m_ticksPerRotation;
 	}
 
-	private double nativeUnits2RPM(final double nativeUnits) {
+	private double nativeUnits2RPM(final int nativeUnits) {
 		return nativeUnits * m_cylinderToEncoderReduction / m_ticksPerRotation * 600.0;
 	}
 
@@ -337,14 +338,14 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	private int RPM2NativeUnitsPer100ms(final double rpm) {
-		return radiansPerSecond2NativeUnitsPer100ms(Units.rpm2RadsPerSecond(rpm));
+		return (int) radiansPerSecond2NativeUnitsPer100ms(Units.rpm2RadsPerSecond(rpm));
 	}
 
-	private int radiansPerSecond2NativeUnitsPer100ms(final double rps) {
-		return (int) (rps / Tau * m_ticksPerRotation / 10.0);
+	private double radiansPerSecond2NativeUnitsPer100ms(final double rps) {
+		return (rps / Tau * m_ticksPerRotation / 10.0);
 	}
 
-	private int getEncoderMultiplier() {
+	private int getInversionMultiplier() {
 		return (m_inverted && m_isFX ? -1 : 1);
 	}
 
