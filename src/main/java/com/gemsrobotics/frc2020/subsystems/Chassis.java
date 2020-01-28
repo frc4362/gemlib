@@ -29,15 +29,14 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		return INSTANCE;
 	}
 
-
 	@Override
 	protected Config getConfig() {
 		final double wheelRadius = Units.inches2Meters(6.0) / 2.0;
 		final double freeSpeed = 3.92 / wheelRadius; // m/s
-		final double kV = 12.0 / freeSpeed;
-		final double kA = 0.001;
-		final double kS = 0.00;
-		final double mass = 22.6;
+		final double kV = 0.2345;//12.0 / freeSpeed;
+		final double kA = 0.011;
+		final double kS = 0.27;
+		final double mass = 23.0;
 
 		return new Config() {{
 			maxVoltage = 12.0;
@@ -50,7 +49,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			gainsHighGear = gainsLowGear;
 
 			propertiesLowGear = new MotorModel.Properties() {{
-				speedRadiansPerSecondPerVolt = 1 / kV;
+				speedRadiansPerSecondPerVolt = (1 / kV);
 				torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
 				stictionVoltage = kS;
 			}};
