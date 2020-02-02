@@ -19,7 +19,7 @@ import static java.lang.Math.min;
 public abstract class Limelight extends Subsystem {
     private static final String DEFAULT_NAME = "limelight";
 
-    protected static final Rotation FOV_HORIZONTAL_DEGREES = Rotation.degrees(54.0);
+    protected static final Rotation FOV_HORIZONTAL = Rotation.degrees(54.0);
     protected static final Rotation FOV_VERTICAL = Rotation.degrees(41.0);
 
 	protected static final double IMAGE_CAPTURE_LATENCY_S = 11e-3;
@@ -94,7 +94,7 @@ public abstract class Limelight extends Subsystem {
         m_periodicIO.timestamp = now - m_periodicIO.latency;
         m_periodicIO.targetPresent = m_existsEntry.getDouble(0) == 1.0;
         // invert this so it is CCW-positive
-        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0)).inverse();
+        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0));
         m_periodicIO.offsetVertical = Rotation.degrees(m_offsetVerticalEntry.getDouble(0));
         m_periodicIO.targetArea = m_areaEntry.getDouble(0.0);
         m_periodicIO.targetSkew = m_skewEntry.getDouble(0.0);
