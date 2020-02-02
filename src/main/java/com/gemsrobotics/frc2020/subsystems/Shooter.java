@@ -7,7 +7,6 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
-import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -17,8 +16,8 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Shooter extends Subsystem implements Loggable {
 	private static final double SHOOTER_WHEEL_RADIUS = Units.inches2Meters(3.8) / 2.0;
-	private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.156, 0.0, 0.0, 0.0);
-	private static final PIDFController.Gains KICKER_GAINS = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
+	private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.113, 0.0, 0.0, 0.0);
+	private static final PIDFController.Gains KICKER_GAINS = new PIDFController.Gains(0.113, 0.0, 0.0, 0.0);
 
 	private static Shooter INSTANCE;
 
@@ -35,50 +34,53 @@ public final class Shooter extends Subsystem implements Loggable {
 			m_shooterSlave,
 			m_kickerMaster,
 			m_kickerSlave;
-	private final MotorFeedforward m_shooterFeedforward;
+	private final MotorFeedforward
+			m_shooterFeedforward,
+			m_kickerFeedforward;
 	private final PeriodicIO m_periodicIO;
 
 	private Shooter() {
 		m_shooterMaster = MotorControllerFactory.createDefaultTalonFX(5);
-		m_shooterMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS);
-		m_shooterMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		m_shooterMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
+		m_shooterMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_shooterMaster.setInvertedOutput(false);
 		m_shooterMaster.setSelectedProfile(0);
 		m_shooterMaster.setPIDF(SHOOTER_GAINS);
 
 		m_shooterSlave = MotorControllerFactory.createSlaveTalonFX(6);
-		m_shooterSlave.setGearingParameters(0.0, SHOOTER_WHEEL_RADIUS);
-		m_shooterSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		m_shooterSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
+		m_shooterSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_shooterSlave.follow(m_shooterMaster, true);
 
 		m_kickerMaster = MotorControllerFactory.createDefaultTalonFX(7);
-		m_kickerMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-		m_kickerMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS);
+		m_kickerMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		m_kickerMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
 		m_kickerMaster.setSelectedProfile(0);
 		m_kickerMaster.setPIDF(KICKER_GAINS);
 		m_kickerMaster.setInvertedOutput(true);
 
 		m_kickerSlave = MotorControllerFactory.createSlaveTalonFX(8);
-		m_kickerSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS);
-		m_kickerSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		m_kickerSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
+		m_kickerSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_kickerSlave.follow(m_kickerMaster, true);
 
-		m_shooterFeedforward = new MotorFeedforward(0.375, 0.0018, 7.116666666666667E-5);
+		m_shooterFeedforward = new MotorFeedforward(0.334, 0.109 / 60.0, 0.0);
+		m_kickerFeedforward = new MotorFeedforward(0.0608, 0.109 / 60.0, 0.0);
 
 		m_periodicIO = new PeriodicIO();
 	}
 
 	private static class PeriodicIO implements Loggable {
-		@Log(name="Shooter Velocity (RPS)")
+		@Log(name="Shooter Velocity (RPM)")
 		public double shooterMeasuredRPM = 0.0;
-		@Log(name="Shooter Reference (RPS)")
+		@Log(name="Shooter Reference (RPM)")
 		public double shooterReferenceRPM = 0.0;
 		@Log(name="Shooter Current Draw (amps)")
 		public double shooterCurrent = 0.0;
 		@Log(name="Kicker Velocity (RPM)")
-		public double kickerRPM = 0.0;
+		public double kickerMeasuredRPM = 0.0;
 		@Log(name="Kicker Reference (RPM)")
-		public double kickerReference = 0.0;
+		public double kickerReferenceRPM = 0.0;
 		@Log(name="Kicker Current Draw (amps)")
 		public double kickerCurrent = 0.0;
 	}
@@ -87,13 +89,13 @@ public final class Shooter extends Subsystem implements Loggable {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.shooterMeasuredRPM = m_shooterMaster.getVelocityAngularRPM();
 		m_periodicIO.shooterCurrent = m_shooterMaster.getDrawnCurrent() + m_shooterSlave.getDrawnCurrent();
-//		m_periodicIO.kickerRPM = m_kickerMaster.getVelocityAngularRPM() / 60.0;
-//		m_periodicIO.kickerCurrent = m_kickerMaster.getDrawnCurrent() + m_kickerSlave.getDrawnCurrent();
+		m_periodicIO.kickerMeasuredRPM = m_kickerMaster.getVelocityAngularRPM();
+		m_periodicIO.kickerCurrent = m_kickerMaster.getDrawnCurrent() + m_kickerSlave.getDrawnCurrent();
 	}
 
 	public synchronized void setRPMs(final double shooterRPM, final double kickerRPM) {
 		m_periodicIO.shooterReferenceRPM = shooterRPM;
-		m_periodicIO.kickerReference = kickerRPM;
+		m_periodicIO.kickerReferenceRPM = kickerRPM;
 	}
 
 	public synchronized void setDisabled() {
@@ -107,12 +109,11 @@ public final class Shooter extends Subsystem implements Loggable {
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
-//		m_kickerMaster.setVelocityRPM(m_periodicIO.kickerRPM);
+		final double kickerFeedforward = m_kickerFeedforward.calculateVolts(m_periodicIO.kickerReferenceRPM) / 12.0;
+		m_kickerMaster.setVelocityRPM(m_periodicIO.kickerReferenceRPM, kickerFeedforward);
 
-		final double velocityTarget = m_periodicIO.shooterReferenceRPM;
-		final double accelerationTarget = (velocityTarget - m_periodicIO.shooterMeasuredRPM) / dt();
-		final double feedforward = m_shooterFeedforward.calculate(velocityTarget, accelerationTarget) / 12.0;
-		m_shooterMaster.setVelocityRPM(velocityTarget, feedforward);
+		final double shooterFeedforward = m_shooterFeedforward.calculateVolts(m_periodicIO.shooterReferenceRPM) / 12.0;
+		m_shooterMaster.setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforward);
 	}
 
 	@Override
@@ -128,6 +129,6 @@ public final class Shooter extends Subsystem implements Loggable {
 
 	public synchronized boolean atReference(final double thresholdRPM) {
 		return epsilonEquals(m_periodicIO.shooterMeasuredRPM, m_periodicIO.shooterReferenceRPM, thresholdRPM)
-			   && epsilonEquals(m_periodicIO.kickerRPM, m_periodicIO.kickerReference, thresholdRPM);
+			   && epsilonEquals(m_periodicIO.kickerMeasuredRPM, m_periodicIO.kickerReferenceRPM, thresholdRPM);
 	}
 }
