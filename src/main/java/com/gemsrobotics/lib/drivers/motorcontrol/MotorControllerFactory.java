@@ -147,7 +147,7 @@ public final class MotorControllerFactory {
              PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
 
              VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_10Ms;
-             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 64;
+             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 32;
 
              OPEN_LOOP_RAMP_RATE = 0.0;
              CLOSED_LOOP_RAMP_RATE = 0.0;
@@ -268,7 +268,6 @@ public final class MotorControllerFactory {
     }
 
     public static GemTalon<TalonFX> createDefaultTalonFX(final int port) {
-        WPI_TalonFX a = null;
         return createTalonFX(port, DEFAULT_TALON_CONFIG, false);
     }
 

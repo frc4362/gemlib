@@ -34,7 +34,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	private final TalonType m_internal;
 	private final boolean m_isFX;
 	private final CachedBoolean m_isEncoderPresent;
-	private final double m_ticksPerRotation;
+	private double m_ticksPerRotation;
 
 	private ControlMode m_lastMode;
 	private DemandType m_lastDemandType;
@@ -179,6 +179,11 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	public boolean setGearingParameters(final GearingParameters gearingParameters) {
 		m_cylinderToEncoderReduction = gearingParameters.cylinderToEncoderReduction;
 		m_cylinderRadiusMeters = gearingParameters.cylinderRadiusMeters;
+
+		if (!m_isFX) {
+			m_ticksPerRotation = gearingParameters.encoderCountsPerRevolution;
+		}
+
 		return true;
 	}
 

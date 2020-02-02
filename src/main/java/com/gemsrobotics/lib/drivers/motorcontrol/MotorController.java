@@ -17,11 +17,16 @@ public interface MotorController<T> {
     }
 
     class GearingParameters {
-        final double cylinderToEncoderReduction, cylinderRadiusMeters;
+        final double cylinderToEncoderReduction, cylinderRadiusMeters, encoderCountsPerRevolution;
 
-        public GearingParameters(final double reduction, final double cylinderRadiusMeters) {
+        public GearingParameters(
+                final double reduction,
+                final double cylinderRadiusMeters,
+                final double encoderCountsPerRevolution
+        ) {
             this.cylinderToEncoderReduction = reduction;
             this.cylinderRadiusMeters = cylinderRadiusMeters;
+            this.encoderCountsPerRevolution = encoderCountsPerRevolution;
         }
     }
 
@@ -82,8 +87,8 @@ public interface MotorController<T> {
     boolean setNeutralBehaviour(NeutralBehaviour mode);
 
     boolean setGearingParameters(GearingParameters gearingParameters);
-    default boolean setGearingParameters(final double reduction, final double cylinderRadiusMeters) {
-        return setGearingParameters(new GearingParameters(reduction, cylinderRadiusMeters));
+    default boolean setGearingParameters(final double reduction, final double cylinderRadiusMeters, final double encoderCountsPerRevolution) {
+        return setGearingParameters(new GearingParameters(reduction, cylinderRadiusMeters, encoderCountsPerRevolution));
     }
 
     /**

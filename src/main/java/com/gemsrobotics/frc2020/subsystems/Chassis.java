@@ -42,7 +42,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			maxVoltage = 12.0;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 12.5, wheelRadius);
+			gearingLowGear = new MotorController.GearingParameters(1.0 / 12.5, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
 
 			gainsLowGear = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0); // 0.69
