@@ -1,25 +1,15 @@
 package com.gemsrobotics.frc2020.subsystems;
 
-import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
-import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-import com.ctre.phoenix.motorcontrol.can.TalonSRXConfiguration;
 import com.gemsrobotics.frc2020.Constants;
-import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.controls.PIDFController;
-import com.gemsrobotics.lib.drivers.AS5600AbsoluteEncoder;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController.MotionParameters;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
-import com.gemsrobotics.lib.utils.MathUtils;
-import com.gemsrobotics.lib.utils.TalonUtils;
 import com.gemsrobotics.lib.utils.Units;
-import edu.wpi.first.wpilibj.Talon;
-import edu.wpi.first.wpilibj.controller.ProfiledPIDController;
-import edu.wpi.first.wpilibj.trajectory.TrapezoidProfile;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -29,7 +19,12 @@ import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Turret extends Subsystem implements Loggable {
-	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
+	private static final MotorController.GearingParameters GEARING_PARAMETERS =
+			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
+	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(4.0, 0.0, 17.5, 0.0);
+	private static final double MAX_VELOCITY = 0.82290092569967646639980865120777;
+	private static final MotionParameters MOTION_PARAMETERS =
+			new MotorController.MotionParameters(MAX_VELOCITY * 1.8, MAX_VELOCITY * 0.98, 0.01);
 
 	private static Turret INSTANCE;
 
@@ -49,10 +44,12 @@ public final class Turret extends Subsystem implements Loggable {
 	private Turret() {
 		m_motor = MotorControllerFactory.createDefaultTalonSRX(Constants.TURRET_PORT);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		m_motor.setGearingParameters(1.0 / 462.2, Units.inches2Meters(13.75) / 2.0, 4096);
+		m_motor.setGearingParameters(GEARING_PARAMETERS);
+		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
 		m_motor.setSelectedProfile(0);
+		m_motor.setEncoderRotations(0);
 		m_motor.setPIDF(TURRET_GAINS);
-		m_motor.setInvertedOutput(true);
+		m_motor.setMotionParameters(MOTION_PARAMETERS);
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -128,7 +125,8 @@ public final class Turret extends Subsystem implements Loggable {
 
 	@Override
 	public synchronized void setSafeState() {
-
+		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		m_motor.setNeutral();
 	}
 
 	public synchronized Rotation getPositionRotations() {
