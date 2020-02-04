@@ -242,8 +242,8 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 
 	@Override
 	public synchronized boolean setMotionParameters(final MotionParameters vars) {
-		final var cruiseVelocityNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.cruiseVelocity / (Tau * m_cylinderRadiusMeters) * 60);
-		final var accelerationNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.acceleration / (Tau * m_cylinderRadiusMeters) * 60);
+		final var cruiseVelocityNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(metersPerSecond2RPM(vars.cruiseVelocity));
+		final var accelerationNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(metersPerSecond2RPM(vars.acceleration));
 		final var toleranceNativeUnits = getInversionMultiplier() * rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
 
 		boolean success = true;
@@ -326,9 +326,9 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		return success;
 	}
 
-//	private double meters2NativeUnits(final double meters) {
-//		return rotations2NativeUnits(meters / (Tau * m_cylinderRadiusMeters) * 60);
-//	}
+	private double metersPerSecond2RPM(final double meters) {
+		return (meters / (Tau * m_cylinderRadiusMeters)) * 60;
+	}
 
 	private double nativeUnits2Rotations(final double nativeUnits) {
 		return nativeUnits * m_cylinderToEncoderReduction / m_ticksPerRotation;
