@@ -8,6 +8,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
+import org.opencv.ml.EM;
 
 import java.util.Arrays;
 import java.util.List;
@@ -18,6 +19,8 @@ import static java.lang.Math.min;
 
 public abstract class Limelight extends Subsystem {
     private static final String DEFAULT_NAME = "limelight";
+
+    protected static final double[] EMPTY = new double[]{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 
     protected static final Rotation FOV_HORIZONTAL = Rotation.degrees(54.0);
     protected static final Rotation FOV_VERTICAL = Rotation.degrees(41.0);
@@ -79,7 +82,8 @@ public abstract class Limelight extends Subsystem {
         public Rotation offsetVertical = Rotation.identity();
         public double targetArea = 0;
         public double targetSkew = 0;
-        public Translation[] corners = new Translation[0];
+        public double[] cornersX;
+        public double[] cornersY;
 
         // OUTPUTS
         public LEDMode ledMode = LEDMode.values()[0];
@@ -99,9 +103,12 @@ public abstract class Limelight extends Subsystem {
         m_periodicIO.targetArea = m_areaEntry.getDouble(0.0);
         m_periodicIO.targetSkew = m_skewEntry.getDouble(0.0);
 
-        final var xs = m_cornerXEntry.getDoubleArray(new double[]{ 0.0, 0.0 });
-        final var ys = m_cornerYEntry.getDoubleArray(new double[]{ 0.0, 0.0 });
-        m_periodicIO.corners = makeCornerArrays(xs, ys);
+        m_periodicIO.cornersX = m_cornerXEntry.getDoubleArray(EMPTY);
+		m_periodicIO.cornersY = m_cornerYEntry.getDoubleArray(EMPTY);
+
+//        final var xs = m_cornerXEntry.getDoubleArray(EMPTY);
+//        final var ys = m_cornerYEntry.getDoubleArray(EMPTY);
+//        m_periodicIO.corners = makeCornerArrays(xs, ys);
 
         // OUTPUTS
         m_periodicIO.ledMode = LEDMode.values()[(int) m_pipelineEntry.getDouble(0.0)];
@@ -193,10 +200,10 @@ public abstract class Limelight extends Subsystem {
      * @return The corner pixel locations of a target- x axis is pixels left and right of the frame, y is pixels up and down
      */
     public synchronized final List<Translation> getCorners() {
-	    return Arrays.asList(m_periodicIO.corners);
+	    return Arrays.asList(makeCornerArrays(m_periodicIO.cornersX, m_periodicIO.cornersY));
     }
 
-    private static Translation[] makeCornerArrays(final double[] xs, final double[] ys) {
+    protected static Translation[] makeCornerArrays(final double[] xs, final double[] ys) {
         return IntStream.range(0, min(xs.length, ys.length))
                         .mapToObj(i -> new Translation(xs[i], ys[i]))
                         .toArray(Translation[]::new);
