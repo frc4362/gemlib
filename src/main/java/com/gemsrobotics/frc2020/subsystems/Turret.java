@@ -17,18 +17,19 @@ import java.util.Objects;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
+import static java.lang.Math.abs;
+import static java.lang.Math.copySign;
 
 public final class Turret extends Subsystem implements Loggable {
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(4.0, 0.0, 17.5, 0.0);
-	private static final double MAX_VELOCITY = 0.82290092569967646639980865120777;
-	private static final MotionParameters MOTION_PARAMETERS =
-			new MotorController.MotionParameters(MAX_VELOCITY * 1.8, MAX_VELOCITY * 0.98, 0.01);
+	private static final double MAX_VELOCITY = 0.823; // meters / second
+	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.0 / 360.0));
 
 	private static Turret INSTANCE;
 
-	public Turret getInstance() {
+	public static Turret getInstance() {
 		if (Objects.isNull(INSTANCE)) {
 			INSTANCE = new Turret();
 		}
@@ -49,7 +50,11 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor.setSelectedProfile(0);
 		m_motor.setEncoderRotations(0);
 		m_motor.setPIDF(TURRET_GAINS);
-		m_motor.setMotionParameters(MOTION_PARAMETERS);
+		m_motor.getInternalController().configForwardSoftLimitEnable(true);
+		m_motor.getInternalController().configForwardSoftLimitThreshold(+TURRET_USABLE_RANGE);
+		m_motor.getInternalController().configReverseSoftLimitEnable(true);
+		m_motor.getInternalController().configReverseSoftLimitThreshold(-TURRET_USABLE_RANGE);
+//		m_motor.setMotionParameters(MOTION_PARAMETERS);
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -60,8 +65,6 @@ public final class Turret extends Subsystem implements Loggable {
 	}
 
 	private static class PeriodicIO implements Loggable {
-		@Log
-		public double outputDutyCycle = 0.0;
 		@Log
 		public double current = 0.0;
 		@Log.ToString
@@ -93,11 +96,15 @@ public final class Turret extends Subsystem implements Loggable {
 		m_controlMode = Mode.DISABLED;
 	}
 
-	public synchronized void setOpenLoop(final double dutyCycle) {
-		m_periodicIO.outputDutyCycle = dutyCycle;
-	}
+	public synchronized void setReferencePosition(Rotation reference) {
+		m_controlMode = Mode.ROTATION;
 
-	public synchronized void setReferencePosition(final Rotation reference) {
+		final double setpoint = reference.getRadians() * (4096 / Tau);
+
+		if (abs(setpoint) > TURRET_USABLE_RANGE) {
+			reference = Rotation.radians(reference.getRadians() + copySign(Tau, setpoint));
+		}
+
 		m_periodicIO.reference = reference;
 	}
 
@@ -129,7 +136,7 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor.setNeutral();
 	}
 
-	public synchronized Rotation getPositionRotations() {
+	public synchronized Rotation getRotation() {
 		return m_periodicIO.position;
 	}
 
