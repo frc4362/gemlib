@@ -34,7 +34,7 @@ public final class MotorControllerFactory {
         public double NOMINAL_VOLTAGE;
     }
 
-    private static final SparkConfiguration DEFAULT_SPARK_CONFIG = new SparkConfiguration() {
+    public static final SparkConfiguration DEFAULT_SPARK_CONFIG = new SparkConfiguration() {
         {
              BURN_FACTORY_DEFAULT_FLASH = false;
              IDLE_MODE = IdleMode.kCoast;
