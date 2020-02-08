@@ -47,7 +47,8 @@ public final class SubsystemManager implements Reportable, Loggable {
 				double now = getFPGATimestamp();
 
                 for (final var subsystem : m_subsystems) {
-                    now = getFPGATimestamp();
+                	// removed this for better state estimation
+//                    now = getFPGATimestamp();
 
                     try {
                         // provide each subsystem the time, it will update the dt internally
