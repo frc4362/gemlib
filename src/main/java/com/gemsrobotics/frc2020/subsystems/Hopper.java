@@ -5,15 +5,17 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.ColorSensorV3;
 import edu.wpi.first.wpilibj.I2C;
-import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
 import java.util.Objects;
+
+import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Hopper extends Subsystem {
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
@@ -30,8 +32,11 @@ public final class Hopper extends Subsystem {
 	}
 
 	private final MotorController<CANSparkMax> m_motor;
+	private final Inventory m_inventory;
 	private final ColorSensorV3 m_sensor;
 	private final PeriodicIO m_periodicIO;
+
+	private Mode m_mode;
 
 	private Hopper() {
 		m_motor = MotorControllerFactory.createSparkMax(Constants.HOPPER_MOTOR_PORT, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
@@ -42,9 +47,11 @@ public final class Hopper extends Subsystem {
 //		m_motor.setClosedLoopVoltageRampRate(0.1);
 		m_motor.setEncoderRotations(0.0);
 
+		m_inventory = new Inventory();
 		m_sensor = new ColorSensorV3(I2C.Port.kMXP);
-
 		m_periodicIO = new PeriodicIO();
+
+		m_mode = Mode.DISABLED;
 	}
 
 	public enum Mode {
@@ -54,20 +61,25 @@ public final class Hopper extends Subsystem {
 	}
 
 	private static class PeriodicIO implements Loggable {
-		public ColorSensorV3.RawColor observedColor = new ColorSensorV3.RawColor(0, 0, 0, 0);
-		public Rotation velocityRadiansPerSecond = Rotation.identity();
-		public double positionRotations = 0.0;
 		public double referenceRotations = 0.0;
+		public double positionRotations = 0.0;
+		public Rotation velocityPerSecond = Rotation.identity();
+		public boolean atReference = false;
+
+		public ColorSensorV3.RawColor observedColor = new ColorSensorV3.RawColor(0, 0, 0, 0);
 	}
 
 	@Override
 	protected synchronized void readPeriodicInputs(double timestamp) {
 //		m_periodicIO.observedColor = m_sensor.getRawColor();
-		m_periodicIO.velocityRadiansPerSecond = Rotation.radians(m_motor.getVelocityAngularRadiansPerSecond());
+		m_periodicIO.velocityPerSecond = Rotation.radians(m_motor.getVelocityAngularRadiansPerSecond());
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
+		m_periodicIO.atReference =
+			epsilonEquals(m_periodicIO.referenceRotations, m_periodicIO.positionRotations, (1.0 / 360.0))
+			&& epsilonEquals(m_periodicIO.velocityPerSecond.getDegrees(), 0.0, 0.5);
 	}
 
-	public synchronized void rotate(final int steps) {
+	private synchronized void rotate(final int steps) {
 		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * steps;
 	}
 
@@ -77,8 +89,19 @@ public final class Hopper extends Subsystem {
 
 	@Override
 	protected synchronized void onUpdate(double timestamp) {
-		m_motor.setPositionRotations(m_periodicIO.referenceRotations);
-		SmartDashboard.putNumber("Hopper RPM", m_motor.getVelocityAngularRPM());
+		switch (m_mode) {
+			case RATCHETING:
+				m_motor.setPositionRotations(m_periodicIO.referenceRotations);
+
+				if (m_periodicIO.atReference) {
+					m_inventory.setRotations(m_periodicIO.positionRotations);
+				}
+
+				break;
+			default:
+				m_motor.setDutyCycle(0.0);
+				break;
+		}
 	}
 
 	@Override
