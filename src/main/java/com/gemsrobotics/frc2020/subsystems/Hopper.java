@@ -9,6 +9,7 @@ import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.ColorSensorV3;
 import edu.wpi.first.wpilibj.I2C;
+import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
@@ -29,7 +30,7 @@ public final class Hopper extends Subsystem {
 	}
 
 	private final MotorController<CANSparkMax> m_motor;
-//	private final ColorSensorV3 m_sensor;
+	private final ColorSensorV3 m_sensor;
 	private final PeriodicIO m_periodicIO;
 
 	private Hopper() {
@@ -41,7 +42,7 @@ public final class Hopper extends Subsystem {
 //		m_motor.setClosedLoopVoltageRampRate(0.1);
 		m_motor.setEncoderRotations(0.0);
 
-//		m_sensor = new ColorSensorV3(I2C.Port.kMXP);
+		m_sensor = new ColorSensorV3(I2C.Port.kMXP);
 
 		m_periodicIO = new PeriodicIO();
 	}

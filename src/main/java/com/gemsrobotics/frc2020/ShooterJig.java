@@ -5,7 +5,6 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.frc2020.subsystems.Hopper;
 import com.gemsrobotics.frc2020.subsystems.Shooter;
 import com.gemsrobotics.frc2020.subsystems.Turret;
-import com.gemsrobotics.lib.drivers.hid.Gempad;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
