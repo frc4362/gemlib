@@ -1,7 +1,5 @@
 package com.gemsrobotics.frc2020.subsystems;
 
-import com.gemsrobotics.frc2020.vision.CachedTargetInfo;
-import com.gemsrobotics.frc2020.vision.TargetInfo;
 import com.gemsrobotics.frc2020.vision.TargetServer;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
@@ -43,10 +41,20 @@ public final class TargetState extends Subsystem {
 		m_periodicIO = new PeriodicIO();
 	}
 
+	public static class CachedTarget {
+		public final double timestamp;
+		public final Translation captureFieldToVehicle;
+
+		public CachedTarget(final double timestamp, final Translation captureFieldToVehicle) {
+			this.timestamp = timestamp;
+			this.captureFieldToVehicle = captureFieldToVehicle;
+		}
+	}
+
 	private static class PeriodicIO {
 		private Rotation newTurretRotation = Rotation.identity();
-		private Optional<TargetInfo> targetInfo = Optional.empty();
-		private Optional<CachedTargetInfo> fieldToTargetCached = Optional.empty();
+		private Optional<TargetServer.TargetInfo> targetInfo = Optional.empty();
+		private Optional<CachedTarget> fieldToTargetCached = Optional.empty();
 	}
 
 	@Override
@@ -67,10 +75,10 @@ public final class TargetState extends Subsystem {
 		if (m_periodicIO.targetInfo.isPresent()) {
 			final var targetInfo = m_periodicIO.targetInfo.get();
 			final var fieldToTarget = getFieldToCamera(now).transformBy(targetInfo.cameraToTarget);
-			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTargetInfo(now, fieldToTarget.getTranslation()));
+			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(now, fieldToTarget.getTranslation()));
 		} else if (m_periodicIO.fieldToTargetCached.isPresent()) {
 			final var cachedLocation = m_periodicIO.fieldToTargetCached.get().captureFieldToVehicle.getTranslation();
-			if (cachedLocation.difference(m_odometer.getFieldToVehicle(now).getTranslation()).norm() > CACHE_DISTANCE_METERS) {
+			if (cachedLocation.difference(getFieldToVehicle(now).getTranslation()).norm() > CACHE_DISTANCE_METERS) {
 				m_periodicIO.fieldToTargetCached = Optional.empty();
 			}
 		}
@@ -86,18 +94,30 @@ public final class TargetState extends Subsystem {
 		// saf ety
 	}
 
+	public synchronized RigidTransform getFieldToVehicle(final double timestamp) {
+		return m_odometer.getFieldToVehicle(timestamp);
+	}
+
+	public synchronized RigidTransform getLatestFieldToVehicle() {
+		return m_odometer.getLatestFieldToVehicleValue();
+	}
+
 	public synchronized Rotation getVehicleToTurret(final double timestamp) {
 		return m_turretHeading.getInterpolated(new InterpolatingDouble(timestamp));
 	}
 
+	public synchronized Rotation getFieldToTurret(final double timestamp) {
+		return getFieldToVehicle(timestamp).getRotation().rotateBy(getVehicleToTurret(timestamp));
+	}
+
 	private synchronized RigidTransform getFieldToCamera(final double timestamp) {
-		return m_odometer.getFieldToVehicle(timestamp)
+		return getFieldToVehicle(timestamp)
 					   .transformBy(VEHICLE_TO_TURRET)
 					   .transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)))
 					   .transformBy(TURRET_TO_CAMERA);
 	}
 
-	public synchronized Optional<CachedTargetInfo> getCachedFieldToTarget() {
+	public synchronized Optional<CachedTarget> getCachedFieldToTarget() {
 		return m_periodicIO.fieldToTargetCached;
 	}
 }

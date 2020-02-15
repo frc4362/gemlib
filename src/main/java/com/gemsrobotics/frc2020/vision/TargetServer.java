@@ -24,6 +24,16 @@ public final class TargetServer extends Limelight {
 		return INSTANCE;
 	}
 
+	public static class TargetInfo {
+		public final double timestamp;
+		public final RigidTransform cameraToTarget;
+
+		public TargetInfo(final double timestamp, final RigidTransform cameraToTarget) {
+			this.timestamp = timestamp;
+			this.cameraToTarget = cameraToTarget;
+		}
+	}
+
 	@Override
 	protected void onCreate(final double timestamp) {
 		setCameraMode(CameraMode.COMPUTER_VISION);

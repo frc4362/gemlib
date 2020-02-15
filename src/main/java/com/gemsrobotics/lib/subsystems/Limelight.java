@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.subsystems;
 
+import com.ctre.phoenix.CANifier;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
