@@ -28,7 +28,7 @@ public class WaitUntilInsideRegionCommand extends Command {
     }
 
     public WaitUntilInsideRegionCommand(
-            final DifferentialDrive chassis,
+            final DifferentialDrive<?> chassis,
             final Translation bottomLeft,
             final Translation topRight,
             final Side side
