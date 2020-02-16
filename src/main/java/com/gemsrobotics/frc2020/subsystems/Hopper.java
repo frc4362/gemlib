@@ -5,15 +5,15 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
-import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.ColorSensorV3;
 import edu.wpi.first.wpilibj.I2C;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
@@ -32,6 +32,7 @@ public final class Hopper extends Subsystem {
 	}
 
 	private final MotorController<CANSparkMax> m_motor;
+	private final Channel m_channelRight, m_channelCenter, m_channelLeft;
 	private final Inventory m_inventory;
 	private final ColorSensorV3 m_sensor;
 	private final PeriodicIO m_periodicIO;
@@ -47,6 +48,10 @@ public final class Hopper extends Subsystem {
 //		m_motor.setClosedLoopVoltageRampRate(0.1);
 		m_motor.setEncoderRotations(0.0);
 
+		m_channelRight = new Channel(Inventory.Location.RIGHT_INTAKE, Constants.CHANNEL_RIGHT_PORT);
+		m_channelCenter = new Channel(Inventory.Location.CENTER_INTAKE, Constants.CHANNEL_CENTER_PORT);
+		m_channelLeft = new Channel(Inventory.Location.LEFT_INTAKE, Constants.CHANNEL_LEFT_PORT);
+
 		m_inventory = new Inventory();
 		m_sensor = new ColorSensorV3(I2C.Port.kMXP);
 		m_periodicIO = new PeriodicIO();
@@ -56,7 +61,8 @@ public final class Hopper extends Subsystem {
 
 	public enum Mode {
 		DISABLED,
-		RATCHETING,
+		INTAKING,
+		CLEARING,
 		SURVEYING
 	}
 
@@ -70,7 +76,9 @@ public final class Hopper extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void readPeriodicInputs(double timestamp) {
+	protected synchronized void readPeriodicInputs(final double timestamp) {
+		doForChannels(channel -> channel.readPeriodicInputs(timestamp));
+
 //		m_periodicIO.observedColor = m_sensor.getRawColor();
 		m_periodicIO.velocityPerSecond = Rotation.radians(m_motor.getVelocityAngularRadiansPerSecond());
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
@@ -79,22 +87,62 @@ public final class Hopper extends Subsystem {
 			&& epsilonEquals(m_periodicIO.velocityPerSecond.getDegrees(), 0.0, 0.5);
 	}
 
+	private void doForChannels(final Consumer<Channel> op) {
+		for (final var channel : List.of(m_channelRight, m_channelCenter, m_channelLeft)) {
+			op.accept(channel);
+		}
+	}
+
 	private synchronized void rotate(final int steps) {
 		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * steps;
 	}
 
 	@Override
-	protected synchronized void onCreate(double timestamp) {
+	protected synchronized void onCreate(final double timestamp) {
+		doForChannels(channel -> channel.onCreate(timestamp));
 	}
 
 	@Override
-	protected synchronized void onUpdate(double timestamp) {
+	protected synchronized void onUpdate(final double timestamp) {
+		doForChannels(channel -> {
+			channel.onUpdate(timestamp);
+
+			if (channel.isBallAtBottom() && !channel.isBusy()) {
+				channel.carryBallToTop();
+			}
+		});
+
 		switch (m_mode) {
 			case RATCHETING:
 				m_motor.setPositionRotations(m_periodicIO.referenceRotations);
 
 				if (m_periodicIO.atReference) {
 					m_inventory.setRotations(m_periodicIO.positionRotations);
+
+					if (m_inventory.getFilledChamberCount() == 6) {
+						return;
+					}
+
+					Channel loadChannel = null;
+
+					if (m_channelRight.isBallAtTop()) {
+						loadChannel = m_channelRight;
+					} else if (m_channelCenter.isBallAtTop()) {
+						loadChannel = m_channelCenter;
+					} else if (m_channelLeft.isBallAtTop()) {
+						loadChannel = m_channelLeft;
+					}
+
+					if (!Objects.isNull(loadChannel)) {
+						final var optimalChamber = m_inventory.getOptimalLoadingChamber(loadChannel.getLocation()).get();
+						final var movement = optimalChamber.getDistance(m_inventory.getNearestChamber(loadChannel.getLocation()));
+
+						if (movement == 0) {
+							loadChannel.putBallInHopper();
+						} else {
+							rotate(movement);
+						}
+					}
 				}
 
 				break;
@@ -105,12 +153,14 @@ public final class Hopper extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onStop(double timestamp) {
-
+	protected synchronized void onStop(final double timestamp) {
+		doForChannels(channel -> channel.onStop(timestamp));
 	}
 
 	@Override
 	public void setSafeState() {
 
 	}
+
+	public synchronized int
 }

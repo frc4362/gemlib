@@ -2,6 +2,8 @@ package com.gemsrobotics.frc2020.subsystems;
 
 import java.util.List;
 
+import static java.lang.Math.abs;
+
 public final class Chamber {
 	private final int m_index;
 	private boolean m_isFull;
@@ -28,17 +30,23 @@ public final class Chamber {
 	}
 
 	public int getDistance(final Chamber other) {
-		 int d = other.getIndex() - m_index;
+		int d = other.getIndex() - m_index;
 
-		 if (d > 3) {
-			 d -= 6;
-		 }
+		if (d > 3) {
+			d -= 6;
+		} else if (d < -3) {
+			d += 6;
+		}
 
-		 return d;
+		return d;
 	}
 
-	public int getProximityScore(final List<Chamber> chambers) {
-		return chambers.stream().filter(Chamber::isFull).mapToInt(this::getDistance).map(Math::abs).sum();
+	public int getDistanceScore(final Chamber other) {
+		return 4 - abs(getDistance(other));
+	}
+
+	public int getTotalDistanceScore(final List<Chamber> chambers) {
+		return chambers.stream().filter(Chamber::isFull).mapToInt(this::getDistanceScore).sum();
 	}
 
 	@Override
