@@ -179,4 +179,6 @@ public interface MotorController<T> {
     default double getVelocityAngularRadiansPerSecond() {
         return Units.rpm2RadsPerSecond(getVelocityAngularRPM());
     }
+
+    int getSelectedProfile();
 }

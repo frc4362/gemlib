@@ -195,7 +195,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 
     @Override
     public void setVelocityRPM(final double rpm, final double feedforward) {
-        set(m_hasMotionProfilingBeenConfigured ? ControlType.kSmartVelocity : ControlType.kVelocity, rpm / m_cylinderToEncoderReduction, feedforward);
+        set(ControlType.kVelocity, rpm / m_cylinderToEncoderReduction, feedforward);
     }
 
     @Override
@@ -221,6 +221,11 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
     @Override
     public double getPositionRotations() {
         return m_encoder.getPosition() * m_cylinderToEncoderReduction;
+    }
+
+    @Override
+    public int getSelectedProfile() {
+        return m_selectedProfileID;
     }
 
     private synchronized boolean runWithRetries(final Supplier<CANError> call) {

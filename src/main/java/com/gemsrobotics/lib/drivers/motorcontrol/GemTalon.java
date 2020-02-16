@@ -292,6 +292,11 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 				DemandType.ArbitraryFeedForward, feedforward);
 	}
 
+	@Override
+	public int getSelectedProfile() {
+		return m_selectedProfileID;
+	}
+
 	public boolean setNominalOutputForward(final double percentOut) {
 		return runWithRetries(() -> m_internal.configNominalOutputForward(percentOut, TIMEOUT_MS));
 	}
