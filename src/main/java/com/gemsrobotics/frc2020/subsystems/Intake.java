@@ -9,7 +9,7 @@ import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANDigitalInput;
 import com.revrobotics.CANSparkMax;
 
-public final class Channel extends Subsystem {
+public final class Intake extends Subsystem {
 	private final double
 			BOTTOM_TO_TOP_DISTANCE = 1.0,
 			TOP_TO_HOPPER_DISTANCE = 0.25;
@@ -24,7 +24,7 @@ public final class Channel extends Subsystem {
 
 	private Mode m_mode;
 
-	public Channel(final Inventory.Location location, final int motorPort) {
+	public Intake(final Inventory.Location location, final int motorPort) {
 		m_location = location;
 
 		m_motor = MotorControllerFactory.createSparkMax(motorPort, MotorControllerFactory.DEFAULT_SPARK_CONFIG);

@@ -43,35 +43,40 @@ public final class Inventory {
 		return m_rotatedChambers.get(object.index);
 	}
 
+	// returns the best chambers to load from
+	// in practice, it's the chamber nearest the object
+	// which is on the end of the stream of balls
 	public List<Chamber> getCandidateChambers(final Location object) {
+		final Chamber nearestChamber = getNearestChamber(object);
+
 		if (getFilledChamberCount() == 0) {
-			return List.of(getNearestChamber(object));
+			return List.of(nearestChamber);
 		}
 
-		final Chamber nearestChamber = getNearestChamber(object);
-		final Comparator<Chamber> utility = Comparator
-			 .<Chamber>comparingInt(chamber -> chamber.getTotalDistanceScore(m_chambers))
-			 .thenComparingInt(chamber -> chamber.getDistanceScore(nearestChamber));
-
-		return new ArrayList<>(m_chambers)
-			 .stream()
+		return m_chambers.stream()
 			 .filter(Chamber::isEmpty)
-			 .sorted(utility)
+			 .sorted(Comparator
+					 .<Chamber>comparingInt(chamber -> chamber.getTotalDistanceScore(m_chambers))
+					 .thenComparingInt(chamber -> chamber.getDistanceScore(nearestChamber)))
 			 .collect(Collectors.toList());
 	}
 
-	public Optional<Chamber> getOptimalLoadingChamber(final Location object) {
-		final List<Chamber> candidates = getCandidateChambers(object);
-		// highest-scoring element will be last
-		if (candidates.size() > 0) {
-			return Optional.of(candidates.get(candidates.size() - 1));
-		} else {
+	public Optional<Chamber> getOptimalLoadingChamber(final Intake intakeChannel) {
+		final List<Chamber> candidates = getCandidateChambers(intakeChannel.getLocation());
+
+		if (candidates.isEmpty()) {
 			return Optional.empty();
+		} else {
+			return Optional.of(candidates.get(candidates.size() - 1));
 		}
 	}
 
 	// shoots counter-clockwise
 	public Optional<Chamber> getOptimalShootingChamber() {
+		if (getFilledChamberCount() == 6) {
+			return Optional.of(getNearestChamber(Location.SHOOTER));
+		}
+
 		final List<Chamber> candidates = getCandidateChambers(Location.SHOOTER);
 
 		if (candidates.size() == 0) {
@@ -80,17 +85,14 @@ public final class Inventory {
 			return Optional.of(candidates.get(0));
 		} else {
 			// take two highest scored chambers
+			// will always be on either side of the balls
 			final List<Chamber> cs = candidates.subList(candidates.size() - 2, candidates.size());
 			cs.sort(Comparator.comparing(m_rotatedChambers::indexOf));
 			final int indexMin = m_rotatedChambers.indexOf(cs.get(0));
 			final int indexMax = m_rotatedChambers.indexOf(cs.get(1));
 			final Chamber middleChamber = m_rotatedChambers.get((indexMin + indexMax) / 2);
 
-			if (middleChamber.isFull()) {
-				return Optional.of(m_rotatedChambers.get(indexMax));
-			} else {
-				return Optional.of(m_rotatedChambers.get(indexMin));
-			}
+			return Optional.of(m_rotatedChambers.get(middleChamber.isFull() ? indexMax : indexMin));
 		}
 	}
 }
