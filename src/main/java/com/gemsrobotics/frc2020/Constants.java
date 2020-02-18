@@ -10,4 +10,6 @@ public class Constants {
 	public static final int CHANNEL_LEFT_PORT = 0;
 	public static final int CHANNEL_CENTER_PORT = 0;
 	public static final int CHANNEL_RIGHT_PORT = 0;
+
+	public static final int HOOD_SOLENOID_PORT = 0;
 }
