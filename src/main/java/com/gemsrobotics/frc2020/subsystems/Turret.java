@@ -109,7 +109,7 @@ public final class Turret extends Subsystem implements Loggable {
 	}
 
 	@Override
-	protected synchronized void onCreate(final double timestamp) {
+	protected synchronized void onStart(final double timestamp) {
 		setDisabled();
 	}
 

@@ -301,7 +301,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	}
 
 	@Override
-	protected final synchronized void onCreate(final double timestamp) {
+	protected final synchronized void onStart(final double timestamp) {
 		setDisabled();
 	}
 

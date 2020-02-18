@@ -62,7 +62,7 @@ public abstract class Subsystem
 	// called once everything has been initialized
 	// designed for things which must be initialized very late
 	// or are dependant on other subsystems
-    protected abstract void onCreate(double timestamp);
+    protected abstract void onStart(double timestamp);
     // called every 10ms while the subsystem is enabled
     protected abstract void onUpdate(double timestamp);
     // called when the robot is disabled

@@ -101,7 +101,7 @@ public final class SubsystemManager implements Reportable, Loggable {
 	        m_timer.reset();
             m_subsystems.forEach(subsystem -> {
                 try {
-                    subsystem.onCreate(getFPGATimestamp());
+                    subsystem.onStart(getFPGATimestamp());
                 } catch (final Throwable throwable) {
                     Pod.catchThrowable(subsystem, throwable);
                 }

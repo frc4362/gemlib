@@ -64,7 +64,7 @@ public final class TargetState extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onCreate(final double timestamp) {
+	protected synchronized void onStart(final double timestamp) {
 
 	}
 

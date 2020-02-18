@@ -82,7 +82,7 @@ public final class Intake extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onCreate(final double timestamp) {
+	protected synchronized void onStart(final double timestamp) {
 		setHoldPosition();
 	}
 

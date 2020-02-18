@@ -81,7 +81,7 @@ public final class Hopper extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onCreate(final double timestamp) {
+	protected synchronized void onStart(final double timestamp) {
 	}
 
 	@Override
@@ -102,6 +102,7 @@ public final class Hopper extends Subsystem {
 
 	@Override
 	public void setSafeState() {
+		m_motor.setDutyCycle(0.0);
 	}
 
 	public synchronized boolean atReference() {

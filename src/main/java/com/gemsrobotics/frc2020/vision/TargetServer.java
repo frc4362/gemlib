@@ -35,7 +35,7 @@ public final class TargetServer extends Limelight {
 	}
 
 	@Override
-	protected void onCreate(final double timestamp) {
+	protected void onStart(final double timestamp) {
 		setCameraMode(CameraMode.COMPUTER_VISION);
 		setLEDMode(LEDMode.OFF);
 	}
