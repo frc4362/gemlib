@@ -15,10 +15,6 @@ public final class Superstructure extends Subsystem {
 		return INSTANCE;
 	}
 
-	private Superstructure() {
-
-	}
-
 	public enum WantedState {
 		IDLE,
 		INTAKING,
@@ -27,15 +23,15 @@ public final class Superstructure extends Subsystem {
 		SHOOTING,
 		CLIMBING,
 		CONTROL_PANEL_ROTATION,
-		CONTORL_PANEL_POSITION
+		CONTROL_PANEL_POSITION
 	}
 
 	public enum SystemState {
 		IDLE,
 		INTAKING, // includes serialization
 		OUTTAKING,
-		FEEDING,
-		SPINNING_UP,
+		WAITING_FOR_ALIGNMENT,
+		WAITING_FOR_FLYWHEEL,
 		SHOOTING,
 		PREPARING_CLIMB,
 		CLIMBING,
@@ -43,23 +39,26 @@ public final class Superstructure extends Subsystem {
 		CONTROL_PANEL_POSITION
 	}
 
+	private SystemState m_systemState;
+	private WantedState m_wantedState;
+
 	@Override
-	protected void readPeriodicInputs(double timestamp) {
+	protected void readPeriodicInputs(final double timestamp) {
 
 	}
 
 	@Override
-	protected void onCreate(double timestamp) {
+	protected void onStart(final double timestamp) {
+		m_wantedState = WantedState.IDLE;
+	}
+
+	@Override
+	protected void onUpdate(final double timestamp) {
 
 	}
 
 	@Override
-	protected void onUpdate(double timestamp) {
-
-	}
-
-	@Override
-	protected void onStop(double timestamp) {
+	protected void onStop(final double timestamp) {
 
 	}
 
