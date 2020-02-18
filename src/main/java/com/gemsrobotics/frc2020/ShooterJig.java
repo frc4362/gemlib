@@ -40,7 +40,7 @@ public class ShooterJig extends TimedRobot implements Loggable {
 //		m_hopper = Hopper.getInstance();
 		m_limelight = new Limelight() {
 			@Override
-			protected void onCreate(double timestamp) {
+			protected void onStart(double timestamp) {
 				setLEDMode(LEDMode.ON);
 				setSelectedPipeline(0);
 			}
