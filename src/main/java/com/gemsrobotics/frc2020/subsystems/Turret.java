@@ -17,10 +17,10 @@ import java.util.Objects;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
-import static java.lang.Math.abs;
-import static java.lang.Math.copySign;
+import static java.lang.Math.*;
 
 public final class Turret extends Subsystem implements Loggable {
+	private static final double STICTION_VOLTS = 0.0;
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(4.0, 0.0, 17.5, 0.0);
@@ -96,7 +96,7 @@ public final class Turret extends Subsystem implements Loggable {
 		m_controlMode = Mode.DISABLED;
 	}
 
-	public synchronized void setReferencePosition(Rotation reference) {
+	public synchronized void setReferenceRotation(Rotation reference) {
 		m_controlMode = Mode.ROTATION;
 
 		final double setpoint = reference.getRadians() * (4096 / Tau);
@@ -120,7 +120,8 @@ public final class Turret extends Subsystem implements Loggable {
 				m_motor.setNeutral();
 				break;
 			case ROTATION:
-				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau);
+				final var error = m_motor.getInternalController().getClosedLoopError();
+				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * STICTION_VOLTS);
 				break;
 		}
 	}

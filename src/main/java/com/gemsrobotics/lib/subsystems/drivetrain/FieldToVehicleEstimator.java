@@ -106,6 +106,7 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
         m_velocityMeasured = displacement;
         m_velocityPredicted = velocityPredicted;
+
         m_distanceDriven += abs(displacement.dx);
     }
 

@@ -8,6 +8,8 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.drivetrain.FieldToVehicleEstimator;
+import com.gemsrobotics.lib.utils.MathUtils;
+import edu.wpi.first.wpilibj.Timer;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -15,6 +17,7 @@ import java.util.Optional;
 public final class TargetState extends Subsystem {
 	private static final double CACHE_DISTANCE_METERS = 8.0; // meters
 	private static final int BUFFER_SIZE = 400;
+	private static final MathUtils.Bounds STABILITY_RANGE = new MathUtils.Bounds(0.0, 1.0);
 
 	private static final RigidTransform
 			VEHICLE_TO_TURRET = RigidTransform.identity(),
@@ -41,52 +44,65 @@ public final class TargetState extends Subsystem {
 		m_periodicIO = new PeriodicIO();
 	}
 
-	public static class CachedTarget {
-		public final double timestamp;
-		public final Translation captureFieldToVehicle;
+	public class CachedTarget {
+		private final Timer m_timer;
+		private final Translation m_fieldToTarget;
+		private final double m_captureDriveDistance;
 
-		public CachedTarget(final double timestamp, final Translation captureFieldToVehicle) {
-			this.timestamp = timestamp;
-			this.captureFieldToVehicle = captureFieldToVehicle;
+		public CachedTarget(final Translation fieldToTarget) {
+			m_timer = new Timer();
+			m_timer.start();
+
+			m_fieldToTarget = fieldToTarget;
+
+			m_captureDriveDistance = m_odometer.getDistanceDriven();
+		}
+
+		public double getAge() {
+			return m_timer.get();
+		}
+
+		public Translation getFieldToTarget() {
+			return m_fieldToTarget;
+		}
+
+		public double getDriveDistanceSinceCapture() {
+			return m_odometer.getDistanceDriven() - m_captureDriveDistance;
+		}
+
+		public double getTargetDistance() {
+			return m_odometer.getLatestFieldToVehicleValue().getTranslation().difference(m_fieldToTarget).norm();
 		}
 	}
 
 	private static class PeriodicIO {
-		private Rotation newTurretRotation = Rotation.identity();
-		private Optional<TargetServer.TargetInfo> targetInfo = Optional.empty();
-		private Optional<CachedTarget> fieldToTargetCached = Optional.empty();
+		public Rotation newTurretRotation = Rotation.identity();
+		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
+		public Optional<CachedTarget> fieldToTargetCached = Optional.empty();
 	}
 
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.newTurretRotation = Turret.getInstance().getRotation();
-		m_periodicIO.targetInfo = TargetServer.getInstance().getTargetInfo();
+		m_periodicIO.newTargetInfo = TargetServer.getInstance().getTargetInfo();
 	}
 
 	@Override
 	protected synchronized void onStart(final double timestamp) {
-
 	}
 
 	@Override
 	protected synchronized void onUpdate(final double now) {
 		m_turretHeading.put(new InterpolatingDouble(now), m_periodicIO.newTurretRotation);
 
-		if (m_periodicIO.targetInfo.isPresent()) {
-			final var targetInfo = m_periodicIO.targetInfo.get();
-			final var fieldToTarget = getFieldToCamera(now).transformBy(targetInfo.cameraToTarget);
-			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(now, fieldToTarget.getTranslation()));
-		} else if (m_periodicIO.fieldToTargetCached.isPresent()) {
-			final var cachedLocation = m_periodicIO.fieldToTargetCached.get().captureFieldToVehicle.getTranslation();
-			if (cachedLocation.difference(getFieldToVehicle(now).getTranslation()).norm() > CACHE_DISTANCE_METERS) {
-				m_periodicIO.fieldToTargetCached = Optional.empty();
-			}
+		if (m_periodicIO.newTargetInfo.isPresent()) {
+			final var fieldToTarget = getFieldToCamera(now).transformBy(m_periodicIO.newTargetInfo.get().cameraToTarget);
+			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}
 	}
 
 	@Override
 	protected synchronized void onStop(final double timestamp) {
-
 	}
 
 	@Override
@@ -110,7 +126,7 @@ public final class TargetState extends Subsystem {
 		return getFieldToVehicle(timestamp).getRotation().rotateBy(getVehicleToTurret(timestamp));
 	}
 
-	private synchronized RigidTransform getFieldToCamera(final double timestamp) {
+	public synchronized RigidTransform getFieldToCamera(final double timestamp) {
 		return getFieldToVehicle(timestamp)
 					   .transformBy(VEHICLE_TO_TURRET)
 					   .transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)))

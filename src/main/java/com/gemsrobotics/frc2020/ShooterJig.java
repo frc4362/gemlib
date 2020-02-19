@@ -13,7 +13,6 @@ import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.Rev2mDistanceSensor;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -29,7 +28,6 @@ public class ShooterJig extends TimedRobot implements Loggable {
 	private Turret m_turret;
 	private Hopper m_hopper;
 	private Limelight m_limelight;
-	private Rev2mDistanceSensor m_distanceSensor;
 	private SubsystemManager m_subsystems;
 	private XboxController m_gamepad;
 
@@ -58,12 +56,6 @@ public class ShooterJig extends TimedRobot implements Loggable {
 
 		m_subsystems = new SubsystemManager(m_shooter, m_limelight/*m_turret, m_hopper*/);
 
-		m_distanceSensor = new Rev2mDistanceSensor(Rev2mDistanceSensor.Port.kOnboard);
-		m_distanceSensor.setEnabled(true);
-		m_distanceSensor.setAutomaticMode(true);
-		m_distanceSensor.setDistanceUnits(Rev2mDistanceSensor.Unit.kInches);
-		m_distanceSensor.setRangeProfile(Rev2mDistanceSensor.RangeProfile.kHighAccuracy);
-
 		SmartDashboard.putNumber("Shooter RPM", 0.0);
 //		SmartDashboard.putNumber("Hopper Duty Cycle", 0.0);
 //		SmartDashboard.putNumber("Turret Degrees", 0.0);
@@ -74,7 +66,6 @@ public class ShooterJig extends TimedRobot implements Loggable {
 
 	@Override
 	public void robotPeriodic() {
-		SmartDashboard.putNumber("Distance Reading (in)", m_distanceSensor.getRange());
 		SmartDashboard.putString("Limelight Horizontal", m_limelight.getOffsetHorizontal().toString());
 		Logger.updateEntries();
 	}
