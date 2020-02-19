@@ -77,7 +77,12 @@ public final class Hopper extends Subsystem {
 	}
 
 	public synchronized void rotate(final int steps) {
+		m_mode = Mode.RATCHETING;
 		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * steps;
+	}
+
+	public synchronized void setDisabled() {
+		m_mode = Mode.DISABLED;
 	}
 
 	@Override
