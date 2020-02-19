@@ -1,6 +1,10 @@
 package com.gemsrobotics.frc2020.subsystems;
 
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.timing.ElapsedTimer;
+import edu.wpi.first.wpilibj.Timer;
+import io.github.oblarg.oblog.Loggable;
+import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Objects;
 
@@ -19,7 +23,6 @@ public final class Superstructure extends Subsystem {
 		IDLE,
 		INTAKING,
 		OUTTAKING,
-		FEEDING,
 		SHOOTING,
 		CLIMBING,
 		CONTROL_PANEL_ROTATION,
@@ -39,8 +42,29 @@ public final class Superstructure extends Subsystem {
 		CONTROL_PANEL_POSITION
 	}
 
+	private final Chassis m_chassis;
+	private final Hopper m_hopper;
+
+	private final Timer m_stateChangeTimer, m_wantStateChangeTimer;
+
+	@Log.ToString
 	private SystemState m_systemState;
+	@Log.ToString
 	private WantedState m_wantedState;
+	private boolean m_stateChanged;
+
+	private Superstructure() {
+		m_chassis = Chassis.getInstance();
+		m_hopper = Hopper.getInstance();
+
+		m_stateChangeTimer = new Timer();
+		m_wantStateChangeTimer = new Timer();
+	}
+
+	public synchronized void setWantedState(final WantedState state) {
+		m_wantedState = state;
+		m_wantStateChangeTimer.reset();
+	}
 
 	@Override
 	protected void readPeriodicInputs(final double timestamp) {
@@ -49,17 +73,45 @@ public final class Superstructure extends Subsystem {
 
 	@Override
 	protected void onStart(final double timestamp) {
-		m_wantedState = WantedState.IDLE;
+		m_wantStateChangeTimer.start();
+		m_stateChangeTimer.start();
+		setWantedState(WantedState.IDLE);
 	}
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		final SystemState newState;
 
+		switch (m_systemState) {
+			case IDLE:
+				newState = handleIdle();
+				break;
+			default:
+				newState = SystemState.IDLE;
+				break;
+		}
+
+		if (newState != m_systemState) {
+			m_systemState = newState;
+			m_stateChangeTimer.reset();
+			m_stateChanged = true;
+		} else {
+			m_stateChanged = false;
+		}
 	}
 
 	@Override
 	protected void onStop(final double timestamp) {
 
+	}
+
+	private SystemState handleIdle() {
+		m_hopper.setDisabled();
+		
+		switch (m_wantedState) {
+			default:
+				return SystemState.IDLE;
+		}
 	}
 
 	@Override
