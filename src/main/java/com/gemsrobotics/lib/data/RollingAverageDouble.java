@@ -1,7 +1,7 @@
 package com.gemsrobotics.lib.data;
 
-public final class MovingAverage extends LimitedQueue<Double> {
-    public MovingAverage(final int sampleSize) {
+public final class RollingAverageDouble extends LimitedQueue<Double> {
+    public RollingAverageDouble(final int sampleSize) {
         super(sampleSize);
     }
 
