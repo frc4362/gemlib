@@ -58,7 +58,6 @@ public final class Turret extends Subsystem implements Loggable {
 
 		m_periodicIO = new PeriodicIO();
 	}
-
 	public enum Mode {
 		DISABLED,
 		ROTATION
