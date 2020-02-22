@@ -97,6 +97,10 @@ public final class SubsystemManager implements Reportable, Loggable {
     public synchronized void start() {
 	    final int size;
 
+	    if (m_isRunning) {
+	    	return;
+		}
+
 	    synchronized (m_lock) {
 	        m_timer.reset();
             m_subsystems.forEach(subsystem -> {

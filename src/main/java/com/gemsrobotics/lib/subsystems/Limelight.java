@@ -23,8 +23,8 @@ public abstract class Limelight extends Subsystem {
 
     protected static final double[] EMPTY = new double[]{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 
-    protected static final Rotation FOV_HORIZONTAL = Rotation.degrees(54.0);
-    protected static final Rotation FOV_VERTICAL = Rotation.degrees(41.0);
+    protected static final Rotation FOV_HORIZONTAL_HALF = Rotation.degrees(27.0);
+    protected static final Rotation FOV_VERTICAL_HALF = Rotation.degrees(20.5);
 
 	protected static final double IMAGE_CAPTURE_LATENCY_S = 11e-3;
 

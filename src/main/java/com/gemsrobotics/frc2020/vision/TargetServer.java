@@ -10,7 +10,7 @@ import java.util.*;
 import static java.lang.Math.tan;
 
 public final class TargetServer extends Limelight {
-	private static final double LENS_HEIGHT = 0.6096;
+	private static final double LENS_HEIGHT = 0.57;
 	private static final double GOAL_CENTER_HEIGHT = 2.49555;
 	private static final Rotation LENS_PITCH_DEGREES = Rotation.degrees(10.0);
 
@@ -52,7 +52,7 @@ public final class TargetServer extends Limelight {
 
 	public synchronized Optional<TargetInfo> getTargetInfo() {
 		if (m_periodicIO.targetPresent) {
-			final Rotation a2 = m_periodicIO.offsetVertical.sum(Rotation.radians(FOV_VERTICAL.getRadians() / 2.0));
+			final Rotation a2 = m_periodicIO.offsetVertical.sum(FOV_VERTICAL_HALF);
 			final double distanceMeters = (GOAL_CENTER_HEIGHT - LENS_HEIGHT) / tan(LENS_PITCH_DEGREES.sum(a2).getRadians());
 			final RigidTransform cameraToTarget = new RigidTransform(
 					Translation.fromPolar(m_periodicIO.offsetHorizontal, distanceMeters),
