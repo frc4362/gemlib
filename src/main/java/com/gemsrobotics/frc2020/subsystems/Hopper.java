@@ -110,7 +110,7 @@ public final class Hopper extends Subsystem {
 		m_motor.setDutyCycle(0.0);
 	}
 
-	public synchronized boolean atReference() {
+	public synchronized boolean atRest() {
 		return m_periodicIO.atReference;
 	}
 
