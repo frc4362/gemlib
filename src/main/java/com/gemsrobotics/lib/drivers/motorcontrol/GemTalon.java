@@ -352,7 +352,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	private double radiansPerSecond2NativeUnitsPer100ms(final double rps) {
-		return (rps / Tau * m_ticksPerRotation / 10.0);
+		return (rps / Tau * m_ticksPerRotation / 10.0) / m_cylinderToEncoderReduction;
 	}
 
 	private int getInversionMultiplier() {
