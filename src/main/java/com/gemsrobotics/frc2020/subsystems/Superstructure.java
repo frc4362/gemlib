@@ -1,11 +1,11 @@
 package com.gemsrobotics.frc2020.subsystems;
 
+import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
-import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.Timer;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -55,10 +55,12 @@ public final class Superstructure extends Subsystem {
 	private final Hopper m_hopper;
 	private final TargetState m_targetState;
 
+	private final Inventory m_inventory;
+
 	private final Timer m_stateChangeTimer, m_wantStateChangeTimer;
 
 	private final PeriodicIO m_periodicIO;
-	
+
 	@Log.ToString
 	private SystemState m_systemState;
 	@Log.ToString
@@ -73,9 +75,11 @@ public final class Superstructure extends Subsystem {
 		m_hopper = Hopper.getInstance();
 		m_targetState = TargetState.getInstance();
 
+		m_inventory = new Inventory();
+
 		m_stateChangeTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
-		
+
 		m_periodicIO = new PeriodicIO();
 	}
 
@@ -105,6 +109,10 @@ public final class Superstructure extends Subsystem {
 	@Override
 	protected void onUpdate(final double timestamp) {
 		final SystemState newState;
+
+		if (m_hopper.atRest()) {
+			m_inventory.setRotations(m_hopper.getRotations());
+		}
 
 		switch (m_systemState) {
 			case IDLE:
@@ -136,11 +144,16 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleIdle() {
-		m_hopper.setDisabled();
-		
+		m_turret.setDisabled();
+		m_hood.setDeployed(true);
+
 		switch (m_wantedState) {
-			default:
+			case IDLE:
 				return SystemState.IDLE;
+			case INTAKING:
+				return SystemState.INTAKING;
+			case FEEDING:
+				return SystemState.FEEDING;
 		}
 	}
 
@@ -155,9 +168,9 @@ public final class Superstructure extends Subsystem {
 			final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
 
 			if (m_turret.atReference(Rotation.degrees(0.15))
-						&& m_hood.isDeployed() == m_hood.wantsDeployed()
-						&& (wheelSpeeds.left + wheelSpeeds.right) < 0.03
-						&& ((isCloseShot && target.getDriveDistanceSinceCapture() < 5.0) || target.getAge() < 0.25)
+				&& m_hood.isDeployed() == m_hood.wantsDeployed()
+				&& (wheelSpeeds.left + wheelSpeeds.right) < 0.03
+				&& ((isCloseShot && target.getDriveDistanceSinceCapture() < 5.0) || target.getAge() < 0.25)
 			) {
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			}
@@ -174,8 +187,22 @@ public final class Superstructure extends Subsystem {
 		}
 	}
 
-	private void handleWaitingForFlywheel() {
+	private SystemState handleWaitingForFlywheel() {
+		m_shooter.setRPM(Constants.SHOOTER_RANGE_REGRESSION.predict(m_periodicIO.target.map(TargetState.CachedTarget::getTargetDistance).orElse(0.0)));
 
+		if (m_shooter.atReference()) {
+			return SystemState.SHOOTING;
+		}
+
+		switch (m_wantedState) {
+			case INTAKING:
+				return SystemState.INTAKING;
+			case FEEDING:
+				return SystemState.FEEDING;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
+		}
 	}
 
 	@Override
