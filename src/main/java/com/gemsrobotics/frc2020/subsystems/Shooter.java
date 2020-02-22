@@ -61,16 +61,16 @@ public final class Shooter extends Subsystem implements Loggable {
 		m_feederMaster = MotorControllerFactory.createHighPerformanceTalonFX(7);
 		m_feederMaster.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 		m_feederMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-		m_feederMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
+		m_feederMaster.setGearingParameters(1.5, SHOOTER_WHEEL_RADIUS, 2048);
 		m_feederMaster.setSelectedProfile(0);
 		m_feederMaster.setPIDF(FEEDER_GAINS);
-		m_feederMaster.setInvertedOutput(true);
+		m_feederMaster.setInvertedOutput(false);
 
 		m_feederSlave = MotorControllerFactory.createHighPerformanceTalonFX(8);
 		m_feederSlave.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
-		m_feederSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
+		m_feederSlave.setGearingParameters(1.5, SHOOTER_WHEEL_RADIUS, 2048);
 		m_feederSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-		m_feederSlave.follow(m_feederMaster, true);
+		m_feederSlave.follow(m_feederMaster, false);
 
 		m_shooterFeedforward = new MotorFeedforward(0.323, 0.118 / 60.0, 0.0004 / 60.0);
 		m_feederFeedforward = new MotorFeedforward(0.0608, 0.109 / 60.0, 0.0);
