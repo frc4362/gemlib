@@ -1,6 +1,6 @@
 package com.gemsrobotics.frc2020.subsystems;
 
-import com.gemsrobotics.frc2020.vision.TargetServer;
+import com.gemsrobotics.frc2020.TargetServer;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -70,12 +70,13 @@ public final class TargetState extends Subsystem {
 			return m_odometer.getDistanceDriven() - m_captureDriveDistance;
 		}
 
-		public double getTargetDistance() {
+		public double getDistance() {
 			return m_odometer.getLatestFieldToVehicleValue().getTranslation().difference(m_fieldToTarget).norm();
 		}
 	}
 
 	private static class PeriodicIO {
+		public boolean targetServerAlive = false;
 		public Rotation newTurretRotation = Rotation.identity();
 		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
 		public Optional<CachedTarget> fieldToTargetCached = Optional.empty();
@@ -84,6 +85,7 @@ public final class TargetState extends Subsystem {
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.newTurretRotation = Turret.getInstance().getRotation();
+		m_periodicIO.targetServerAlive = TargetServer.getInstance().isAlive();
 		m_periodicIO.newTargetInfo = TargetServer.getInstance().getTargetInfo();
 	}
 
@@ -95,8 +97,9 @@ public final class TargetState extends Subsystem {
 	protected synchronized void onUpdate(final double now) {
 		m_turretHeading.put(new InterpolatingDouble(now), m_periodicIO.newTurretRotation);
 
-		if (m_periodicIO.newTargetInfo.isPresent()) {
-			final var fieldToTarget = getFieldToCamera(now).transformBy(m_periodicIO.newTargetInfo.get().cameraToTarget);
+		if (m_periodicIO.targetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
+			final var newTarget = m_periodicIO.newTargetInfo.get();
+			final var fieldToTarget = getFieldToCamera(newTarget.timestamp).transformBy(newTarget.cameraToTarget);
 			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}
 	}

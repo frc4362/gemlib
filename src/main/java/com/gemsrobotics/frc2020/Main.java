@@ -5,6 +5,6 @@ import edu.wpi.first.wpilibj.RobotBase;
 
 public class Main {
 	public static void main(final String[] args) {
-		RobotBase.startRobot(ShooterJig::new);
+		RobotBase.startRobot(Overload::new);
 	}
 }

@@ -155,7 +155,7 @@ public abstract class Limelight extends Subsystem {
     }
 
     public synchronized final boolean isAlive() {
-	    return m_periodicIO.latency > IMAGE_CAPTURE_LATENCY_S;
+	    return m_periodicIO.latency < Double.POSITIVE_INFINITY;
     }
 
     /**

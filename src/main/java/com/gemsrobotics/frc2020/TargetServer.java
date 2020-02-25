@@ -1,4 +1,4 @@
-package com.gemsrobotics.frc2020.vision;
+package com.gemsrobotics.frc2020;
 
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;

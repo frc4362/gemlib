@@ -31,8 +31,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected Config getConfig() {
-		final double wheelRadius = Units.inches2Meters(6.0) / 2.0;
-		final double freeSpeed = 3.92 / wheelRadius; // m/s
+		final double wheelRadius = Units.inches2Meters(6.25) / 2.0;
+		final double freeSpeed = 4.8768 / wheelRadius; // m/s
 		final double kV = 0.2345;//12.0 / freeSpeed;
 		final double kA = 0.011;
 		final double kS = 0.27;
@@ -42,7 +42,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			maxVoltage = 12.0;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 12.5, wheelRadius, 2048);
+			gearingLowGear = new MotorController.GearingParameters(1.0 / 7.291, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
 
 			gainsLowGear = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0); // 0.69
@@ -104,8 +104,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(0);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(1);
+		final var master = MotorControllerFactory.createDefaultTalonFX(1);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(2);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);
@@ -114,8 +114,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(2);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(3);
+		final var master = MotorControllerFactory.createDefaultTalonFX(3);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(4);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(true);

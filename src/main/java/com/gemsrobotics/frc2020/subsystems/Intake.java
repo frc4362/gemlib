@@ -1,5 +1,6 @@
 package com.gemsrobotics.frc2020.subsystems;
 
+import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
@@ -8,6 +9,9 @@ import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANDigitalInput;
 import com.revrobotics.CANSparkMax;
+
+import java.util.List;
+import java.util.Objects;
 
 public final class Intake extends Subsystem {
 	private final double
@@ -24,7 +28,38 @@ public final class Intake extends Subsystem {
 
 	private Mode m_mode;
 
-	public Intake(final Inventory.Location location, final int motorPort) {
+	private static Intake INTAKE_RIGHT, INTAKE_CENTER, INTAKE_LEFT;
+
+	public static Intake getInstance(final Inventory.Location location) {
+		switch (location) {
+			case RIGHT_INTAKE:
+				if (Objects.isNull(INTAKE_RIGHT)) {
+					INTAKE_RIGHT = new Intake(Inventory.Location.RIGHT_INTAKE, Constants.CHANNEL_RIGHT_PORT);
+				}
+
+				return INTAKE_RIGHT;
+			case CENTER_INTAKE:
+				if (Objects.isNull(INTAKE_CENTER)) {
+					INTAKE_CENTER = new Intake(Inventory.Location.CENTER_INTAKE, Constants.CHANNEL_CENTER_PORT);
+				}
+
+				return INTAKE_CENTER;
+			case LEFT_INTAKE:
+				if (Objects.isNull(INTAKE_LEFT)) {
+					INTAKE_LEFT = new Intake(Inventory.Location.LEFT_INTAKE, Constants.CHANNEL_LEFT_PORT);
+				}
+
+				return INTAKE_LEFT;
+			default:
+				return null;
+		}
+	}
+
+	public static List<Intake> getAll() {
+		return List.of(getInstance(Inventory.Location.RIGHT_INTAKE), getInstance(Inventory.Location.CENTER_INTAKE), getInstance(Inventory.Location.RIGHT_INTAKE));
+	}
+
+	private Intake(final Inventory.Location location, final int motorPort) {
 		m_location = location;
 
 		m_motor = MotorControllerFactory.createSparkMax(motorPort, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
@@ -90,6 +125,10 @@ public final class Intake extends Subsystem {
 	protected synchronized void onUpdate(final double timestamp) {
 		if (m_mode == Mode.VELOCITY) {
 			m_motor.setVelocityMetersPerSecond(m_periodicIO.referenceMeters);
+
+			if (m_periodicIO.ballObserved) {
+				m_motor.setDutyCycle(0.0);
+			}
 		} else if (m_mode == Mode.POSITION) {
 			m_motor.setPositionMeters(m_periodicIO.referenceMeters);
 		}
@@ -106,7 +145,7 @@ public final class Intake extends Subsystem {
 	}
 
 	public synchronized boolean isBallAtBottom() {
-		return m_switch.get();
+		return m_periodicIO.ballObserved;
 	}
 
 	public synchronized void setVelocity(final double velocityMetersPerSecond) {
@@ -124,11 +163,6 @@ public final class Intake extends Subsystem {
 		m_periodicIO.referenceMeters = m_periodicIO.positionMeters + meters;
 	}
 
-	public synchronized void carryBallToTop() {
-		addPosition(BOTTOM_TO_TOP_DISTANCE);
-		m_periodicIO.ballImplied = true;
-	}
-
 	public synchronized void putBallInHopper() {
 		addPosition(TOP_TO_HOPPER_DISTANCE);
 		m_periodicIO.ballImplied = false;
@@ -142,15 +176,19 @@ public final class Intake extends Subsystem {
 		return m_periodicIO.isBusy;
 	}
 
-	public synchronized boolean hasBall() {
-		return m_periodicIO.ballObserved || m_periodicIO.ballImplied;
-	}
-
 	public synchronized boolean isBallAtTop() {
 		return m_periodicIO.ballImplied && !m_periodicIO.isBusy;
 	}
 
+	public synchronized boolean hasBall() {
+		return m_periodicIO.ballObserved || m_periodicIO.ballImplied;
+	}
+
 	public Inventory.Location getLocation() {
 		return m_location;
+	}
+
+	public synchronized void clear() {
+		m_periodicIO.ballImplied = false;
 	}
 }

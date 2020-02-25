@@ -70,6 +70,10 @@ public final class MotorControllerFactory {
         }
     }
 
+    public static GemSparkMax createDefaultSparkMax(final int port) {
+        return createSparkMax(port, DEFAULT_SPARK_CONFIG);
+    }
+
     public static GemSparkMax createSparkMax(final int port, final SparkConfiguration config) {
         final CANSparkMax sparkMax = new CANSparkMax(port, CANSparkMaxLowLevel.MotorType.kBrushless);
 

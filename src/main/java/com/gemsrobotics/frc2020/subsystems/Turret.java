@@ -99,7 +99,7 @@ public final class Turret extends Subsystem implements Loggable {
 	public synchronized void setReferenceRotation(Rotation reference) {
 		m_controlMode = Mode.ROTATION;
 
-		final double setpoint = reference.getRadians() * (4096 / Tau);
+		final double setpoint = reference.getRadians() * (4096.0 / Tau);
 
 		if (abs(setpoint) > TURRET_USABLE_RANGE) {
 			reference = Rotation.radians(reference.getRadians() + copySign(Tau, setpoint));

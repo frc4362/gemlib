@@ -35,6 +35,10 @@ public final class Inventory {
 		m_rotatedChambers = copy;
 	}
 
+	public void clear() {
+		m_chambers.forEach(chamber -> chamber.setFull(false));
+	}
+
 	public long getFilledChamberCount() {
 		return m_chambers.stream().filter(Chamber::isFull).count();
 	}
@@ -72,17 +76,15 @@ public final class Inventory {
 	}
 
 	// shoots counter-clockwise
-	public Optional<Chamber> getOptimalShootingChamber() {
+	public Chamber getOptimalShootingChamber() {
 		if (getFilledChamberCount() == 6) {
-			return Optional.of(getNearestChamber(Location.SHOOTER));
+			return getNearestChamber(Location.SHOOTER);
 		}
 
 		final List<Chamber> candidates = getCandidateChambers(Location.SHOOTER);
 
-		if (candidates.size() == 0) {
-			return Optional.empty();
-		} else if (candidates.size() == 1) {
-			return Optional.of(candidates.get(0));
+		if (candidates.size() == 1) {
+			return candidates.get(0);
 		} else {
 			// take two highest scored chambers
 			// will always be on either side of the balls
@@ -92,7 +94,7 @@ public final class Inventory {
 			final int indexMax = m_rotatedChambers.indexOf(cs.get(1));
 			final Chamber middleChamber = m_rotatedChambers.get((indexMin + indexMax) / 2);
 
-			return Optional.of(m_rotatedChambers.get(middleChamber.isFull() ? indexMax : indexMin));
+			return m_rotatedChambers.get(middleChamber.isFull() ? indexMax : indexMin);
 		}
 	}
 }

@@ -7,16 +7,17 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.physics.MotorModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
+import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 import com.gemsrobotics.lib.trajectory.*;
 import com.gemsrobotics.lib.trajectory.parameterization.DifferentialDriveDynamicsConstraint;
 import com.gemsrobotics.lib.trajectory.parameterization.Parameterizer;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import com.gemsrobotics.lib.trajectory.parameterization.TrajectoryUtils;
+import com.gemsrobotics.lib.utils.Units;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertFalse;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,18 +28,28 @@ public class TestIntegration {
     public void testSplineTrajectoryGenerator() {
         // Specify desired waypoints.
         final List<RigidTransform> waypoints = Arrays.asList(
-                RigidTransform.identity(),
-                new RigidTransform(100, 0, Rotation.degrees(0)));
+                new RigidTransform(0, 0, Rotation.identity()),
+				new RigidTransform(3, 0.0, Rotation.identity()));
+
+        final double wheelRadius = Units.inches2Meters(6.0) / 2.0;
+        final double freeSpeed = 3.9 / wheelRadius; // m/s
+        final double kV = 0.23446153846153842;
+        final double kA = 0.011;
+        final double kS = 0.27;
+        final double mass = 23.0;
 
         final var cfg = new DriveMotionPlanner.MotionConfig() {
             {
-                maxDx = 0.0508;
+                beta = 2.0;
+                zeta = 0.7;
+
+                maxDx = 0.00127;
                 maxDy = 0.00127;
-                maxDtheta = Math.toRadians(5.0);
-                maxVoltage = 12.0;
-                maxVelocity = 4.0;
+                maxDtheta = Rotation.degrees(5.0).getRadians();
+                maxVoltage = 10.0;
+                maxVelocity = 3.9;
                 maxAcceleration = 3.0;
-                maxCentripetalAcceleration = 1.0;
+                maxCentripetalAcceleration = 2.5;
             }
         };
 
@@ -47,31 +58,28 @@ public class TestIntegration {
 
         final var modelProps = new DifferentialDriveModel.Properties() {
             {
-                massKg = 60;
-                angularMomentInertiaKgMetersSquared = 9.6;
+                massKg = mass; // kg
+                angularMomentInertiaKgMetersSquared = 4.519;
                 angularDragTorquePerRadiansPerSecond = 12.0;
-                wheelRadiusMeters = 0.0508;
-                wheelbaseRadiusMeters = 0.3489513;
+                wheelRadiusMeters = wheelRadius;
+                wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
             }
         };
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
-            speedRadiansPerSecondPerVolt = 7.11942257233;
-            torquePerVolt = 6.4516;
-            stictionVoltage = 1.3;
+            speedRadiansPerSecondPerVolt = 1 / kV;
+            torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
+            stictionVoltage = kS;
         }});
 
         final var model = new DifferentialDriveModel(modelProps, transmission, transmission);
-
-        // Create the constraint that the robot must be able to traverse the trajectory without ever applying more than 10V.
-        DifferentialDriveDynamicsConstraint<RigidTransformWithCurvature> constraint = new DifferentialDriveDynamicsConstraint<>(model, false, 10.0);
 
         // Generate the timed trajectory.
         Trajectory<TimedState<RigidTransformWithCurvature>> timedTrajectory = Parameterizer.timeParameterizeTrajectory(
                 false,
                 new DistanceView<>(trajectory),
                 1.0,
-                Collections.singletonList(constraint),
+                Collections.emptyList(),
                 cfg,
                 0.0,
                 0.0);
@@ -100,7 +108,7 @@ public class TestIntegration {
                     new ChassisState(state.getAcceleration(), state.getAcceleration() * state.getState().getCurvature()),
                     false);
 
-            System.out.println(dynamics.voltage.map(v -> v / 12.0));
+            System.out.println(dynamics.voltage);
 
             sample = iterator.advance(dt);
         } while (!iterator.isDone());

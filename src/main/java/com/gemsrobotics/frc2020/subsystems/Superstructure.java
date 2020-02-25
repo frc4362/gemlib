@@ -6,11 +6,16 @@ import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Timer;
 import io.github.oblarg.oblog.annotations.Log;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
+import static java.lang.Math.*;
 
 public final class Superstructure extends Subsystem {
 	private static Superstructure INSTANCE;
@@ -29,23 +34,23 @@ public final class Superstructure extends Subsystem {
 		OUTTAKING,
 		FEEDING,
 		SHOOTING,
-		CLIMBING,
-		CONTROL_PANEL_ROTATION,
-		CONTROL_PANEL_POSITION
+		CLIMBING
+//		CONTROL_PANEL_ROTATION,
+//		CONTROL_PANEL_POSITION
 	}
 
 	public enum SystemState {
 		IDLE,
-		INTAKING, // includes serialization
+		INTAKING,
 		OUTTAKING,
 		FEEDING,
 		WAITING_FOR_ALIGNMENT,
 		WAITING_FOR_FLYWHEEL,
 		SHOOTING,
 		PREPARING_CLIMB,
-		CLIMBING,
-		CONTROL_PANEL_ROTATION,
-		CONTROL_PANEL_POSITION
+		CLIMBING
+//		CONTROL_PANEL_ROTATION,
+//		CONTROL_PANEL_POSITION
 	}
 
 	private final Chassis m_chassis;
@@ -54,8 +59,10 @@ public final class Superstructure extends Subsystem {
 	private final Hood m_hood;
 	private final Hopper m_hopper;
 	private final TargetState m_targetState;
-
+	private final List<Intake> m_intakes;
 	private final Inventory m_inventory;
+
+	private final Solenoid m_intakeDeployer;
 
 	private final Timer m_stateChangeTimer, m_wantStateChangeTimer;
 
@@ -74,8 +81,10 @@ public final class Superstructure extends Subsystem {
 		m_hood = Hood.getInstance();
 		m_hopper = Hopper.getInstance();
 		m_targetState = TargetState.getInstance();
-
+		m_intakes = Intake.getAll();
 		m_inventory = new Inventory();
+
+		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
 
 		m_stateChangeTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
@@ -84,7 +93,9 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private static class PeriodicIO {
-		private RigidTransform currentPose = RigidTransform.identity();
+		private RigidTransform vehiclePose = RigidTransform.identity();
+		private RigidTransform cameraPose = RigidTransform.identity();
+		private Rotation cameraRotation = Rotation.identity();
 		private Optional<TargetState.CachedTarget> target = Optional.empty();
 	}
 
@@ -94,20 +105,21 @@ public final class Superstructure extends Subsystem {
 	}
 
 	@Override
-	protected void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.currentPose = m_targetState.getFieldToVehicle(timestamp);
+	protected synchronized void readPeriodicInputs(final double timestamp) {
+		m_periodicIO.vehiclePose = m_targetState.getFieldToVehicle(timestamp);
+		m_periodicIO.cameraPose = m_targetState.getFieldToCamera(timestamp);
 		m_periodicIO.target = m_targetState.getCachedFieldToTarget();
 	}
 
 	@Override
-	protected void onStart(final double timestamp) {
+	protected synchronized void onStart(final double timestamp) {
 		m_wantStateChangeTimer.start();
 		m_stateChangeTimer.start();
 		setWantedState(WantedState.IDLE);
 	}
 
 	@Override
-	protected void onUpdate(final double timestamp) {
+	protected synchronized void onUpdate(final double timestamp) {
 		final SystemState newState;
 
 		if (m_hopper.atRest()) {
@@ -118,11 +130,20 @@ public final class Superstructure extends Subsystem {
 			case IDLE:
 				newState = handleIdle();
 				break;
+			case INTAKING:
+				newState = handleIntaking();
+				break;
+			case OUTTAKING:
+				newState = handleOuttaking();
+				break;
 			case WAITING_FOR_ALIGNMENT:
 				newState = handleWaitingForAlignment();
 				break;
 			case WAITING_FOR_FLYWHEEL:
 				newState = handleWaitingForFlywheel();
+				break;
+			case SHOOTING:
+				newState = handleShooting();
 				break;
 			default:
 				newState = SystemState.IDLE;
@@ -139,48 +160,127 @@ public final class Superstructure extends Subsystem {
 	}
 
 	@Override
-	protected void onStop(final double timestamp) {
-
+	protected synchronized void onStop(final double timestamp) {
+		m_wantStateChangeTimer.stop();
+		m_wantStateChangeTimer.reset();
+		m_stateChangeTimer.stop();
+		m_stateChangeTimer.reset();
 	}
 
 	private SystemState handleIdle() {
 		m_turret.setDisabled();
-		m_hood.setDeployed(true);
+		m_hood.setDeployed(false);
+		m_shooter.setRPM(0.0);
+		m_intakeDeployer.set(false);
 
 		switch (m_wantedState) {
-			case IDLE:
-				return SystemState.IDLE;
 			case INTAKING:
 				return SystemState.INTAKING;
-			case FEEDING:
-				return SystemState.FEEDING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
 		}
 	}
 
-	private SystemState handleWaitingForAlignment() {
-		if (m_periodicIO.target.isPresent()) {
-			final var target = m_periodicIO.target.get();
-			setTurretTargetPoint(target.getFieldToTarget());
+	private SystemState handleIntaking() {
+		m_turret.setDisabled();
+		m_hood.setDeployed(false);
+		m_shooter.setRPM(0.0);
+		m_intakeDeployer.set(true);
 
-			final var isCloseShot = target.getTargetDistance() < 10.0;
-			m_hood.setDeployed(isCloseShot);
-
+		if (m_wantStateChangeTimer.get() > 0.25) {
 			final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
+			final var intakeVelocityMetersPerSecond = max(wheelSpeeds.left, wheelSpeeds.right) + 3.0;
 
-			if (m_turret.atReference(Rotation.degrees(0.15))
-				&& m_hood.isDeployed() == m_hood.wantsDeployed()
-				&& (wheelSpeeds.left + wheelSpeeds.right) < 0.03
-				&& ((isCloseShot && target.getDriveDistanceSinceCapture() < 5.0) || target.getAge() < 0.25)
-			) {
-				return SystemState.WAITING_FOR_FLYWHEEL;
-			}
-
-			// note fallthrough
+			maybeRunIntakes(intakeVelocityMetersPerSecond);
 		}
 
 		switch (m_wantedState) {
-			case FEEDING:
-				return SystemState.FEEDING;
+			case INTAKING:
+				return SystemState.INTAKING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
+		}
+	}
+
+	private SystemState handleOuttaking() {
+		m_turret.setDisabled();
+		m_hood.setDeployed(false);
+		m_shooter.setRPM(0.0);
+		m_intakeDeployer.set(true);
+
+		if (m_wantStateChangeTimer.get() > 0.25) {
+			maybeRunIntakes(-3.0);
+			m_intakes.forEach(Intake::clear);
+		}
+
+		if (m_wantStateChangeTimer.get() < 3.0) {
+			return SystemState.INTAKING;
+		}
+
+		switch (m_wantedState) {
+			case INTAKING:
+				return SystemState.INTAKING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
+		}
+	}
+
+	// TODO
+//	private SystemState handleFeeding() {
+//		if (m_stateChanged) {
+//
+//		}
+//	}
+
+	private SystemState handleWaitingForAlignment() {
+		m_intakeDeployer.set(false);
+
+		if (m_stateChanged && m_inventory.getFilledChamberCount() > 0) {
+			final var loadingChamber = m_inventory.getOptimalShootingChamber();
+			final var currentChamber = m_inventory.getNearestChamber(Inventory.Location.SHOOTER);
+			m_hopper.rotate(currentChamber.getDistance(loadingChamber));
+		}
+
+		if (m_periodicIO.target.isPresent()) {
+			final var target = m_periodicIO.target.get();
+			m_hood.setDeployed(target.getDistance() < Units.feet2Meters(7.0));
+
+			final var innerAdjustment = getInnerAdjustment().orElseGet(Rotation::identity);
+			setTurretTargetPoint(target.getFieldToTarget(), innerAdjustment);
+
+			if (isAligned(target, Rotation.degrees(1.5))
+				&& m_inventory.getFilledChamberCount() > 0
+				&& (target.getDistance() < Units.feet2Meters(5.0)
+					|| target.getDistance() > Units.feet2Meters(9.0))
+			) {
+				return SystemState.WAITING_FOR_FLYWHEEL;
+			}
+		} else {
+			setTurretFieldRotation(Rotation.degrees(0));
+		}
+
+		switch (m_wantedState) {
+			case INTAKING:
+				return SystemState.INTAKING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
 			case IDLE:
 			default:
 				return SystemState.IDLE;
@@ -188,17 +288,56 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleWaitingForFlywheel() {
-		m_shooter.setRPM(Constants.SHOOTER_RANGE_REGRESSION.predict(m_periodicIO.target.map(TargetState.CachedTarget::getTargetDistance).orElse(0.0)));
+		final var target = m_periodicIO.target.get();
+		final var targetDistance = target.getDistance();
 
-		if (m_shooter.atReference()) {
+		final double targetRPM;
+
+		if (target.getDistance() < Units.feet2Meters(5.0)) {
+			targetRPM = Constants.WALL_SHOOTING_RPM;
+		} else {
+			targetRPM = Constants.SHOOTER_RANGE_REGRESSION.predict(targetDistance);
+		}
+
+		m_shooter.setRPM(targetRPM);
+
+		if (!isAligned(m_periodicIO.target.get(), Rotation.degrees(3.0))) {
+			return SystemState.WAITING_FOR_ALIGNMENT;
+		}
+
+		if (m_turret.atReference(Rotation.degrees(0.15)) && isReadyToFire()) {
 			return SystemState.SHOOTING;
 		}
 
 		switch (m_wantedState) {
 			case INTAKING:
 				return SystemState.INTAKING;
-			case FEEDING:
-				return SystemState.FEEDING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_FLYWHEEL;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
+		}
+	}
+
+	public SystemState handleShooting() {
+		if (m_stateChanged) {
+			m_hopper.rotate(6);
+		}
+
+		if (!m_hopper.atRest()) {
+			return SystemState.SHOOTING;
+		}
+
+		switch (m_wantedState) {
+			case INTAKING:
+				return SystemState.INTAKING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
 			case IDLE:
 			default:
 				return SystemState.IDLE;
@@ -210,11 +349,65 @@ public final class Superstructure extends Subsystem {
 
 	}
 
-	private void setTurretTargetPoint(final Translation targetPoint) {
-		m_periodicIO.currentPose.getTranslation().difference(targetPoint).direction().difference(m_turret.getRotation());
+	private boolean isAligned(final TargetState.CachedTarget target, final Rotation tolerance) {
+		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
+
+		return m_turret.atReference(tolerance)
+			   && (wheelSpeeds.left + wheelSpeeds.right) < 0.03
+			   && ((target.getDistance() < 10.0 && target.getDriveDistanceSinceCapture() < 5.0) || target.getAge() < 0.25);
+	}
+
+	private boolean isReadyToFire() {
+		return m_shooter.atReference()
+			   && m_hopper.atRest()
+			   && m_hood.isDeployed() == m_hood.wantsDeployed();
+	}
+
+	private Optional<Rotation> getInnerAdjustment() {
+		if (Constants.USE_INNER_ADJUSTMENT) {
+			var outerDistance = m_periodicIO.target.get().getDistance();
+			var angleWallToRobot = Rotation.degrees(90).difference(Rotation.radians(abs(m_periodicIO.cameraRotation.getRadians())));
+			var angleTargetToRobot = angleWallToRobot.sum(Rotation.degrees(90));
+			var outerToInnerDistance = Constants.OUTER_TO_INNER_DISTANCE;
+			// law of cosines
+			var innerDistance = sqrt(outerDistance * outerDistance + outerToInnerDistance * outerToInnerDistance - 2 * outerDistance * outerToInnerDistance * angleTargetToRobot.cos());
+
+			var adjustment = Rotation.radians(asin(outerToInnerDistance * (angleTargetToRobot.sin() / innerDistance)));
+
+			if (Rotation.degrees(180).difference(adjustment).difference(angleTargetToRobot).getDegrees() > 21.46) {
+				return Optional.empty();
+			}
+
+			if (m_periodicIO.cameraRotation.getRotation().getRadians() > 0) {
+				adjustment = adjustment.inverse();
+			}
+
+			return Optional.of(adjustment);
+		} else {
+			return Optional.empty();
+		}
+	}
+
+	private void setTurretTargetPoint(final Translation targetPoint, final Rotation innerAdjustment) {
+		m_periodicIO.vehiclePose
+					.getTranslation()
+					.difference(targetPoint)
+					.direction()
+					.difference(m_periodicIO.cameraRotation)
+					.sum(innerAdjustment);
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
-		m_turret.setReferenceRotation(m_periodicIO.currentPose.getRotation().inverse().sum(fieldRotation));
+		m_turret.setReferenceRotation(m_periodicIO.vehiclePose.getRotation().inverse().sum(fieldRotation));
+	}
+
+	private void maybeRunIntakes(final double speedMetersPerSecond) {
+		m_intakes.forEach(intake -> {
+			if (intake.hasBall()) {
+				intake.setVelocity(0.0);
+			} else {
+				intake.setVelocity(speedMetersPerSecond);
+			}
+		});
 	}
 }

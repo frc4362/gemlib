@@ -17,7 +17,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Hopper extends Subsystem {
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
-			new MotorController.GearingParameters(1.0 / 77.575757, Units.inches2Meters(13.75) / 2.0, 1.0);
+			new MotorController.GearingParameters(1.0 / 96.9625, Units.inches2Meters(13.75) / 2.0, 1.0);
 
 	private static Hopper INSTANCE;
 
@@ -30,23 +30,19 @@ public final class Hopper extends Subsystem {
 	}
 
 	private final MotorController<CANSparkMax> m_motor;
-	private final Inventory m_inventory;
-	private final ColorSensorV3 m_sensor;
 	private final PeriodicIO m_periodicIO;
 
 	private Mode m_mode;
 
 	private Hopper() {
-		m_motor = MotorControllerFactory.createSparkMax(Constants.HOPPER_MOTOR_PORT, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
+		m_motor = MotorControllerFactory.createSparkMax(Constants.HOPPER_PORT, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setSelectedProfile(0);
 		m_motor.setPIDF(12.1, 0.0, 0.979, 0.0);
-//		m_motor.setClosedLoopVoltageRampRate(0.1);
+		m_motor.setInvertedOutput(true);
 		m_motor.setEncoderRotations(0.0);
 
-		m_inventory = new Inventory();
-		m_sensor = new ColorSensorV3(I2C.Port.kMXP);
 		m_periodicIO = new PeriodicIO();
 
 		m_mode = Mode.DISABLED;
@@ -54,8 +50,7 @@ public final class Hopper extends Subsystem {
 
 	public enum Mode {
 		DISABLED,
-		RATCHETING,
-		SURVEYING
+		RATCHETING
 	}
 
 	private static class PeriodicIO implements Loggable {
@@ -63,8 +58,6 @@ public final class Hopper extends Subsystem {
 		public double positionRotations = 0.0;
 		public Rotation velocityRotationsPerSecond = Rotation.identity();
 		public boolean atReference = false;
-
-		public ColorSensorV3.RawColor observedColor = new ColorSensorV3.RawColor(0, 0, 0, 0);
 	}
 
 	@Override
@@ -72,8 +65,8 @@ public final class Hopper extends Subsystem {
 //		m_periodicIO.observedColor = m_sensor.getRawColor();
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
 		m_periodicIO.velocityRotationsPerSecond = Rotation.radians(m_motor.getVelocityAngularRadiansPerSecond());
-		m_periodicIO.atReference = epsilonEquals(m_periodicIO.referenceRotations, m_periodicIO.positionRotations, (1.0 / 360.0))
-								   && epsilonEquals(m_periodicIO.velocityRotationsPerSecond.getDegrees(), 0.0, 0.5);
+		m_periodicIO.atReference = epsilonEquals(m_periodicIO.referenceRotations, m_periodicIO.positionRotations, (0.4 / 360.0))
+								   && epsilonEquals(m_periodicIO.velocityRotationsPerSecond.getDegrees(), 0.0, 2.0);
 	}
 
 	public synchronized void rotate(final int steps) {
@@ -94,6 +87,11 @@ public final class Hopper extends Subsystem {
 		switch (m_mode) {
 			case RATCHETING:
 				m_motor.setPositionRotations(m_periodicIO.referenceRotations);
+
+				if (m_periodicIO.atReference) {
+					m_mode = Mode.DISABLED;
+				}
+
 				break;
 			default:
 				m_motor.setDutyCycle(0.0);
