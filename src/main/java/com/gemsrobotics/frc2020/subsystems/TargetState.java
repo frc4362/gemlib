@@ -14,7 +14,7 @@ import edu.wpi.first.wpilibj.Timer;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class RobotState extends Subsystem {
+public final class TargetState extends Subsystem {
 	private static final double CACHE_DISTANCE_METERS = 8.0; // meters
 	private static final int BUFFER_SIZE = 400;
 	private static final MathUtils.Bounds STABILITY_RANGE = new MathUtils.Bounds(0.0, 1.0);
@@ -23,11 +23,11 @@ public final class RobotState extends Subsystem {
 			VEHICLE_TO_TURRET = RigidTransform.identity(),
 			TURRET_TO_CAMERA = RigidTransform.identity();
 
-	private static RobotState INSTANCE;
+	private static TargetState INSTANCE;
 
-	public static RobotState getInstance() {
+	public static TargetState getInstance() {
 		if (Objects.isNull(INSTANCE)) {
-			INSTANCE = new RobotState();
+			INSTANCE = new TargetState();
 		}
 
 		return INSTANCE;
@@ -37,7 +37,7 @@ public final class RobotState extends Subsystem {
 	private final InterpolatingTreeMap<InterpolatingDouble, Rotation> m_turretHeading;
 	private final PeriodicIO m_periodicIO;
 
-	private RobotState() {
+	private TargetState() {
 		m_odometer = Chassis.getInstance().getOdometer();
 		m_turretHeading = new InterpolatingTreeMap<>(BUFFER_SIZE);
 
@@ -97,15 +97,9 @@ public final class RobotState extends Subsystem {
 	protected synchronized void onUpdate(final double now) {
 		m_turretHeading.put(new InterpolatingDouble(now), m_periodicIO.newTurretRotation);
 
-<<<<<<< HEAD:src/main/java/com/gemsrobotics/frc2020/subsystems/RobotState.java
-		if (m_periodicIO.newTargetInfo.isPresent()) {
-			final var target = m_periodicIO.newTargetInfo.get();
-			final var fieldToTarget = getFieldToCamera(target.timestamp).transformBy(target.cameraToTarget);
-=======
 		if (m_periodicIO.targetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
 			final var newTarget = m_periodicIO.newTargetInfo.get();
 			final var fieldToTarget = getFieldToCamera(newTarget.timestamp).transformBy(newTarget.cameraToTarget);
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616:src/main/java/com/gemsrobotics/frc2020/subsystems/TargetState.java
 			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}
 	}
@@ -131,12 +125,15 @@ public final class RobotState extends Subsystem {
 		return m_turretHeading.getInterpolated(new InterpolatingDouble(timestamp));
 	}
 
-	public synchronized RigidTransform getFieldToTurret(final double timestamp) {
-		return getFieldToVehicle(timestamp).transformBy(VEHICLE_TO_TURRET).transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)));
+	public synchronized Rotation getFieldToTurret(final double timestamp) {
+		return getFieldToVehicle(timestamp).getRotation().rotateBy(getVehicleToTurret(timestamp));
 	}
 
 	public synchronized RigidTransform getFieldToCamera(final double timestamp) {
-		return getFieldToTurret(timestamp).transformBy(TURRET_TO_CAMERA);
+		return getFieldToVehicle(timestamp)
+					   .transformBy(VEHICLE_TO_TURRET)
+					   .transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)))
+					   .transformBy(TURRET_TO_CAMERA);
 	}
 
 	public synchronized Optional<CachedTarget> getCachedFieldToTarget() {

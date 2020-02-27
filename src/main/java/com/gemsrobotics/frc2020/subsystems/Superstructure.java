@@ -58,13 +58,8 @@ public final class Superstructure extends Subsystem {
 	private final Turret m_turret;
 	private final Hood m_hood;
 	private final Hopper m_hopper;
-<<<<<<< HEAD
-	private final RobotState m_targetState;
-
-=======
 	private final TargetState m_targetState;
 	private final List<Intake> m_intakes;
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 	private final Inventory m_inventory;
 
 	private final Solenoid m_intakeDeployer;
@@ -85,13 +80,8 @@ public final class Superstructure extends Subsystem {
 		m_turret = Turret.getInstance();
 		m_hood = Hood.getInstance();
 		m_hopper = Hopper.getInstance();
-<<<<<<< HEAD
-		m_targetState = RobotState.getInstance();
-
-=======
 		m_targetState = TargetState.getInstance();
 		m_intakes = Intake.getAll();
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 		m_inventory = new Inventory();
 
 		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
@@ -104,14 +94,9 @@ public final class Superstructure extends Subsystem {
 
 	private static class PeriodicIO {
 		private RigidTransform vehiclePose = RigidTransform.identity();
-<<<<<<< HEAD
-		private RigidTransform turretPose = RigidTransform.identity();
-		private Optional<RobotState.CachedTarget> target = Optional.empty();
-=======
 		private RigidTransform cameraPose = RigidTransform.identity();
 		private Rotation cameraRotation = Rotation.identity();
 		private Optional<TargetState.CachedTarget> target = Optional.empty();
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 	}
 
 	public synchronized void setWantedState(final WantedState state) {
@@ -120,15 +105,9 @@ public final class Superstructure extends Subsystem {
 	}
 
 	@Override
-<<<<<<< HEAD
-	protected void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.vehiclePose = m_targetState.getFieldToVehicle(timestamp);
-		m_periodicIO.turretPose = m_targetState.getFieldToTurret(timestamp);
-=======
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.vehiclePose = m_targetState.getFieldToVehicle(timestamp);
 		m_periodicIO.cameraPose = m_targetState.getFieldToCamera(timestamp);
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 		m_periodicIO.target = m_targetState.getCachedFieldToTarget();
 	}
 
@@ -195,12 +174,6 @@ public final class Superstructure extends Subsystem {
 		m_intakeDeployer.set(false);
 
 		switch (m_wantedState) {
-<<<<<<< HEAD
-			case INTAKING:
-				return SystemState.INTAKING;
-			case FEEDING:
-				return SystemState.FEEDING;
-=======
 			case INTAKING:
 				return SystemState.INTAKING;
 			case OUTTAKING:
@@ -233,7 +206,6 @@ public final class Superstructure extends Subsystem {
 				return SystemState.OUTTAKING;
 			case SHOOTING:
 				return SystemState.WAITING_FOR_ALIGNMENT;
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 			case IDLE:
 			default:
 				return SystemState.IDLE;
@@ -316,9 +288,6 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleWaitingForFlywheel() {
-<<<<<<< HEAD
-		m_shooter.setRPM(Constants.SHOOTER_RANGE_REGRESSION.predict(m_periodicIO.target.map(RobotState.CachedTarget::getTargetDistance).orElse(0.0)));
-=======
 		final var target = m_periodicIO.target.get();
 		final var targetDistance = target.getDistance();
 
@@ -352,7 +321,6 @@ public final class Superstructure extends Subsystem {
 				return SystemState.IDLE;
 		}
 	}
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 
 	public SystemState handleShooting() {
 		if (m_stateChanged) {
@@ -381,14 +349,6 @@ public final class Superstructure extends Subsystem {
 
 	}
 
-<<<<<<< HEAD
-	private void setTurretTargetPoint(final Translation targetPoint) {
-		m_turret.setReferenceRotation(m_periodicIO.turretPose.getTranslation().difference(targetPoint).direction().difference(m_turret.getRotation()));
-	}
-
-	private void setTurretFieldRotation(final Rotation fieldRotation) {
-		m_turret.setReferenceRotation(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
-=======
 	private boolean isAligned(final TargetState.CachedTarget target, final Rotation tolerance) {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
 
@@ -449,6 +409,5 @@ public final class Superstructure extends Subsystem {
 				intake.setVelocity(speedMetersPerSecond);
 			}
 		});
->>>>>>> 88439fa085ec7fe649eebc5fdaed18d5f01de616
 	}
 }
