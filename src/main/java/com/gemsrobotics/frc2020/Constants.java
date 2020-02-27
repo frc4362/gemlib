@@ -2,13 +2,19 @@ package com.gemsrobotics.frc2020;
 
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.PolynomialRegression;
+import com.gemsrobotics.lib.math.se2.Translation;
+import com.gemsrobotics.lib.utils.Units;
 
 public class Constants {
 	private Constants() { }
 
-	public static final boolean USE_INNER_ADJUSTMENT = false;
+	public static final double FIELD_LENGTH_METERS = 16.4846;
 
-	public static final double OUTER_TO_INNER_DISTANCE = 0.74295;
+	public static final boolean USE_INNER_ADJUSTMENT = false;
+	public static final Translation OUTER_TO_INNER = new Translation(0.74295, 0.0);
+
+	public static final double MAX_SHOT_RANGE_METERS = Units.feet2Meters(40.0);
+	public static final double CLOSE_SHOT_RANGE_METERS = Units.feet2Meters(5.0);
 
 	public static final double WALL_SHOOTING_RPM = 0.0;
 	public static final double[][] SHOOTER_RANGE_RPM = {

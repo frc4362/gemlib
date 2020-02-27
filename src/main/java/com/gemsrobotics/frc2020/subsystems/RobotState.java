@@ -1,5 +1,6 @@
 package com.gemsrobotics.frc2020.subsystems;
 
+import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.frc2020.TargetServer;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
@@ -8,26 +9,25 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.drivetrain.FieldToVehicleEstimator;
-import com.gemsrobotics.lib.utils.MathUtils;
 import edu.wpi.first.wpilibj.Timer;
 
 import java.util.Objects;
 import java.util.Optional;
 
-public final class TargetState extends Subsystem {
-	private static final double CACHE_DISTANCE_METERS = 8.0; // meters
+public final class RobotState extends Subsystem {
 	private static final int BUFFER_SIZE = 400;
-	private static final MathUtils.Bounds STABILITY_RANGE = new MathUtils.Bounds(0.0, 1.0);
+	public static final int MANY_METERS = 100;
+	private static final Rotation INNER_SHOT_ALLOWED_DEFLECTION = Rotation.degrees(21.46);
 
 	private static final RigidTransform
 			VEHICLE_TO_TURRET = RigidTransform.identity(),
 			TURRET_TO_CAMERA = RigidTransform.identity();
 
-	private static TargetState INSTANCE;
+	private static RobotState INSTANCE;
 
-	public static TargetState getInstance() {
+	public static RobotState getInstance() {
 		if (Objects.isNull(INSTANCE)) {
-			INSTANCE = new TargetState();
+			INSTANCE = new RobotState();
 		}
 
 		return INSTANCE;
@@ -37,7 +37,7 @@ public final class TargetState extends Subsystem {
 	private final InterpolatingTreeMap<InterpolatingDouble, Rotation> m_turretHeading;
 	private final PeriodicIO m_periodicIO;
 
-	private TargetState() {
+	private RobotState() {
 		m_odometer = Chassis.getInstance().getOdometer();
 		m_turretHeading = new InterpolatingTreeMap<>(BUFFER_SIZE);
 
@@ -46,14 +46,14 @@ public final class TargetState extends Subsystem {
 
 	public class CachedTarget {
 		private final Timer m_timer;
-		private final Translation m_fieldToTarget;
+		private final Translation m_fieldToOuterGoal;
 		private final double m_captureDriveDistance;
 
 		public CachedTarget(final Translation fieldToTarget) {
 			m_timer = new Timer();
 			m_timer.start();
 
-			m_fieldToTarget = fieldToTarget;
+			m_fieldToOuterGoal = fieldToTarget;
 
 			m_captureDriveDistance = m_odometer.getDistanceDriven();
 		}
@@ -62,16 +62,30 @@ public final class TargetState extends Subsystem {
 			return m_timer.get();
 		}
 
-		public Translation getFieldToTarget() {
-			return m_fieldToTarget;
-		}
-
 		public double getDriveDistanceSinceCapture() {
 			return m_odometer.getDistanceDriven() - m_captureDriveDistance;
 		}
 
-		public double getDistance() {
-			return m_odometer.getLatestFieldToVehicleValue().getTranslation().difference(m_fieldToTarget).norm();
+		public Translation getFieldToOuterGoal() {
+			return m_fieldToOuterGoal;
+		}
+
+		public Optional<Translation> getFieldToInnerGoal() {
+			final var innerGoal = m_fieldToOuterGoal.translateBy(Constants.OUTER_TO_INNER);
+			final var innerA = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION, MANY_METERS).inverse());
+			final var innerC = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION.inverse(), MANY_METERS).inverse());
+			// get latest field to turret
+			final var turretPose = RobotState.this.getLatestFieldToVehicle().transformBy(VEHICLE_TO_TURRET).transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
+
+			if (turretPose.getTranslation().isWithinAngle(innerA, innerGoal, innerC)) {
+				return Optional.of(innerGoal);
+			} else {
+				return Optional.empty();
+			}
+		}
+
+		public Translation getOptimalGoal() {
+			return Constants.USE_INNER_ADJUSTMENT ? getFieldToInnerGoal().orElseGet(this::getFieldToOuterGoal) : getFieldToOuterGoal();
 		}
 	}
 
@@ -99,6 +113,7 @@ public final class TargetState extends Subsystem {
 
 		if (m_periodicIO.targetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
 			final var newTarget = m_periodicIO.newTargetInfo.get();
+			// this is where latency compensation happens
 			final var fieldToTarget = getFieldToCamera(newTarget.timestamp).transformBy(newTarget.cameraToTarget);
 			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}
@@ -106,6 +121,7 @@ public final class TargetState extends Subsystem {
 
 	@Override
 	protected synchronized void onStop(final double timestamp) {
+
 	}
 
 	@Override

@@ -77,8 +77,8 @@ public final class Shooter extends Subsystem implements Loggable {
 		m_shooterFeedforward = new MotorFeedforward(0.323, 0.118 / 60.0, 0.0004 / 60.0);
 		m_feederFeedforward = new MotorFeedforward(0.0608, 0.109 / 60.0, 0.0);
 
-		m_shooterSamples = new RollingAverageDouble(RPM_SAMPLE_SIZE);
-		m_feederSamples = new RollingAverageDouble(RPM_SAMPLE_SIZE);
+		m_shooterSamples = new LimitedQueue<>(RPM_SAMPLE_SIZE);
+		m_feederSamples = new LimitedQueue<>(RPM_SAMPLE_SIZE);
 
 		m_periodicIO = new PeriodicIO();
 	}

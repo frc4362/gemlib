@@ -18,6 +18,7 @@ import java.util.Optional;
 import static java.lang.Math.*;
 
 public final class Superstructure extends Subsystem {
+	public static final double TARGET_CACHE_DISTANCE = 5.0;
 	private static Superstructure INSTANCE;
 
 	public static Superstructure getInstance() {
@@ -58,7 +59,7 @@ public final class Superstructure extends Subsystem {
 	private final Turret m_turret;
 	private final Hood m_hood;
 	private final Hopper m_hopper;
-	private final TargetState m_targetState;
+	private final RobotState m_targetState;
 	private final List<Intake> m_intakes;
 	private final Inventory m_inventory;
 
@@ -80,7 +81,7 @@ public final class Superstructure extends Subsystem {
 		m_turret = Turret.getInstance();
 		m_hood = Hood.getInstance();
 		m_hopper = Hopper.getInstance();
-		m_targetState = TargetState.getInstance();
+		m_targetState = RobotState.getInstance();
 		m_intakes = Intake.getAll();
 		m_inventory = new Inventory();
 
@@ -95,7 +96,7 @@ public final class Superstructure extends Subsystem {
 	private static class PeriodicIO {
 		private RigidTransform vehiclePose = RigidTransform.identity();
 		private RigidTransform turretPose = RigidTransform.identity();
-		private Optional<TargetState.CachedTarget> target = Optional.empty();
+		private Optional<RobotState.CachedTarget> target = Optional.empty();
 	}
 
 	public synchronized void setWantedState(final WantedState state) {
@@ -257,16 +258,13 @@ public final class Superstructure extends Subsystem {
 
 		if (m_periodicIO.target.isPresent()) {
 			final var target = m_periodicIO.target.get();
-			m_hood.setDeployed(target.getDistance() < Units.feet2Meters(7.0));
+			final var goal = target.getOptimalGoal();
+			final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
-			final var innerAdjustment = getInnerAdjustment().orElseGet(Rotation::identity);
-			setTurretTargetPoint(target.getFieldToTarget(), innerAdjustment);
+			m_hood.setDeployed(outerDistance < Constants.CLOSE_SHOT_RANGE_METERS);
+			setTurretTargetPoint(goal);
 
-			if (isAligned(target, Rotation.degrees(1.5))
-				&& m_inventory.getFilledChamberCount() > 0
-				&& (target.getDistance() < Units.feet2Meters(5.0)
-					|| target.getDistance() > Units.feet2Meters(9.0))
-			) {
+			if (isAligned(target, Rotation.degrees(1.5), true) && m_inventory.getFilledChamberCount() > 0) {
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			}
 		} else {
@@ -288,11 +286,11 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handleWaitingForFlywheel() {
 		final var target = m_periodicIO.target.get();
-		final var targetDistance = target.getDistance();
+		final var targetDistance = target.getOptimalGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 		final double targetRPM;
 
-		if (target.getDistance() < Units.feet2Meters(5.0)) {
+		if (targetDistance < Constants.WALL_SHOOTING_RPM) {
 			targetRPM = Constants.WALL_SHOOTING_RPM;
 		} else {
 			targetRPM = Constants.SHOOTER_RANGE_REGRESSION.predict(targetDistance);
@@ -300,7 +298,7 @@ public final class Superstructure extends Subsystem {
 
 		m_shooter.setRPM(targetRPM);
 
-		if (!isAligned(m_periodicIO.target.get(), Rotation.degrees(3.0))) {
+		if (!isAligned(m_periodicIO.target.get(), Rotation.degrees(3.0), false)) {
 			return SystemState.WAITING_FOR_ALIGNMENT;
 		}
 
@@ -348,12 +346,15 @@ public final class Superstructure extends Subsystem {
 
 	}
 
-	private boolean isAligned(final TargetState.CachedTarget target, final Rotation tolerance) {
+	private boolean isAligned(final RobotState.CachedTarget target, final Rotation tolerance, final boolean allowDeadspot) {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
+		final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
+		final var isCloseShot = outerDistance < Constants.CLOSE_SHOT_RANGE_METERS;
+		final var isFarShot = allowDeadspot && outerDistance > (Constants.CLOSE_SHOT_RANGE_METERS + Units.feet2Meters(1.5));
 
 		return m_turret.atReference(tolerance)
 			   && (wheelSpeeds.left + wheelSpeeds.right) < 0.03
-			   && ((target.getDistance() < 10.0 && target.getDriveDistanceSinceCapture() < 5.0) || target.getAge() < 0.25);
+			   && ((isCloseShot && target.getDriveDistanceSinceCapture() < TARGET_CACHE_DISTANCE) || (isFarShot && target.getAge() < 0.25));
 	}
 
 	private boolean isReadyToFire() {
@@ -362,42 +363,16 @@ public final class Superstructure extends Subsystem {
 			   && m_hood.isDeployed() == m_hood.wantsDeployed();
 	}
 
-	private Optional<Rotation> getInnerAdjustment() {
-		if (Constants.USE_INNER_ADJUSTMENT) {
-			var outerDistance = m_periodicIO.target.get().getDistance();
-			var angleWallToRobot = Rotation.degrees(90).difference(Rotation.radians(abs(m_periodicIO.turretPose.getRotation().getRadians())));
-			var angleTargetToRobot = angleWallToRobot.sum(Rotation.degrees(90));
-			var outerToInnerDistance = Constants.OUTER_TO_INNER_DISTANCE;
-			// law of cosines
-			var innerDistance = sqrt(outerDistance * outerDistance + outerToInnerDistance * outerToInnerDistance - 2 * outerDistance * outerToInnerDistance * angleTargetToRobot.cos());
-
-			var adjustment = Rotation.radians(asin(outerToInnerDistance * (angleTargetToRobot.sin() / innerDistance)));
-
-			if (Rotation.degrees(180).difference(adjustment).difference(angleTargetToRobot).getDegrees() > 21.46) {
-				return Optional.empty();
-			}
-
-			if (m_periodicIO.turretPose.getRotation().getRadians() > 0) {
-				adjustment = adjustment.inverse();
-			}
-
-			return Optional.of(adjustment);
-		} else {
-			return Optional.empty();
-		}
-	}
-
-	private void setTurretTargetPoint(final Translation targetPoint, final Rotation innerAdjustment) {
+	private void setTurretTargetPoint(final Translation targetPoint) {
 		m_turret.setReferenceRotation(m_periodicIO.turretPose
-											   .getTranslation()
-											   .difference(targetPoint)
-											   .direction()
-											   .difference(m_periodicIO.turretPose.getRotation())
-											   .sum(innerAdjustment));
+											      .getTranslation()
+											      .difference(targetPoint)
+											      .direction()
+											      .difference(m_periodicIO.turretPose.getRotation()));
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
-		m_turret.setReferenceRotation(m_periodicIO.vehiclePose.getRotation().inverse().sum(fieldRotation));
+		m_turret.setReferenceRotation(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
 	}
 
 	private void maybeRunIntakes(final double speedMetersPerSecond) {
