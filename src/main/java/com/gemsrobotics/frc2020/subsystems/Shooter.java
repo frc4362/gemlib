@@ -47,7 +47,6 @@ public final class Shooter extends Subsystem implements Loggable {
 
 	private Shooter() {
 		m_shooterMaster = MotorControllerFactory.createHighPerformanceTalonFX(Constants.SHOOTER_MASTER_PORT);
-		m_shooterMaster.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 		m_shooterMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
 		m_shooterMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_shooterMaster.setInvertedOutput(false);
@@ -55,13 +54,11 @@ public final class Shooter extends Subsystem implements Loggable {
 		m_shooterMaster.setPIDF(SHOOTER_GAINS);
 
 		m_shooterSlave = MotorControllerFactory.createHighPerformanceTalonFX(Constants.SHOOTER_SLAVE_PORT);
-		m_shooterMaster.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 		m_shooterSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
 		m_shooterSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_shooterSlave.follow(m_shooterMaster, true);
 
 		m_feederMaster = MotorControllerFactory.createHighPerformanceTalonFX(Constants.FEEDER_MASTER_PORT);
-		m_feederMaster.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 		m_feederMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_feederMaster.setGearingParameters(1.5, SHOOTER_WHEEL_RADIUS, 2048);
 		m_feederMaster.setSelectedProfile(0);
@@ -69,7 +66,6 @@ public final class Shooter extends Subsystem implements Loggable {
 		m_feederMaster.setInvertedOutput(false);
 
 		m_feederSlave = MotorControllerFactory.createHighPerformanceTalonFX(Constants.FEEDER_SLAVE_PORT);
-		m_feederSlave.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
 		m_feederSlave.setGearingParameters(1.5, SHOOTER_WHEEL_RADIUS, 2048);
 		m_feederSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_feederSlave.follow(m_feederMaster, false);
