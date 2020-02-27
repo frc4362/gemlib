@@ -137,7 +137,7 @@ public class Translation implements ITranslation2d<Translation> {
         final double cosAngle = dot(a, b) / (a.norm() * b.norm());
 
         if (Double.isNaN(cosAngle)) {
-            return new Rotation();
+            return Rotation.identity();
         }
 
         return Rotation.radians(acos(min(1.0, max(cosAngle, -1.0))));
@@ -231,7 +231,7 @@ public class Translation implements ITranslation2d<Translation> {
 
     @Override
     public double distance(final Translation other) {
-        return inverse().translateBy(other).norm();
+        return difference(other).norm();
     }
 
     @Override
