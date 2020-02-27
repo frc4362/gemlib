@@ -94,8 +94,7 @@ public final class Superstructure extends Subsystem {
 
 	private static class PeriodicIO {
 		private RigidTransform vehiclePose = RigidTransform.identity();
-		private RigidTransform cameraPose = RigidTransform.identity();
-		private Rotation cameraRotation = Rotation.identity();
+		private RigidTransform turretPose = RigidTransform.identity();
 		private Optional<TargetState.CachedTarget> target = Optional.empty();
 	}
 
@@ -107,7 +106,7 @@ public final class Superstructure extends Subsystem {
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.vehiclePose = m_targetState.getFieldToVehicle(timestamp);
-		m_periodicIO.cameraPose = m_targetState.getFieldToCamera(timestamp);
+		m_periodicIO.turretPose = m_targetState.getFieldToTurret(timestamp);
 		m_periodicIO.target = m_targetState.getCachedFieldToTarget();
 	}
 
@@ -366,7 +365,7 @@ public final class Superstructure extends Subsystem {
 	private Optional<Rotation> getInnerAdjustment() {
 		if (Constants.USE_INNER_ADJUSTMENT) {
 			var outerDistance = m_periodicIO.target.get().getDistance();
-			var angleWallToRobot = Rotation.degrees(90).difference(Rotation.radians(abs(m_periodicIO.cameraRotation.getRadians())));
+			var angleWallToRobot = Rotation.degrees(90).difference(Rotation.radians(abs(m_periodicIO.turretPose.getRotation().getRadians())));
 			var angleTargetToRobot = angleWallToRobot.sum(Rotation.degrees(90));
 			var outerToInnerDistance = Constants.OUTER_TO_INNER_DISTANCE;
 			// law of cosines
@@ -378,7 +377,7 @@ public final class Superstructure extends Subsystem {
 				return Optional.empty();
 			}
 
-			if (m_periodicIO.cameraRotation.getRotation().getRadians() > 0) {
+			if (m_periodicIO.turretPose.getRotation().getRadians() > 0) {
 				adjustment = adjustment.inverse();
 			}
 
@@ -389,12 +388,12 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private void setTurretTargetPoint(final Translation targetPoint, final Rotation innerAdjustment) {
-		m_periodicIO.vehiclePose
-					.getTranslation()
-					.difference(targetPoint)
-					.direction()
-					.difference(m_periodicIO.cameraRotation)
-					.sum(innerAdjustment);
+		m_turret.setReferenceRotation(m_periodicIO.turretPose
+											   .getTranslation()
+											   .difference(targetPoint)
+											   .direction()
+											   .difference(m_periodicIO.turretPose.getRotation())
+											   .sum(innerAdjustment));
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {

@@ -125,15 +125,12 @@ public final class TargetState extends Subsystem {
 		return m_turretHeading.getInterpolated(new InterpolatingDouble(timestamp));
 	}
 
-	public synchronized Rotation getFieldToTurret(final double timestamp) {
-		return getFieldToVehicle(timestamp).getRotation().rotateBy(getVehicleToTurret(timestamp));
+	public synchronized RigidTransform getFieldToTurret(final double timestamp) {
+		return getFieldToVehicle(timestamp).transformBy(VEHICLE_TO_TURRET).transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)));
 	}
 
 	public synchronized RigidTransform getFieldToCamera(final double timestamp) {
-		return getFieldToVehicle(timestamp)
-					   .transformBy(VEHICLE_TO_TURRET)
-					   .transformBy(RigidTransform.fromRotation(getVehicleToTurret(timestamp)))
-					   .transformBy(TURRET_TO_CAMERA);
+		return getFieldToTurret(timestamp).transformBy(TURRET_TO_CAMERA);
 	}
 
 	public synchronized Optional<CachedTarget> getCachedFieldToTarget() {
