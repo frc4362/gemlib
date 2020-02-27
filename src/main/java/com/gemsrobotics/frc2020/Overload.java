@@ -22,7 +22,6 @@ public final class Overload extends TimedRobot {
 	private Shooter m_shooter;
 	private Turret m_turret;
 
-
 	private Limelight m_limelight;
 	private DoubleSolenoid m_pto;
 	private Solenoid m_kicker, m_hood, m_intakeSol;
