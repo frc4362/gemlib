@@ -36,7 +36,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		final double kV = 0.2345;//12.0 / freeSpeed;
 		final double kA = 0.011;
 		final double kS = 0.27;
-		final double mass = 23.0;
+		final double mass = 66.678;
 
 		return new Config() {{
 			maxVoltage = 12.0;
@@ -79,10 +79,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			openLoopConfig = new OpenLoopDriveHelper.Config() {{
 				useSineAttack = true;
 				zNonLinearityHighGear = 1.0;
-				zNonLinearityLowGear = 1.0;
+				zNonLinearityLowGear = 0.85;
 
 				sensitivityHighGear = 0.65;
-				sensitivityLowGear = 0.4;
+				sensitivityLowGear = 1.0;
 
 				negativeInertiaScalarHigh = 4.0;
 				negativeInertiaThresholdLow = 0.65;
@@ -90,8 +90,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				negativeInertiaCloseScalarLow = 4.0;
 				negativeInertiaFarScalarLow = 5.0;
 
-				quickStopDeadband = 0.5;
-				quickStopScalar = 5.0;
+				quickStopDeadband = 0.3; // 0.5
+				quickStopScalar = 3.0; // 5.0
 				quickStopWeight = 0.1;
 			}};
 		}};

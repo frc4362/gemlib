@@ -17,7 +17,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Hopper extends Subsystem {
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
-			new MotorController.GearingParameters(1.0 / 96.9625, Units.inches2Meters(13.75) / 2.0, 1.0);
+			new MotorController.GearingParameters(1.0 / 135.7475, Units.inches2Meters(13.75) / 2.0, 1.0);
 
 	private static Hopper INSTANCE;
 

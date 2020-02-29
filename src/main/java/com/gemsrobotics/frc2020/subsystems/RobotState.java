@@ -75,7 +75,10 @@ public final class RobotState extends Subsystem {
 			final var innerA = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION, MANY_METERS).inverse());
 			final var innerC = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION.inverse(), MANY_METERS).inverse());
 			// get latest field to turret
-			final var turretPose = RobotState.this.getLatestFieldToVehicle().transformBy(VEHICLE_TO_TURRET).transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue())).transformBy(TURRET_TO_CAMERA);
+			final var turretPose = RobotState.this.getLatestFieldToVehicle()
+												   .transformBy(VEHICLE_TO_TURRET)
+												   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()))
+												   .transformBy(TURRET_TO_CAMERA);
 
 			if (turretPose.getTranslation().isWithinAngle(innerA, innerGoal, innerC)) {
 				return Optional.of(innerGoal);
@@ -121,7 +124,6 @@ public final class RobotState extends Subsystem {
 
 	@Override
 	protected synchronized void onStop(final double timestamp) {
-
 	}
 
 	@Override

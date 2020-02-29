@@ -51,7 +51,7 @@ public final class Gemstick extends Joystick {
 		 * @return The default function pipeline
 		 */
 		public static Function<Frame, Frame> defaultPipeline() {
-			return Deadbands.makeInverts(false, true, false)
+			return Deadbands.makeInverts(true, true, false)
                     .andThen(Deadbands.makeRadialDeadband(0.06))
                     .andThen(Deadbands.makeZDeadband(0.06));
 		}

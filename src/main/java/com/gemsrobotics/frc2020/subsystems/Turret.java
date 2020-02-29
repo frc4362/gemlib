@@ -37,7 +37,7 @@ public final class Turret extends Subsystem implements Loggable {
 		return INSTANCE;
 	}
 
-	private final MotorController<TalonSRX> m_motor;
+	public final MotorController<TalonSRX> m_motor;
 	private final PeriodicIO m_periodicIO;
 
 	private Mode m_controlMode;
@@ -47,6 +47,7 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+		m_motor.setInvertedOutput(false);
 		m_motor.setSelectedProfile(0);
 		m_motor.setEncoderRotations(0);
 		m_motor.setPIDF(TURRET_GAINS);

@@ -25,10 +25,10 @@ public class Constants {
 	public static final PolynomialRegression SHOOTER_RANGE_REGRESSION = PolynomialRegression.of(SHOOTER_RANGE_RPM, 2);
 
 	public static final int[] DRIVE_PORTS = { 1, 2, 3, 4 };
-	public static final int FEEDER_MASTER_PORT = 5;
-	public static final int FEEDER_SLAVE_PORT = 6;
-	public static final int SHOOTER_MASTER_PORT = 7;
-	public static final int SHOOTER_SLAVE_PORT = 8;
+	public static final int FEEDER_MASTER_PORT = 7;
+	public static final int FEEDER_SLAVE_PORT = 8;
+	public static final int SHOOTER_MASTER_PORT = 5;
+	public static final int SHOOTER_SLAVE_PORT = 6;
 
 	public static final int HOPPER_PORT = 12;
 	public static final int TURRET_PORT = 13;
