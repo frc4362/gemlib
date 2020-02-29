@@ -7,8 +7,6 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.ColorSensorV3;
-import edu.wpi.first.wpilibj.I2C;
 import io.github.oblarg.oblog.Loggable;
 
 import java.util.Objects;
@@ -16,8 +14,9 @@ import java.util.Objects;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Hopper extends Subsystem {
+	private static final double STICTION_VOLTS = 0.488;
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
-			new MotorController.GearingParameters(1.0 / 135.7475, Units.inches2Meters(13.75) / 2.0, 1.0);
+			new MotorController.GearingParameters(1.0 / 310.28, Units.inches2Meters(13.75) / 2.0, 1.0);
 
 	private static Hopper INSTANCE;
 
@@ -39,7 +38,7 @@ public final class Hopper extends Subsystem {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setSelectedProfile(0);
-		m_motor.setPIDF(12.1, 0.0, 0.979, 0.0);
+		m_motor.setPIDF(3.98, 0.0, 0.24, 0.0);
 		m_motor.setInvertedOutput(true);
 		m_motor.setEncoderRotations(0.0);
 

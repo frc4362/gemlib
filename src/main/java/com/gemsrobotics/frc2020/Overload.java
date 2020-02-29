@@ -33,6 +33,7 @@ public final class Overload extends TimedRobot implements Loggable {
 	private SubsystemManager m_subsystemManager;
 	private MotorController<CANSparkMax> m_1, m_2, m_3, m_h;
 
+	Compressor m_compressor;
 	Gemstick m_stickLeft, m_stickRight;
 	XboxController m_gamepad;
 
@@ -42,8 +43,10 @@ public final class Overload extends TimedRobot implements Loggable {
 		m_stickLeft = new Gemstick(0);
 		m_stickRight = new Gemstick(1);
 		m_shooter = Shooter.getInstance();
-//		m_hopper = Hopper.getInstance();
-//		m_turret = Turret.getInstance();
+		m_hopper = Hopper.getInstance();
+		m_turret = Turret.getInstance();
+		m_compressor = new Compressor();
+		m_compressor.setClosedLoopControl(false);
 
 		m_limelight = new Limelight() {
 			@Override
@@ -76,7 +79,7 @@ public final class Overload extends TimedRobot implements Loggable {
 		m_3.setInvertedOutput(true);
 		m_h = MotorControllerFactory.createDefaultSparkMax(Constants.HOPPER_PORT);
 
-		m_subsystemManager = new SubsystemManager(m_chassis, m_shooter);
+		m_subsystemManager = new SubsystemManager(m_chassis, m_hopper, m_turret, m_shooter);
 		m_gamepad = new XboxController(2);
 
 		SmartDashboard.putNumber("Shooter RPM", 0.0);
@@ -93,26 +96,25 @@ public final class Overload extends TimedRobot implements Loggable {
 
 	@Override
 	public void teleopInit() {
+		new Compressor().setClosedLoopControl(false);
 		m_subsystemManager.start();
 	}
 
 	@Override
 	public void teleopPeriodic() {
-		m_pto.set(m_gamepad.getBumper(GenericHID.Hand.kRight) ? DoubleSolenoid.Value.kForward : DoubleSolenoid.Value.kReverse);
-		m_hood.set(m_gamepad.getAButton());
-		m_intakeSol.set(m_gamepad.getBButton());
-		m_kicker.set(m_gamepad.getXButton());
+		m_intakeSol.set(m_gamepad.getAButton());
+
 		double throttle = -m_stickLeft.getY();
 		double wheel = -m_stickRight.getX();
 		boolean quickturn = m_stickRight.getRawButton(3);
 		SmartDashboard.putNumber("throttle", throttle);
 		SmartDashboard.putNumber("wheel", wheel);
-		m_chassis.setCurvatureDrive(Math.copySign(throttle * throttle, throttle), wheel, quickturn);
+//		m_chassis.setCurvatureDrive(Math.copySign(throttle * throttle, throttle), wheel, quickturn);
 
 		//m_pto.set(DoubleSolenoid.Value.kForward);
 
-//		m_turret.setReferenceRotation(Rotation.degrees(SmartDashboard.getNumber("Turret Degrees", 0.0)));
-//		SmartDashboard.putNumber("Turret Encoder Pos", m_turret.m_motor.getInternalController().getSelectedSensorPosition());
+		m_turret.setReferenceRotation(Rotation.degrees(SmartDashboard.getNumber("Turret Degrees", 0.0)));
+		SmartDashboard.putNumber("Turret Encoder Pos", m_turret.m_motor.getInternalController().getSelectedSensorPosition());
 
 		final double shooterRpm = SmartDashboard.getNumber("Shooter RPM", 0.0);
 		m_shooter.setRPM(shooterRpm);
@@ -122,14 +124,14 @@ public final class Overload extends TimedRobot implements Loggable {
 		m_2.setDutyCycle(intakeSpeed);
 		m_3.setDutyCycle(intakeSpeed);
 
-//		if (m_gamepad.getXButtonPressed()) {
-//			m_hopper.rotate(1);
-//		} else if (m_gamepad.getBButtonPressed()) {
-//			m_hopper.rotate(6);
-//		} else if(m_gamepad.getYButtonPressed()){
-//			m_kicker.set(true);
-//		} else if(m_gamepad.getAButtonPressed()){
-//			m_kicker.set(false);
-//		}
+		if (m_gamepad.getXButtonPressed()) {
+			m_hopper.rotate(1);
+		} else if (m_gamepad.getBButtonPressed()) {
+			m_hopper.rotate(6);
+		} else if(m_gamepad.getYButtonPressed()){
+			m_kicker.set(true);
+		} else if(m_gamepad.getAButtonPressed()){
+			m_kicker.set(false);
+		}
 	}
 }

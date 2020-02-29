@@ -23,7 +23,7 @@ public final class Turret extends Subsystem implements Loggable {
 	private static final double STICTION_VOLTS = 0.0;
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
-	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(4.0, 0.0, 17.5, 0.0);
+	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
 	private static final double MAX_VELOCITY = 0.823; // meters / second
 	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.0 / 360.0));
 
@@ -47,6 +47,7 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+		m_motor.getInternalController().setSensorPhase(true);
 		m_motor.setInvertedOutput(false);
 		m_motor.setSelectedProfile(0);
 		m_motor.setEncoderRotations(0);
