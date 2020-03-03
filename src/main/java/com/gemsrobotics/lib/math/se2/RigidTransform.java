@@ -110,7 +110,7 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
     }
 
     /**
-     * Transforming this RigidTransform2d means first translating by other.translation and then rotating by
+     * Transforming this RigidTransform means first translating by other.translation and then rotating by
      * other.rotation
      *
      * @param other The other transform.

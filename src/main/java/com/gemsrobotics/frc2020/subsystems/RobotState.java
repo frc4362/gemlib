@@ -1,7 +1,6 @@
 package com.gemsrobotics.frc2020.subsystems;
 
 import com.gemsrobotics.frc2020.Constants;
-import com.gemsrobotics.frc2020.TargetServer;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -9,7 +8,9 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.drivetrain.FieldToVehicleEstimator;
+import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -20,8 +21,8 @@ public final class RobotState extends Subsystem {
 	private static final Rotation INNER_SHOT_ALLOWED_DEFLECTION = Rotation.degrees(21.46);
 
 	private static final RigidTransform
-			VEHICLE_TO_TURRET = RigidTransform.identity(),
-			TURRET_TO_CAMERA = RigidTransform.identity();
+			VEHICLE_TO_TURRET = RigidTransform.fromTranslation(new Translation(Units.inches2Meters(-7.5), 0)),
+			TURRET_TO_CAMERA = RigidTransform.fromTranslation(new Translation(Units.inches2Meters(9.04), 0));
 
 	private static RobotState INSTANCE;
 
@@ -67,11 +68,18 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Translation getFieldToOuterGoal() {
-			return m_fieldToOuterGoal;
+			// L A T E N C Y
+			final var latest = getLatestFieldToVehicle();
+			final double vy = m_fieldToOuterGoal.y() - latest.getTranslation().y();
+			final double vx = m_fieldToOuterGoal.x() - latest.getTranslation().x();
+			final double angleToAim = Math.atan2(vy, vx);
+			final double range = Math.sqrt(vy * vy + vx * vx);
+
+			return Translation.fromPolar(Rotation.radians(angleToAim), range);
 		}
 
 		public Optional<Translation> getFieldToInnerGoal() {
-			final var innerGoal = m_fieldToOuterGoal.translateBy(Constants.OUTER_TO_INNER);
+			final var innerGoal = getFieldToOuterGoal().translateBy(Constants.OUTER_TO_INNER);
 			final var innerA = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION, MANY_METERS).inverse());
 			final var innerC = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION.inverse(), MANY_METERS).inverse());
 			// get latest field to turret
@@ -117,7 +125,8 @@ public final class RobotState extends Subsystem {
 		if (m_periodicIO.targetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
 			final var newTarget = m_periodicIO.newTargetInfo.get();
 			// this is where latency compensation happens
-			final var fieldToTarget = getFieldToCamera(newTarget.timestamp).transformBy(newTarget.cameraToTarget);
+			SmartDashboard.putString("Camera to Target", newTarget.getCameraToTarget().toString());
+			final var fieldToTarget = getFieldToCamera(newTarget.getTimestamp()).transformBy(newTarget.getCameraToTarget());
 			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}
 	}

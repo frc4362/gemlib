@@ -46,7 +46,7 @@ public final class Gemstick extends Joystick {
 	 * This is doable as it doesn't matter which order you apply these in
 	 */
 	@SuppressWarnings("unused")
-	private static class Deadbands {
+	public static class Deadbands {
 		/**
 		 * @return The default function pipeline
 		 */

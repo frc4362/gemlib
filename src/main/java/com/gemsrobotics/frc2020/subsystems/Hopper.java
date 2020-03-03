@@ -1,6 +1,7 @@
 package com.gemsrobotics.frc2020.subsystems;
 
 import com.gemsrobotics.frc2020.Constants;
+import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -14,9 +15,9 @@ import java.util.Objects;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Hopper extends Subsystem {
-	private static final double STICTION_VOLTS = 0.488;
+	private static final MotorFeedforward FEEDFORWARD = new MotorFeedforward(0.488, 20.2 / 60.0, 1.22 / 60.0);
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
-			new MotorController.GearingParameters(1.0 / 310.28, Units.inches2Meters(13.75) / 2.0, 1.0);
+			new MotorController.GearingParameters(1.0 / 310.30303, Units.inches2Meters(13.75) / 2.0, 1.0);
 
 	private static Hopper INSTANCE;
 
@@ -39,7 +40,9 @@ public final class Hopper extends Subsystem {
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setSelectedProfile(0);
 		m_motor.setPIDF(3.98, 0.0, 0.24, 0.0);
-		m_motor.setInvertedOutput(true);
+		m_motor.setSelectedProfile(1);
+		m_motor.setPIDF(0.409, 0.0, 0.0, 0.0);
+		m_motor.setInvertedOutput(false);
 		m_motor.setEncoderRotations(0.0);
 
 		m_periodicIO = new PeriodicIO();
@@ -49,13 +52,14 @@ public final class Hopper extends Subsystem {
 
 	public enum Mode {
 		DISABLED,
-		RATCHETING
+		RATCHETING,
+		VELOCITY
 	}
 
 	private static class PeriodicIO implements Loggable {
 		public double referenceRotations = 0.0;
 		public double positionRotations = 0.0;
-		public Rotation velocityRotationsPerSecond = Rotation.identity();
+		public double velocityRPM = 0.0;
 		public boolean atReference = false;
 	}
 
@@ -63,14 +67,21 @@ public final class Hopper extends Subsystem {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 //		m_periodicIO.observedColor = m_sensor.getRawColor();
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
-		m_periodicIO.velocityRotationsPerSecond = Rotation.radians(m_motor.getVelocityAngularRadiansPerSecond());
+		m_periodicIO.velocityRPM = m_motor.getVelocityAngularRPM();
 		m_periodicIO.atReference = epsilonEquals(m_periodicIO.referenceRotations, m_periodicIO.positionRotations, (0.4 / 360.0))
-								   && epsilonEquals(m_periodicIO.velocityRotationsPerSecond.getDegrees(), 0.0, 2.0);
+								   && epsilonEquals(m_periodicIO.velocityRPM, 0.0, 0.1);
 	}
 
 	public synchronized void rotate(final int steps) {
 		m_mode = Mode.RATCHETING;
-		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * steps;
+		m_motor.setSelectedProfile(0);
+		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * -steps;
+	}
+
+	public synchronized void setVoltage(final double voltage) {
+		m_mode = Mode.VELOCITY;
+		m_motor.setSelectedProfile(1);
+		m_periodicIO.referenceRotations = voltage;
 	}
 
 	public synchronized void setDisabled() {
@@ -91,6 +102,11 @@ public final class Hopper extends Subsystem {
 					m_mode = Mode.DISABLED;
 				}
 
+				break;
+			case VELOCITY:
+				final double acceleration = (m_periodicIO.referenceRotations - m_periodicIO.velocityRPM) / dt();
+				final double ff = FEEDFORWARD.calculateVolts(m_periodicIO.referenceRotations, acceleration) / 12.0;
+				m_motor.setDutyCycle(m_periodicIO.referenceRotations);
 				break;
 			default:
 				m_motor.setDutyCycle(0.0);

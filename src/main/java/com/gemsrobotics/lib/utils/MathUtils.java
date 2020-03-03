@@ -125,6 +125,10 @@ public class MathUtils {
         return ret;
     }
 
+    public static double powSign(final double number, final double pow) {
+        return copySign(Math.pow(number, pow), number);
+    }
+
     public static final class Bounds {
         public double min, max;
 

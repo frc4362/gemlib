@@ -1,5 +1,6 @@
 package com.gemsrobotics.frc2020.subsystems;
 
+import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -31,21 +32,22 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected Config getConfig() {
-		final double wheelRadius = Units.inches2Meters(6.25) / 2.0;
-		final double freeSpeed = 4.8768 / wheelRadius; // m/s
-		final double kV = 0.2345;//12.0 / freeSpeed;
-		final double kA = 0.011;
-		final double kS = 0.27;
-		final double mass = 66.678;
+		final double peakVoltage = 12.0;
+		final double wheelRadius = 0.08016875;
+		final double freeSpeed = 4.8 / wheelRadius; // m/s
+		final double kS = 0.25; // V
+		final double kV = 0.06875 * 2.0; // V / (rad / s)
+		final double kA = 0.011; // V / (rad / s^2)
+		final double mass = 66.678; // kg
 
 		return new Config() {{
-			maxVoltage = 12.0;
+			maxVoltage = peakVoltage;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 7.291, wheelRadius, 2048);
+			gearingLowGear = new MotorController.GearingParameters(1.0 / 8.751, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
 
-			gainsLowGear = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0); // 0.69
+			gainsLowGear = new PIDFController.Gains(5.33, 0.0, 0.0, 0.0); // 0.69
 			gainsHighGear = gainsLowGear;
 
 			propertiesLowGear = new MotorModel.Properties() {{
@@ -57,10 +59,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 			propertiesModel = new DifferentialDriveModel.Properties() {{
 				massKg = mass; // kg
-				angularMomentInertiaKgMetersSquared = 4.519;
+				angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
 				angularDragTorquePerRadiansPerSecond = 12.0;
 				wheelRadiusMeters = wheelRadius;
-				wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
+				wheelbaseRadiusMeters = 0.351;
 			}};
 
 			motionConfig = new DriveMotionPlanner.MotionConfig() {{
@@ -71,9 +73,9 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				maxDy = 0.00127;
 				maxDtheta = Rotation.degrees(5.0).getRadians();
 				maxVoltage = 10.0;
-				maxVelocity = 3.9;
-				maxAcceleration = 3.0;
-				maxCentripetalAcceleration = 2.5;
+				maxVelocity = 4.8;
+				maxAcceleration = 3.2;
+				maxCentripetalAcceleration = 2.0;
 			}};
 
 			openLoopConfig = new OpenLoopDriveHelper.Config() {{
@@ -82,7 +84,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				zNonLinearityLowGear = 0.85;
 
 				sensitivityHighGear = 0.65;
-				sensitivityLowGear = 1.0;
+				sensitivityLowGear = 0.7;
 
 				negativeInertiaScalarHigh = 4.0;
 				negativeInertiaThresholdLow = 0.65;
@@ -98,8 +100,16 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	}
 
 	private void configMotors(final MotorControllerGroup<TalonFX> motors) {
-		motors.forEach(motor ->
-			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST));
+		motors.forEach(motor -> {
+			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+			motor.getInternalController().enableVoltageCompensation(true);
+			motor.getInternalController().configStatorCurrentLimit(new StatorCurrentLimitConfiguration(
+					true,
+					75,
+					0,
+					0.02),
+				10);
+		});
 	}
 
 	@Override

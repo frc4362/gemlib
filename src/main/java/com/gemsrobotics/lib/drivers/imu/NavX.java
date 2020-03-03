@@ -113,8 +113,8 @@ public final class NavX {
         return m_yawRateDegreesPerSecond;
     }
 
-    public synchronized double getFusedHeading() {
-        return m_fusedHeading;
+    public synchronized Rotation getFusedHeading() {
+        return Rotation.degrees(m_fusedHeading);
     }
 
     public synchronized double getYawRateRadiansPerSec() {

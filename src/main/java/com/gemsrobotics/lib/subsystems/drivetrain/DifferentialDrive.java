@@ -62,7 +62,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     protected final TrajectoryGenerator m_generator;
 	protected final DriveMotionPlanner m_motionPlanner;
 
-    protected final NavX m_imu;
+    public final NavX m_imu;
 	protected final MotorControllerGroup<MotorType> m_motorsLeft, m_motorsRight;
     protected final MotorController<MotorType> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
@@ -117,8 +117,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);
 
-		controller.setSelectedProfile(slotForGear(true));
-		controller.setPIDF(m_config.gainsHighGear);
+//		controller.setSelectedProfile(slotForGear(true));
+//		controller.setPIDF(m_config.gainsHighGear);
 
 		controller.setEncoderRotations(0.0);
 	}
@@ -130,7 +130,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
         TRAJECTORY_TRACKING
 	}
 
-	public final class PeriodicIO implements Loggable {
+	private final class PeriodicIO implements Loggable {
 		// Inputs
         @Log.ToString(name="Wheel Position (m, m)")
 		public WheelState positionMeters = new WheelState();
@@ -225,9 +225,13 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	}
 
 	public synchronized void setOpenLoop(final ChassisState chassisState) {
-	    configureControlMode(ControlMode.OPEN_LOOP);
-	    m_periodicIO.demand = new WheelState(chassisState.linear - chassisState.angular, chassisState.linear + chassisState.angular);
+	    setOpenLoop(new WheelState(chassisState.linear - chassisState.angular, chassisState.linear + chassisState.angular));
     }
+
+    public synchronized void setOpenLoop(final WheelState wheelState) {
+		configureControlMode(ControlMode.OPEN_LOOP);
+		m_periodicIO.demand = wheelState;
+	}
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
 		configureControlMode(ControlMode.TRAJECTORY_TRACKING);
@@ -271,7 +275,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		m_periodicIO.accelerationMeters = newVelocity.difference(oldVelocity).map(dv -> dv / dt());
 
 		// IMU reads and adjustments
-		m_periodicIO.heading = m_imu.getYaw().rotateBy(m_headingOffset);
+		m_periodicIO.heading = m_imu.getFusedHeading().rotateBy(m_headingOffset);
         m_periodicIO.isCollisionOccurring = m_imu.isCollisionOccurring();
         m_periodicIO.isTipping = m_imu.isTipping();
 

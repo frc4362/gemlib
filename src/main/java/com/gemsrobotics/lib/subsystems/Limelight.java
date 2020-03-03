@@ -99,7 +99,7 @@ public abstract class Limelight extends Subsystem {
         m_periodicIO.timestamp = now - m_periodicIO.latency;
         m_periodicIO.targetPresent = m_existsEntry.getDouble(0) == 1.0;
         // invert this so it is CCW-positive
-        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0));
+        m_periodicIO.offsetHorizontal = Rotation.degrees(m_offsetHorizontalEntry.getDouble(0)).inverse();
         m_periodicIO.offsetVertical = Rotation.degrees(m_offsetVerticalEntry.getDouble(0));
         m_periodicIO.targetArea = m_areaEntry.getDouble(0.0);
         m_periodicIO.targetSkew = m_skewEntry.getDouble(0.0);

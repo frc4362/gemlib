@@ -4,16 +4,16 @@ import com.ctre.phoenix.CANifier;
 
 import java.awt.Color;
 
-public final class LEDCanifier extends LEDs {
+public class LEDCanifier extends LEDs {
 	private final CANifier m_canifier;
 
     private Color m_colorLast;
-	private double m_intensityLast;
+	private float m_intensityLast;
 
 	public LEDCanifier(final CANifier canifier) {
 		m_canifier = canifier;
 		m_colorLast = Color.BLACK;
-		m_intensityLast = Double.NaN;
+		m_intensityLast = Float.NaN;
 	}
 
 	@Override

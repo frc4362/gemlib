@@ -37,7 +37,7 @@ public final class Hood extends Subsystem {
 
 	@Override
 	protected void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.desiredState = m_solenoid.get();
+		m_periodicIO.desiredState = !m_solenoid.get();
 	}
 
 	@Override
@@ -61,7 +61,7 @@ public final class Hood extends Subsystem {
 	}
 
 	public synchronized void setDeployed(final boolean deployed) {
-		m_solenoid.set(deployed);
+		m_solenoid.set(!deployed);
 		m_stateChangedTimer.reset();
 	}
 

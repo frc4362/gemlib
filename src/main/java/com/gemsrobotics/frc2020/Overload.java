@@ -1,74 +1,65 @@
 package com.gemsrobotics.frc2020;
 
-import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.frc2020.subsystems.*;
+import com.gemsrobotics.frc2020.subsystems.RobotState;
+import com.gemsrobotics.lib.commands.TrackTrajectoryCommand;
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
+import com.gemsrobotics.lib.math.se2.RigidTransform;
+import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
+import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
 import com.gemsrobotics.lib.subsystems.Limelight;
+import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
+import com.gemsrobotics.lib.trajectory.TrajectoryContainer;
+import com.gemsrobotics.lib.utils.MathUtils;
+import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.SparkMax;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
-import io.github.oblarg.oblog.Logger;
-import io.github.oblarg.oblog.annotations.Log;
 
-import java.util.List;
-
-import static com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless;
+import java.util.Arrays;
+import java.util.Collections;
 
 public final class Overload extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
 	private Hopper m_hopper;
 	private Shooter m_shooter;
 	private Turret m_turret;
+	private TargetServer m_targetServer;
+	private RobotState m_robotState;
+	private Superstructure m_superstructure;
 
-	private Limelight m_limelight;
-	private DoubleSolenoid m_pto;
-	private Solenoid m_kicker, m_hood, m_intakeSol;
 	private SubsystemManager m_subsystemManager;
-	private MotorController<CANSparkMax> m_1, m_2, m_3, m_h;
+	private MotorController<CANSparkMax> m_1, m_2, m_3;
+	private Solenoid m_intakeSol;
 
 	Compressor m_compressor;
 	Gemstick m_stickLeft, m_stickRight;
 	XboxController m_gamepad;
 
+	TrajectoryContainer<RigidTransformWithCurvature> m_trajectory;
+
+	boolean m_slowDrive;
+
 	@Override
 	public void robotInit() {
 		m_chassis = Chassis.getInstance();
 		m_stickLeft = new Gemstick(0);
-		m_stickRight = new Gemstick(1);
+		m_stickRight = new Gemstick(1, Gemstick.Deadbands.makeRectangleDeadband(0.06, 0.15));
 		m_shooter = Shooter.getInstance();
 		m_hopper = Hopper.getInstance();
 		m_turret = Turret.getInstance();
+		m_targetServer = TargetServer.getInstance();
+		m_robotState = RobotState.getInstance();
 		m_compressor = new Compressor();
 		m_compressor.setClosedLoopControl(false);
+		m_superstructure = Superstructure.getInstance();
 
-		m_limelight = new Limelight() {
-			@Override
-			protected void onStart(double timestamp) {
-				setLEDMode(LEDMode.OFF);
-			}
-
-			@Override
-			protected void onUpdate(double timestamp) {
-
-			}
-
-			@Override
-			protected void onStop(double timestamp) {
-
-			}
-		};
-
-		m_pto = new DoubleSolenoid(3, 4);
-
-		m_hood = new Solenoid(Constants.HOOD_SOLENOID_PORT);
-		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
 		m_intakeSol = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
 
 		m_1 = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_RIGHT_PORT);
@@ -77,61 +68,138 @@ public final class Overload extends TimedRobot implements Loggable {
 		m_2.setInvertedOutput(true);
 		m_3 = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_LEFT_PORT);
 		m_3.setInvertedOutput(true);
-		m_h = MotorControllerFactory.createDefaultSparkMax(Constants.HOPPER_PORT);
 
-		m_subsystemManager = new SubsystemManager(m_chassis, m_hopper, m_turret, m_shooter);
+		m_subsystemManager = new SubsystemManager(m_targetServer, m_hopper, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter);
 		m_gamepad = new XboxController(2);
+
+//		m_h = MotorControllerFactory.createSparkMax(40, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
 
 		SmartDashboard.putNumber("Shooter RPM", 0.0);
 		SmartDashboard.putNumber("Drive Train Speed", 0.0);
 		SmartDashboard.putNumber("Turret Degrees", 0.0);
 		SmartDashboard.putNumber("Intake Speed", 0.0);
+		SmartDashboard.putNumber("Hopper Voltage", 0.0);
 
-		Logger.configureLogging(this);
+		m_targetServer.setLEDMode(Limelight.LEDMode.OFF);
+
+		m_trajectory = m_chassis.getTrajectoryGenerator().generateTrajectory(
+				false,
+				false,
+				Arrays.asList(RigidTransform.identity(), new RigidTransform(Units.feet2Meters(10.0), 0.0, Rotation.identity())),
+				Collections.emptyList());
+
+//		Logger.configureLogging(this);
+	}
+
+	@Override
+	public void robotPeriodic() {
+//		Logger.updateEntries();
 	}
 
 	@Override
 	public void disabledInit() {
+		m_targetServer.setLEDMode(Limelight.LEDMode.OFF);
+//		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 	}
 
 	@Override
-	public void teleopInit() {
-		new Compressor().setClosedLoopControl(false);
+	public void autonomousInit() {
 		m_subsystemManager.start();
+		Scheduler.getInstance().add(new TrackTrajectoryCommand(m_chassis, m_trajectory));
+	}
+
+	@Override
+	public void autonomousPeriodic() {
+		Scheduler.getInstance().run();
+	}
+
+	boolean intakeOut;
+
+	@Override
+	public void teleopInit() {
+		Scheduler.getInstance().removeAll();
+		intakeOut = false;
+		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+		m_subsystemManager.start();
+		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
+		m_slowDrive = false;
 	}
 
 	@Override
 	public void teleopPeriodic() {
-		m_intakeSol.set(m_gamepad.getAButton());
+		SmartDashboard.putString("Heading", m_chassis.getHeading().toString());
 
-		double throttle = -m_stickLeft.getY();
-		double wheel = -m_stickRight.getX();
-		boolean quickturn = m_stickRight.getRawButton(3);
-		SmartDashboard.putNumber("throttle", throttle);
-		SmartDashboard.putNumber("wheel", wheel);
-//		m_chassis.setCurvatureDrive(Math.copySign(throttle * throttle, throttle), wheel, quickturn);
+		SmartDashboard.putString("Robot Pose", m_robotState.getLatestFieldToVehicle().toString());
+		final var target = m_robotState.getCachedFieldToTarget();
+		SmartDashboard.putString("Target Pose", target.map(RobotState.CachedTarget::getFieldToOuterGoal).map(Translation::toString).orElse("None"));
 
-		//m_pto.set(DoubleSolenoid.Value.kForward);
+		SmartDashboard.putString("Horizontal Offset", m_targetServer.getOffsetHorizontal().toString());
 
-		m_turret.setReferenceRotation(Rotation.degrees(SmartDashboard.getNumber("Turret Degrees", 0.0)));
-		SmartDashboard.putNumber("Turret Encoder Pos", m_turret.m_motor.getInternalController().getSelectedSensorPosition());
+		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
+		SmartDashboard.putNumber("Linear Velocity", (wheelSpeeds.left + wheelSpeeds.right) / 2.0);
 
-		final double shooterRpm = SmartDashboard.getNumber("Shooter RPM", 0.0);
-		m_shooter.setRPM(shooterRpm);
+		final var wheelDraws = m_chassis.getWheelProperty(MotorController::getDrawnCurrent);
+		SmartDashboard.putNumber("Left Current Draw", wheelDraws.left);
+		SmartDashboard.putNumber("Right Current Draw", wheelDraws.right);
 
-		final double intakeSpeed = m_gamepad.getTriggerAxis(GenericHID.Hand.kRight) * 0.5;
+//		m_turret.setReferenceRotation(Rotation.degrees(SmartDashboard.getNumber("Turret Rotation", 0.0)));
+
+		m_intakeSol.set(intakeOut);
+
+		if (m_gamepad.getAButtonPressed()) {
+			intakeOut = !intakeOut;
+		} else if (m_gamepad.getBButtonPressed()) {
+			m_hopper.rotate(1);
+		} else if (m_gamepad.getXButtonPressed()) {
+			m_hopper.rotate(6);
+		}
+
+		final double intakeSpeed;
+
+		if (intakeOut) {
+			intakeSpeed = m_gamepad.getTriggerAxis(GenericHID.Hand.kRight) * 0.5;
+			SmartDashboard.putNumber("Intake %", intakeSpeed);
+		} else {
+			intakeSpeed = 0.0;
+		}
+
 		m_1.setDutyCycle(intakeSpeed);
 		m_2.setDutyCycle(intakeSpeed);
 		m_3.setDutyCycle(intakeSpeed);
 
-		if (m_gamepad.getXButtonPressed()) {
-			m_hopper.rotate(1);
-		} else if (m_gamepad.getBButtonPressed()) {
-			m_hopper.rotate(6);
-		} else if(m_gamepad.getYButtonPressed()){
-			m_kicker.set(true);
-		} else if(m_gamepad.getAButtonPressed()){
-			m_kicker.set(false);
+		SmartDashboard.putNumber("Right Throttle", -m_stickRight.getY());
+
+		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
+			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY() * 0.2, -m_stickRight.getY() * 0.2));
+
+			if (m_stickRight.getRawButtonPressed(12)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+				m_slowDrive = true;
+			}
+		} else if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_RETRACT) {
+			m_chassis.setOpenLoop(new WheelState(MathUtils.powSign(-m_stickLeft.getY(), 2), MathUtils.powSign(-m_stickRight.getY(), 2)));
+
+			if (m_stickRight.getRawButtonPressed(10)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+				m_slowDrive = false;
+			}
+		} else {
+			double throttle = -m_stickLeft.getY();
+			double wheel = -m_stickRight.getX();
+			boolean quickturn = m_stickRight.getRawButton(3);
+			final double multiplier = m_slowDrive ? 0.25 : 1.0;
+
+			m_chassis.setCurvatureDrive(Math.copySign(throttle * throttle, throttle) * multiplier, wheel, quickturn);
+
+			if (m_stickRight.getTrigger()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
+			} else if (m_stickRight.getRawButtonPressed(11)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_EXTEND);
+			} else if (m_stickRight.getRawButtonPressed(9)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_RETRACT);
+			} else {
+				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+			}
 		}
 	}
 }

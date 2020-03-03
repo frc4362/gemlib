@@ -10,6 +10,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -20,11 +21,10 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.*;
 
 public final class Turret extends Subsystem implements Loggable {
-	private static final double STICTION_VOLTS = 0.0;
+	private static final double STICTION_VOLTS = 0.91 / 12.0; // really .9175
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
-	private static final double MAX_VELOCITY = 0.823; // meters / second
 	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.0 / 360.0));
 
 	private static Turret INSTANCE;
@@ -37,7 +37,7 @@ public final class Turret extends Subsystem implements Loggable {
 		return INSTANCE;
 	}
 
-	public final MotorController<TalonSRX> m_motor;
+	private final MotorController<TalonSRX> m_motor;
 	private final PeriodicIO m_periodicIO;
 
 	private Mode m_controlMode;
@@ -104,7 +104,7 @@ public final class Turret extends Subsystem implements Loggable {
 		final double setpoint = reference.getRadians() * (4096.0 / Tau);
 
 		if (abs(setpoint) > TURRET_USABLE_RANGE) {
-			reference = Rotation.radians(reference.getRadians() + copySign(Tau, setpoint));
+			reference = Rotation.radians(reference.getRadians() - copySign(Tau, setpoint));
 		}
 
 		m_periodicIO.reference = reference;
@@ -122,7 +122,8 @@ public final class Turret extends Subsystem implements Loggable {
 				m_motor.setNeutral();
 				break;
 			case ROTATION:
-				final var error = m_motor.getInternalController().getClosedLoopError();
+				final double error = atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
+
 				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * STICTION_VOLTS);
 				break;
 		}
@@ -143,12 +144,12 @@ public final class Turret extends Subsystem implements Loggable {
 		return m_periodicIO.position;
 	}
 
-	public synchronized boolean atReference(final Rotation tolerance) {
-		return epsilonEquals(m_periodicIO.position.distance(m_periodicIO.reference), 0.0, tolerance.getRadians());
+	public synchronized boolean atReference() {
+		return Math.abs(m_motor.getInternalController().getClosedLoopError()) < 10.0;
 	}
 
 	@Override
 	public FaultedResponse checkFaulted() {
-		return FaultedResponse.NONE;
+		return m_motor.isEncoderPresent() ? FaultedResponse.NONE : FaultedResponse.DISABLE_SUBSYSTEM;
 	}
 }

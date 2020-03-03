@@ -11,6 +11,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -70,7 +71,7 @@ public final class Shooter extends Subsystem implements Loggable {
 		m_feederSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_feederSlave.follow(m_feederMaster, false);
 
-		m_shooterFeedforward = new MotorFeedforward(0.0249, 0.112 / 60.0, 0.000761 / 60.0);
+		m_shooterFeedforward = new MotorFeedforward(0.0249, 0.112 / 60.0, 0.0 / 60.0); // 0.0001
 		m_feederFeedforward = new MotorFeedforward(0.0141, 0.11 / 60.0, 0.0);
 
 		m_shooterSamples = new LimitedQueue<>(RPM_SAMPLE_SIZE);
@@ -92,6 +93,8 @@ public final class Shooter extends Subsystem implements Loggable {
 		public double feederReferenceRPM = 0.0;
 		@Log(name="Feeder Current Draw (amps)")
 		public double feederCurrent = 0.0;
+		@Log(name="Enabled?")
+		public boolean enabled = false;
 	}
 
 	@Override
@@ -103,6 +106,7 @@ public final class Shooter extends Subsystem implements Loggable {
 	}
 
 	public synchronized void setRPM(final double shooterRPM) {
+		m_periodicIO.enabled = shooterRPM != 0.0;
 		m_periodicIO.shooterReferenceRPM = shooterRPM;
 		m_periodicIO.feederReferenceRPM = shooterRPM / 1.75;
 	}
@@ -118,16 +122,24 @@ public final class Shooter extends Subsystem implements Loggable {
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
-		m_feederSamples.add(m_periodicIO.feederMeasuredRPM);
+		if (m_periodicIO.enabled) {
+			m_feederSamples.add(m_periodicIO.feederMeasuredRPM);
 
-		final double kickerFeedforward = m_feederFeedforward.calculateVolts(m_periodicIO.feederReferenceRPM) / 12.0;
-		m_feederMaster.setVelocityRPM(m_periodicIO.feederReferenceRPM, 0.0);
+			final double kickerFeedforward = m_feederFeedforward.calculateVolts(m_periodicIO.feederReferenceRPM) / 12.0;
+			m_feederMaster.setVelocityRPM(m_periodicIO.feederReferenceRPM, kickerFeedforward);
 
-		m_shooterSamples.add(m_periodicIO.shooterMeasuredRPM);
+			m_shooterSamples.add(m_periodicIO.shooterMeasuredRPM);
 
-		final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterMeasuredRPM) / dt();
-		final double shooterFeedforward = m_shooterFeedforward.calculateVolts(m_periodicIO.shooterReferenceRPM, accelerationSetpoint) / 12.0;
-		m_shooterMaster.setVelocityRPM(m_periodicIO.shooterReferenceRPM, 0.0);
+			final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterMeasuredRPM) / dt();
+			final double shooterFeedforward = m_shooterFeedforward.calculateVolts(m_periodicIO.shooterReferenceRPM, accelerationSetpoint) / 12.0;
+			m_shooterMaster.setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforward);
+		} else {
+			m_feederMaster.setNeutral();
+			m_shooterMaster.setNeutral();
+		}
+
+		SmartDashboard.putNumber("Shooter Measured RPM", m_periodicIO.shooterMeasuredRPM);
+		SmartDashboard.putNumber("Feeder Measured RPM", m_periodicIO.feederMeasuredRPM);
 	}
 
 	@Override
@@ -142,8 +154,8 @@ public final class Shooter extends Subsystem implements Loggable {
 	}
 
 	public synchronized boolean atReference() {
-		return m_shooterSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.shooterReferenceRPM, 100.0))
-			   && m_feederSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.feederReferenceRPM, 100.0));
+		return m_shooterSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.shooterReferenceRPM, 200.0))
+			   && m_feederSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.feederReferenceRPM, 200.0));
 	}
 
 	public synchronized boolean isNeutral() {

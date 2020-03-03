@@ -83,9 +83,7 @@ public final class MotorControllerFactory {
         handleCANError(port, sparkMax.setPeriodicFramePeriod(CANSparkMaxLowLevel.PeriodicFrame.kStatus1, config.STATUS_FRAME_1_RATE_MS), "set status1 rate");
         handleCANError(port, sparkMax.setPeriodicFramePeriod(CANSparkMaxLowLevel.PeriodicFrame.kStatus2, config.STATUS_FRAME_2_RATE_MS), "set status2 rate");
 
-        sparkMax.clearFaults();
-
-        handleCANError(port, sparkMax.setIdleMode(config.IDLE_MODE), "set neutrual");
+        handleCANError(port, sparkMax.setIdleMode(config.IDLE_MODE), "set neutral");
         sparkMax.setInverted(config.INVERTED);
         handleCANError(port, sparkMax.setOpenLoopRampRate(config.OPEN_LOOP_RAMP_RATE), "set open loop ramp");
         handleCANError(port, sparkMax.setClosedLoopRampRate(config.CLOSED_LOOP_RAMP_RATE), "set closed loop ramp");
@@ -221,10 +219,6 @@ public final class MotorControllerFactory {
     private static void configureTalon(final BaseTalon talon, final TalonConfiguration config) {
         talon.set(ControlMode.PercentOutput, 0.0);
 
-        talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
-        talon.clearMotionProfileHasUnderrun(TIMEOUT_MS);
-        talon.clearMotionProfileTrajectories();
-
         talon.clearStickyFaults(TIMEOUT_MS);
 
         talon.configForwardLimitSwitchSource(LimitSwitchSource.FeedbackConnector, LimitSwitchNormal.Disabled, TIMEOUT_MS);
@@ -262,11 +256,15 @@ public final class MotorControllerFactory {
         talon.configOpenloopRamp(config.OPEN_LOOP_RAMP_RATE, TIMEOUT_MS);
         talon.configClosedloopRamp(config.CLOSED_LOOP_RAMP_RATE, TIMEOUT_MS);
 
+        talon.enableVoltageCompensation(false);
         talon.configVoltageCompSaturation(0.0, TIMEOUT_MS);
         talon.configVoltageMeasurementFilter(32, TIMEOUT_MS);
-        talon.enableVoltageCompensation(false);
 
         if (talon instanceof TalonSRX) {
+            talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
+            talon.clearMotionProfileHasUnderrun(TIMEOUT_MS);
+            talon.clearMotionProfileTrajectories();
+
             ((TalonSRX) talon).enableCurrentLimit(false);
         }
 
@@ -299,10 +297,6 @@ public final class MotorControllerFactory {
         configureTalon(talon, config);
         talon.configSelectedFeedbackSensor(TalonFXFeedbackDevice.IntegratedSensor, 0, TIMEOUT_MS);
         return new GemTalon<>(talon, isSlave);
-    }
-
-    public static GemTalon<TalonFX> createHighPerformanceTalonFX(final int port) {
-        return createTalonFX(port, HIGH_PERFORMANCE_TALON_CONFIG, false);
     }
 
     public static GemTalon<TalonFX> createDefaultTalonFX(final int port) {
