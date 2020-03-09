@@ -1,8 +1,12 @@
 package com.gemsrobotics.frc2020;
 
+import com.gemsrobotics.frc2020.autonomous.SiuxBallAuton;
+import com.gemsrobotics.frc2020.autonomous.ThreeBallAuton;
+import com.gemsrobotics.frc2020.commands.DriveStraightCommand;
 import com.gemsrobotics.frc2020.subsystems.*;
 import com.gemsrobotics.frc2020.subsystems.RobotState;
 import com.gemsrobotics.lib.commands.TrackTrajectoryCommand;
+import com.gemsrobotics.lib.commands.WaitCommand;
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
@@ -18,36 +22,42 @@ import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.command.Command;
+import edu.wpi.first.wpilibj.command.CommandGroup;
 import edu.wpi.first.wpilibj.command.Scheduler;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-public final class Overload extends TimedRobot implements Loggable {
+public final class Wallace extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
 	private Hopper m_hopper;
 	private Shooter m_shooter;
 	private Turret m_turret;
 	private TargetServer m_targetServer;
 	private RobotState m_robotState;
+	private Hood m_hood;
 	private Superstructure m_superstructure;
 
+	private Solenoid m_kicker;
+
 	private SubsystemManager m_subsystemManager;
-	private MotorController<CANSparkMax> m_1, m_2, m_3;
-	private Solenoid m_intakeSol;
 
-	Compressor m_compressor;
-	Gemstick m_stickLeft, m_stickRight;
-	XboxController m_gamepad;
+	private Compressor m_compressor;
+	private Gemstick m_stickLeft, m_stickRight;
+	private XboxController m_gamepad;
 
-	TrajectoryContainer<RigidTransformWithCurvature> m_trajectory;
+	private SendableChooser<Boolean> m_compressorToggler;
+	private SendableChooser<Command> m_autonChooser;
 
-	boolean m_slowDrive;
+	private boolean m_slowDrive;
 
 	@Override
 	public void robotInit() {
+		m_hood = Hood.getInstance();
 		m_chassis = Chassis.getInstance();
 		m_stickLeft = new Gemstick(0);
 		m_stickRight = new Gemstick(1, Gemstick.Deadbands.makeRectangleDeadband(0.06, 0.15));
@@ -57,55 +67,51 @@ public final class Overload extends TimedRobot implements Loggable {
 		m_targetServer = TargetServer.getInstance();
 		m_robotState = RobotState.getInstance();
 		m_compressor = new Compressor();
-		m_compressor.setClosedLoopControl(false);
 		m_superstructure = Superstructure.getInstance();
 
-		m_intakeSol = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
+//		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
 
-		m_1 = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_RIGHT_PORT);
-		m_1.setInvertedOutput(false);
-		m_2 = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_CENTER_PORT);
-		m_2.setInvertedOutput(true);
-		m_3 = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_LEFT_PORT);
-		m_3.setInvertedOutput(true);
+		m_compressorToggler = new SendableChooser<>();
+		m_compressorToggler.setDefaultOption("Compressor OFF", false);
+		m_compressorToggler.addOption("Compressor ON", true);
 
-		m_subsystemManager = new SubsystemManager(m_targetServer, m_hopper, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter);
+		m_subsystemManager = new SubsystemManager(m_targetServer, m_hopper, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter, m_hood);
 		m_gamepad = new XboxController(2);
 
-//		m_h = MotorControllerFactory.createSparkMax(40, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
-
 		SmartDashboard.putNumber("Shooter RPM", 0.0);
-		SmartDashboard.putNumber("Drive Train Speed", 0.0);
-		SmartDashboard.putNumber("Turret Degrees", 0.0);
-		SmartDashboard.putNumber("Intake Speed", 0.0);
-		SmartDashboard.putNumber("Hopper Voltage", 0.0);
+
+		m_autonChooser = new SendableChooser<>();
+		m_autonChooser.setDefaultOption("None", new WaitCommand(1.0));
+		m_autonChooser.addOption("3 Ball Auton (Seek Left)", new ThreeBallAuton(Rotation.degrees(160)));
+		m_autonChooser.addOption("3 Ball Auton (Seek Right)", new ThreeBallAuton(Rotation.degrees(-160)));
+		m_autonChooser.addOption("6 Ball Auton (Seek Right)", new SiuxBallAuton(Rotation.degrees(-160)));
+		m_autonChooser.addOption("Drive Straight Test", new DriveStraightCommand(m_chassis, 0.15, Units.feet2Meters(3.0)));
+
+		SmartDashboard.putData(m_compressorToggler);
+		SmartDashboard.putData(m_autonChooser);
+
+		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.fromRotation(Rotation.degrees(180)));
+		m_chassis.setHeading(Rotation.degrees(180));
 
 		m_targetServer.setLEDMode(Limelight.LEDMode.OFF);
-
-		m_trajectory = m_chassis.getTrajectoryGenerator().generateTrajectory(
-				false,
-				false,
-				Arrays.asList(RigidTransform.identity(), new RigidTransform(Units.feet2Meters(10.0), 0.0, Rotation.identity())),
-				Collections.emptyList());
-
-//		Logger.configureLogging(this);
 	}
 
 	@Override
 	public void robotPeriodic() {
-//		Logger.updateEntries();
+		SmartDashboard.putNumber("Turret Absolute Encoder Position", m_turret.getAbsolutePosition());
 	}
 
 	@Override
 	public void disabledInit() {
+		m_subsystemManager.stop();
 		m_targetServer.setLEDMode(Limelight.LEDMode.OFF);
-//		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 	}
 
 	@Override
 	public void autonomousInit() {
 		m_subsystemManager.start();
-		Scheduler.getInstance().add(new TrackTrajectoryCommand(m_chassis, m_trajectory));
+		Scheduler.getInstance().add(m_autonChooser.getSelected());
+		m_compressor.setClosedLoopControl(false);
 	}
 
 	@Override
@@ -113,64 +119,51 @@ public final class Overload extends TimedRobot implements Loggable {
 		Scheduler.getInstance().run();
 	}
 
-	boolean intakeOut;
-
 	@Override
 	public void teleopInit() {
 		Scheduler.getInstance().removeAll();
-		intakeOut = false;
-		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 		m_subsystemManager.start();
-		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
+		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 		m_slowDrive = false;
+		m_compressor.setClosedLoopControl(m_compressorToggler.getSelected());
 	}
+
+	int h, k;
 
 	@Override
 	public void teleopPeriodic() {
 		SmartDashboard.putString("Heading", m_chassis.getHeading().toString());
 
+		SmartDashboard.putString("Camera to Target", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("None"));
+
 		SmartDashboard.putString("Robot Pose", m_robotState.getLatestFieldToVehicle().toString());
 		final var target = m_robotState.getCachedFieldToTarget();
-		SmartDashboard.putString("Target Pose", target.map(RobotState.CachedTarget::getFieldToOuterGoal).map(Translation::toString).orElse("None"));
+//		SmartDashboard.putString("Target Pose", target.map(RobotState.CachedTarget::getFieldToOuterGoal).map(Translation::toString).orElse("None"));
 
 		SmartDashboard.putString("Horizontal Offset", m_targetServer.getOffsetHorizontal().toString());
 
-		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
-		SmartDashboard.putNumber("Linear Velocity", (wheelSpeeds.left + wheelSpeeds.right) / 2.0);
-
-		final var wheelDraws = m_chassis.getWheelProperty(MotorController::getDrawnCurrent);
-		SmartDashboard.putNumber("Left Current Draw", wheelDraws.left);
-		SmartDashboard.putNumber("Right Current Draw", wheelDraws.right);
-
-//		m_turret.setReferenceRotation(Rotation.degrees(SmartDashboard.getNumber("Turret Rotation", 0.0)));
-
-		m_intakeSol.set(intakeOut);
-
-		if (m_gamepad.getAButtonPressed()) {
-			intakeOut = !intakeOut;
-		} else if (m_gamepad.getBButtonPressed()) {
-			m_hopper.rotate(1);
+		if (m_gamepad.getBButtonPressed()) {
+			m_hopper.rotate(-1);
 		} else if (m_gamepad.getXButtonPressed()) {
-			m_hopper.rotate(6);
+			m_hopper.rotate(-6);
+		} else if (m_gamepad.getYButtonPressed()) {
+			m_hopper.assertSafe();
 		}
-
-		final double intakeSpeed;
-
-		if (intakeOut) {
-			intakeSpeed = m_gamepad.getTriggerAxis(GenericHID.Hand.kRight) * 0.5;
-			SmartDashboard.putNumber("Intake %", intakeSpeed);
-		} else {
-			intakeSpeed = 0.0;
-		}
-
-		m_1.setDutyCycle(intakeSpeed);
-		m_2.setDutyCycle(intakeSpeed);
-		m_3.setDutyCycle(intakeSpeed);
 
 		SmartDashboard.putNumber("Right Throttle", -m_stickRight.getY());
 
+//		if (m_gamepad.getAButtonPressed()) {
+//			k += 1;
+//		} else if (m_gamepad.getYButtonPressed()) {
+//			h += 1;
+//		}
+
+//		m_kicker.set(k % 2 == 1);
+//		m_hood.setDeployed(h % 2 == 0);
+//		m_shooter.setRPM(SmartDashboard.getNumber("Shooter RPM", 0.0));
+
 		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
-			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY() * 0.2, -m_stickRight.getY() * 0.2));
+			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY(), -m_stickRight.getY()));
 
 			if (m_stickRight.getRawButtonPressed(12)) {
 				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
@@ -191,15 +184,23 @@ public final class Overload extends TimedRobot implements Loggable {
 
 			m_chassis.setCurvatureDrive(Math.copySign(throttle * throttle, throttle) * multiplier, wheel, quickturn);
 
-			if (m_stickRight.getTrigger()) {
+			if (m_stickRight.getTriggerPressed()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
 			} else if (m_stickRight.getRawButtonPressed(11)) {
 				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_EXTEND);
 			} else if (m_stickRight.getRawButtonPressed(9)) {
 				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_RETRACT);
-			} else {
+			} else if (m_gamepad.getBumper(GenericHID.Hand.kRight)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
+			} else if (m_stickRight.getRawButton(2)) {
+				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
+			} else if (!m_stickRight.getTrigger()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 			}
+		}
+
+		if (m_stickRight.getRawButton(10)) {
+			m_slowDrive = false;
 		}
 	}
 }

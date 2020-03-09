@@ -1,25 +1,29 @@
 package com.gemsrobotics.frc2020.subsystems;
 
 import com.gemsrobotics.frc2020.Constants;
+import com.gemsrobotics.frc2020.Target;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.utils.Units;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Solenoid;
-import edu.wpi.first.wpilibj.Timer;
+import com.revrobotics.CANSparkMax;
+import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.awt.*;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.Math.*;
+import static com.gemsrobotics.lib.utils.MathUtils.Tau;
+import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
+import static java.lang.Math.PI;
+import static java.lang.Math.abs;
 
 public final class Superstructure extends Subsystem {
 	public static final double TARGET_CACHE_DISTANCE = 5.0;
@@ -53,9 +57,11 @@ public final class Superstructure extends Subsystem {
 		FEEDING,
 		WAITING_FOR_ALIGNMENT,
 		WAITING_FOR_FLYWHEEL,
+		WAITING_FOR_HOPPER,
 		SHOOTING,
 		CLIMB_EXTEND,
-		CLIMB_RETRACT
+		CLIMB_RETRACT,
+		WAITING_FOR_KICKER
 //		CONTROL_PANEL_ROTATION,
 //		CONTROL_PANEL_POSITION
 	}
@@ -68,15 +74,13 @@ public final class Superstructure extends Subsystem {
 	private final Hood m_hood;
 	private final Hopper m_hopper;
 	private final RobotState m_targetState;
-	// TODO
-	private List<Intake> m_intakes;
 	private final Inventory m_inventory;
 
-	// TODO
+	private MotorController<CANSparkMax> m_intakeMotor;
 	private Solenoid m_intakeDeployer, m_kicker;
 	private DoubleSolenoid m_pto;
 
-	private final Timer m_stateChangeTimer, m_wantStateChangeTimer;
+	private final Timer m_stateChangeTimer, m_wantStateChangeTimer, m_intakeTimer, m_intakeStallTimer;
 
 	private final PeriodicIO m_periodicIO;
 
@@ -85,6 +89,10 @@ public final class Superstructure extends Subsystem {
 	@Log.ToString
 	private WantedState m_wantedState;
 	private boolean m_stateChanged;
+	private DigitalInput m_intakeSensor;
+
+	private Rotation m_turretGuess;
+	private int m_shotsFired;
 
 	private Superstructure() {
 		m_leds = LEDs.getInstance();
@@ -95,17 +103,25 @@ public final class Superstructure extends Subsystem {
 		m_hood = Hood.getInstance();
 		m_hopper = Hopper.getInstance();
 		m_targetState = RobotState.getInstance();
-//		m_intakes = Intake.getAll();
 		m_inventory = new Inventory();
 
+		m_intakeMotor = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_LEFT_PORT);
+		m_intakeMotor.setInvertedOutput(true);
+
+		m_intakeSensor = new DigitalInput(7);
 		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
-//		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
+		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
 		m_pto = new DoubleSolenoid(Constants.PTO_SOLENOID_PORT[0], Constants.PTO_SOLENOID_PORT[1]);
 
+		m_intakeTimer = new Timer();
 		m_stateChangeTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
+		m_intakeStallTimer = new Timer();
 
 		m_systemState = SystemState.IDLE;
+
+		m_turretGuess = Rotation.identity();
+		m_shotsFired = 0;
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -113,7 +129,13 @@ public final class Superstructure extends Subsystem {
 	private static class PeriodicIO {
 		private RigidTransform vehiclePose = RigidTransform.identity();
 		private RigidTransform turretPose = RigidTransform.identity();
-		private Optional<RobotState.CachedTarget> target = Optional.empty();
+		private Optional<Target> target = Optional.empty();
+		private boolean oldIntakeSensor = false;
+		private boolean intakeSensor = false;
+	}
+
+	public synchronized void setTurretGuess(final Rotation turretGuess) {
+		m_turretGuess = turretGuess;
 	}
 
 	public synchronized void setWantedState(final WantedState newState) {
@@ -127,11 +149,49 @@ public final class Superstructure extends Subsystem {
 		return m_systemState;
 	}
 
+	public synchronized int getShotsFired() {
+		return m_shotsFired;
+	}
+
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.vehiclePose = m_targetState.getFieldToVehicle(timestamp);
 		m_periodicIO.turretPose = m_targetState.getFieldToTurret(timestamp);
-		m_periodicIO.target = m_targetState.getCachedFieldToTarget();
+		m_periodicIO.target = (Constants.USE_SCUFFED_WALLSHOT && DriverStation.getInstance().getStickButton(2, 7)) ? Optional.of(new WallshotTarget(m_periodicIO.vehiclePose.getTranslation())): m_targetState.getCachedFieldToTarget();
+		m_periodicIO.oldIntakeSensor = m_periodicIO.intakeSensor;
+		m_periodicIO.intakeSensor = !m_intakeSensor.get();
+	}
+
+	private static class WallshotTarget implements Target {
+		private Translation m_t;
+
+		public WallshotTarget(final Translation outer) {
+			m_t = outer;
+		}
+
+		@Override
+		public double getAge() {
+			return 0.0;
+		}
+
+		@Override
+		public boolean isClose() {
+			return true;
+		}
+
+		@Override
+		public double getDriveDistanceSinceCapture() {
+			return 0.0;
+		}
+
+		@Override
+		public Translation getFieldToOuterGoal() {
+			return m_t.getTranslation().translateBy(new Translation(1.0, 0.0));
+		}
+
+		public Optional<Translation> getFieldToInnerGoal() {
+			return Optional.empty();
+		}
 	}
 
 	@Override
@@ -145,15 +205,11 @@ public final class Superstructure extends Subsystem {
 	protected synchronized void onUpdate(final double timestamp) {
 		final SystemState newState;
 
+		SmartDashboard.putNumber("Intake Current", m_intakeMotor.getDrawnCurrent());
 		SmartDashboard.putString("Wanted State", m_wantedState.toString());
 		SmartDashboard.putString("Current State", m_systemState.toString());
 
-		// TODO
-//		if (m_hopper.atRest()) {
-//			m_inventory.setRotations(m_hopper.getRotations());
-//		}
-
-		final var facingTarget = m_periodicIO.turretPose.getRotation().getNearestPole().equals(Rotation.degrees(0));
+		final var facingTarget = abs(m_periodicIO.turretPose.getRotation().getDegrees()) < 75.0;
 		m_targetServer.setLEDMode(m_systemState != SystemState.CLIMB_EXTEND && m_systemState != SystemState.CLIMB_RETRACT && facingTarget ? Limelight.LEDMode.ON : Limelight.LEDMode.OFF);
 
 		switch (m_systemState) {
@@ -177,6 +233,12 @@ public final class Superstructure extends Subsystem {
 				break;
 			case WAITING_FOR_FLYWHEEL:
 				newState = handleWaitingForFlywheel();
+				break;
+			case WAITING_FOR_HOPPER:
+				newState = handleWaitingForHopper();
+				break;
+			case WAITING_FOR_KICKER:
+				newState = handleWaitingForKicker();
 				break;
 			case SHOOTING:
 				newState = handleShooting();
@@ -206,8 +268,10 @@ public final class Superstructure extends Subsystem {
 	private SystemState handleIdle() {
 		m_kicker.set(false);
 		m_turret.setDisabled();
-		m_hood.setDeployed(false);
+		m_hood.setDeployed(true);
 		m_shooter.setDisabled();
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
 
 		m_leds.setColor(Color.BLACK, 0.0f);
 		m_pto.set(DoubleSolenoid.Value.kReverse);
@@ -231,9 +295,11 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handleClimbExtend() {
 		m_turret.setDisabled();
-		m_hood.setDeployed(false);
+		m_hood.setDeployed(true);
 		m_hopper.setDisabled();
 		m_shooter.setDisabled();
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.75f);
@@ -252,9 +318,11 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handleClimbRetract() {
 		m_turret.setDisabled();
-		m_hood.setDeployed(false);
+		m_hood.setDeployed(true);
 		m_hopper.setDisabled();
 		m_shooter.setDisabled();
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.15f);
@@ -271,14 +339,32 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handleIntaking() {
 		m_turret.setDisabled();
-		m_hood.setDeployed(false);
+		m_hood.setDeployed(true);
 		m_shooter.setDisabled();
 
-		if (m_wantStateChangeTimer.get() > 0.25) {
-			final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
-			final var intakeVelocityMetersPerSecond = max(wheelSpeeds.left, wheelSpeeds.right) + 3.0;
+		m_intakeDeployer.set(true);
 
-			maybeRunIntakes(intakeVelocityMetersPerSecond);
+		if (m_hopper.atRest() && m_stateChangeTimer.get() > 0.1 && m_wantedState == WantedState.INTAKING) {
+			m_inventory.setRotations(m_hopper.getRotations());
+
+			if (!m_periodicIO.intakeSensor && m_periodicIO.oldIntakeSensor && m_stateChangeTimer.get() > 0.25) {
+				m_intakeTimer.start();
+			} else if (m_intakeTimer.get() > 1.0) {
+				m_intakeTimer.stop();
+				m_intakeTimer.reset();
+				m_hopper.rotate(-1);
+				m_inventory.getNearestChamber(Inventory.Location.LEFT_INTAKE).setFull(true);
+			} else if (m_intakeTimer.get() > 0.25){
+				m_intakeMotor.setNeutral();
+			} else {
+				m_intakeMotor.setDutyCycle(1.0);
+			}
+		} else {
+			m_intakeMotor.setNeutral();
+		}
+
+		if (m_wantedState != WantedState.INTAKING && m_wantStateChangeTimer.get() < 0.1) {
+			return SystemState.INTAKING;
 		}
 
 		switch (m_wantedState) {
@@ -300,16 +386,18 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handleOuttaking() {
 		m_turret.setDisabled();
-		m_hood.setDeployed(false);
-		m_shooter.setRPM(0.0);
+		m_hood.setDeployed(true);
+		m_shooter.setDisabled();
 
-		if (m_wantStateChangeTimer.get() > 0.25) {
-			maybeRunIntakes(-3.0);
-			m_intakes.forEach(Intake::clear);
-		}
+		m_intakeDeployer.set(true);
 
-		if (m_wantStateChangeTimer.get() < 3.0) {
-			return SystemState.INTAKING;
+		if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() < 0.1) {
+			m_intakeMotor.setDutyCycle(0.0);
+		} else if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
+			m_intakeMotor.setDutyCycle(-0.5);
+		} else if (m_wantedState != WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
+			m_intakeMotor.setDutyCycle(0.0);
+			return SystemState.OUTTAKING;
 		}
 
 		switch (m_wantedState) {
@@ -329,19 +417,13 @@ public final class Superstructure extends Subsystem {
 		}
 	}
 
-	// TODO
-//	private SystemState handleFeeding() {
-//		if (m_stateChanged) {
-//
-//		}
-//	}
-
 	private SystemState handleWaitingForAlignment() {
-		m_kicker.set(true);
 		m_leds.setOn(true);
 		m_leds.setColor(Color.YELLOW, 1.0f);
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
 
-		if (!Constants.USE_UNCOUNTED_SHOOTING && m_stateChanged && m_inventory.getFilledChamberCount() > 0) {
+		if (Constants.USE_MANAGED_INVENTORY && m_stateChanged && m_inventory.getFilledChamberCount() > 0) {
 			final var loadingChamber = m_inventory.getOptimalShootingChamber();
 			final var currentChamber = m_inventory.getNearestChamber(Inventory.Location.SHOOTER);
 			m_hopper.rotate(currentChamber.getDistance(loadingChamber));
@@ -352,14 +434,19 @@ public final class Superstructure extends Subsystem {
 			final var goal = target.getOptimalGoal();
 			final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
-			m_hood.setDeployed(outerDistance > Constants.CLOSE_SHOT_RANGE_METERS);
-			setTurretTargetPoint(goal);
+			m_hood.setDeployed(!target.isClose());
 
-			if (isAligned(target, true) && (Constants.USE_UNCOUNTED_SHOOTING || m_inventory.getFilledChamberCount() > 0)) {
+			if (target.isClose()) {
+				m_turret.setReferenceRotation(Rotation.degrees(0));
+			} else {
+				setTurretTargetGoal(goal);
+			}
+
+			if (isAligned(target, true) && (!Constants.USE_MANAGED_INVENTORY || m_inventory.getFilledChamberCount() > 0)) {
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			}
 		} else {
-			setTurretFieldRotation(Rotation.degrees(0));
+			m_turret.setReferenceRotation(m_turretGuess);
 		}
 
 		switch (m_wantedState) {
@@ -380,16 +467,20 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleWaitingForFlywheel() {
-		m_leds.setColor(Color.ORANGE, 1.0f);
+		m_leds.setColor(Color.MAGENTA, 1.0f);
 
 		final var target = m_periodicIO.target.get();
 		final var targetDistance = target.getOptimalGoal().distance(m_periodicIO.turretPose.getTranslation());
 
-		setTurretTargetPoint(target.getOptimalGoal());
+		if (target.isClose()) {
+			m_turret.setReferenceRotation(Rotation.degrees(0));
+		} else {
+			setTurretTargetGoal(target.getOptimalGoal());
+		}
 
 		final double targetRPM;
 
-		if (targetDistance < Constants.WALL_SHOOTING_RPM) {
+		if (target.isClose()) {
 			targetRPM = Constants.WALL_SHOOTING_RPM;
 		} else {
 			targetRPM = Constants.getRPM(targetDistance);
@@ -411,8 +502,8 @@ public final class Superstructure extends Subsystem {
 		SmartDashboard.putBoolean("Hood At Ref", hoodAtRef);
 		SmartDashboard.putBoolean("Ready To Fire", readyToFire);
 
-		if (turretAtRef && readyToFire) {
-			return SystemState.SHOOTING;
+		if (turretAtRef && readyToFire && m_hopper.atRest() && epsilonEquals(m_targetServer.getOffsetHorizontal().getDegrees(), 0.0, 1.0)) {
+			return SystemState.WAITING_FOR_HOPPER;
 		}
 
 		switch (m_wantedState) {
@@ -432,10 +523,48 @@ public final class Superstructure extends Subsystem {
 		}
 	}
 
-	public SystemState handleShooting() {
+	private SystemState handleWaitingForHopper() {
+		m_leds.setColor(Color.PINK, 1.0f);
+
+		if (m_stateChanged) {
+			m_hopper.rotate(2);
+		}
+
+		if (m_hopper.atRest() && m_stateChangeTimer.get() > 0.1) {
+			return SystemState.WAITING_FOR_KICKER;
+		} else {
+			return SystemState.WAITING_FOR_HOPPER;
+		}
+	}
+
+	private SystemState handleWaitingForKicker() {
+		if (m_stateChanged) {
+			m_kicker.set(true);
+		}
+
+		if (m_stateChangeTimer.get() > 0.1) {
+			return SystemState.SHOOTING;
+		} else {
+			return SystemState.WAITING_FOR_KICKER;
+		}
+	}
+
+	private SystemState handleShooting() {
 		m_leds.setColor(Color.RED, 1.0f);
 
-		setTurretTargetPoint(m_periodicIO.target.get().getOptimalGoal());
+		final Target target;
+
+		if (m_periodicIO.target.isPresent()) {
+			target = m_periodicIO.target.get();
+		} else {
+			return SystemState.IDLE;
+		}
+
+		if (target.isClose()) {
+			m_turret.setReferenceRotation(Rotation.degrees(0));
+		} else {
+			setTurretTargetGoal(target.getOptimalGoal());
+		}
 
 		if (m_stateChanged) {
 			m_hopper.rotate(6);
@@ -451,20 +580,10 @@ public final class Superstructure extends Subsystem {
 			return SystemState.SHOOTING;
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
+		if (m_wantedState == WantedState.SHOOTING) {
+			return SystemState.SHOOTING;
+		} else {
+			return SystemState.IDLE;
 		}
 	}
 
@@ -473,15 +592,13 @@ public final class Superstructure extends Subsystem {
 
 	}
 
-	private boolean isAligned(final RobotState.CachedTarget target, final boolean allowDeadspot) {
+	private boolean isAligned(final Target target, final boolean allowDeadspot) {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
 		final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
-		final var isCloseShot = outerDistance < Constants.CLOSE_SHOT_RANGE_METERS;
-		final var isFarShot = allowDeadspot && outerDistance > (Constants.CLOSE_SHOT_RANGE_METERS + Units.feet2Meters(1.5));
 
 		return m_turret.atReference()
 			   && (wheelSpeeds.left + wheelSpeeds.right) < 0.04
-			   && ((isCloseShot && target.getDriveDistanceSinceCapture() < TARGET_CACHE_DISTANCE) || (isFarShot && target.getAge() < 0.25));
+			   && ((target.isClose() && target.getDriveDistanceSinceCapture() < TARGET_CACHE_DISTANCE) || (!target.isClose() && target.getAge() < 0.25));
 	}
 
 	private boolean isReadyToFire() {
@@ -490,24 +607,19 @@ public final class Superstructure extends Subsystem {
 			   && m_hood.isDeployed() == m_hood.wantsDeployed();
 	}
 
-	public void setTurretTargetPoint(final Translation targetPoint) {
-		m_turret.setReferenceRotation(targetPoint
-									  .difference(m_periodicIO.turretPose.getTranslation())
-									  .direction()
-									  .difference(m_periodicIO.vehiclePose.getRotation()));
+	private void setTurretTargetGoal(final Translation hint) {
+		if (m_targetServer.isTargetPresent()) {
+			if (abs(m_targetServer.getOffsetHorizontal().getDegrees()) > 0.5) {
+				m_turret.setPositionOffset(m_targetServer.getOffsetHorizontal());
+			} else {
+				m_turret.setDisabled();
+			}
+		} else {
+			setTurretFieldRotation(hint.difference(m_periodicIO.turretPose.getTranslation()).direction());
+		}
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
 		m_turret.setReferenceRotation(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
-	}
-
-	private void maybeRunIntakes(final double speedMetersPerSecond) {
-		m_intakes.forEach(intake -> {
-			if (intake.hasBall()) {
-				intake.setVelocity(0.0);
-			} else {
-				intake.setVelocity(speedMetersPerSecond);
-			}
-		});
 	}
 }

@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj.Timer;
 import java.util.Objects;
 
 public final class Hood extends Subsystem {
-	private static final double STATE_CHANGE_TIME = 0.25;
+	private static final double STATE_CHANGE_TIME = 0.7;
 
 	private static Hood INSTANCE;
 

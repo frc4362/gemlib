@@ -1,6 +1,7 @@
 package com.gemsrobotics.frc2020.subsystems;
 
 import com.gemsrobotics.frc2020.Constants;
+import com.gemsrobotics.frc2020.Target;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -9,6 +10,7 @@ import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.drivetrain.FieldToVehicleEstimator;
 import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -45,7 +47,7 @@ public final class RobotState extends Subsystem {
 		m_periodicIO = new PeriodicIO();
 	}
 
-	public class CachedTarget {
+	public class CachedTarget implements Target {
 		private final Timer m_timer;
 		private final Translation m_fieldToOuterGoal;
 		private final double m_captureDriveDistance;
@@ -68,10 +70,12 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Translation getFieldToOuterGoal() {
-			// L A T E N C Y
-			final var latest = getLatestFieldToVehicle();
-			final double vy = m_fieldToOuterGoal.y() - latest.getTranslation().y();
-			final double vx = m_fieldToOuterGoal.x() - latest.getTranslation().x();
+			// L A T E N C Y=
+			final var turretPose = RobotState.this.getLatestFieldToVehicle()
+										   .transformBy(VEHICLE_TO_TURRET)
+										   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
+			final double vy = m_fieldToOuterGoal.y() - turretPose.getTranslation().y();
+			final double vx = m_fieldToOuterGoal.x() - turretPose.getTranslation().x();
 			final double angleToAim = Math.atan2(vy, vx);
 			final double range = Math.sqrt(vy * vy + vx * vx);
 
@@ -85,8 +89,7 @@ public final class RobotState extends Subsystem {
 			// get latest field to turret
 			final var turretPose = RobotState.this.getLatestFieldToVehicle()
 												   .transformBy(VEHICLE_TO_TURRET)
-												   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()))
-												   .transformBy(TURRET_TO_CAMERA);
+												   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
 
 			if (turretPose.getTranslation().isWithinAngle(innerA, innerGoal, innerC)) {
 				return Optional.of(innerGoal);
@@ -104,7 +107,7 @@ public final class RobotState extends Subsystem {
 		public boolean targetServerAlive = false;
 		public Rotation newTurretRotation = Rotation.identity();
 		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
-		public Optional<CachedTarget> fieldToTargetCached = Optional.empty();
+		public Optional<Target> fieldToTargetCached = Optional.empty();
 	}
 
 	@Override
@@ -160,7 +163,7 @@ public final class RobotState extends Subsystem {
 		return getFieldToTurret(timestamp).transformBy(TURRET_TO_CAMERA);
 	}
 
-	public synchronized Optional<CachedTarget> getCachedFieldToTarget() {
+	public synchronized Optional<Target> getCachedFieldToTarget() {
 		return m_periodicIO.fieldToTargetCached;
 	}
 }

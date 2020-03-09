@@ -12,43 +12,42 @@ public class Constants {
 
 	public static final double FIELD_LENGTH_METERS = 16.4846;
 
-	public static final boolean USE_UNCOUNTED_SHOOTING = true;
+	public static final boolean USE_MANAGED_INVENTORY = false;
 	public static final boolean USE_INNER_ADJUSTMENT = false;
+	public static final boolean USE_SCUFFED_WALLSHOT = true;
 	public static final Translation OUTER_TO_INNER = new Translation(0.74295, 0.0);
 
 	public static final double MAX_SHOT_RANGE_METERS = Units.feet2Meters(40.0);
-	public static final double CLOSE_SHOT_RANGE_METERS = Units.feet2Meters(5.0);
+	public static final double CLOSE_SHOT_RANGE_METERS = 1.0;
 
-	public static final double WALL_SHOOTING_RPM = 0.0;
-	public static final double[][] SHOOTER_RANGE_RPM_FAR = {
-			{ 3.1, 4700.0 },
-			{ 4.76, 4400.0 },
-			{ 6.31, 4900.0 },
-			{ 7.184, 5050.0 },
-			{ 8.732, 5200.0 }
+	public static final double WALL_SHOOTING_RPM = 6000.0;
+	public static final double[][] SHOOTER_RANGE_RPM = {
+			{ 1.0, 6000.0   },
+			{ 2.385, 5750.0 },
+			{ 3.22,  4575.0 },
+			{ 4.11,  4475.0 },
+			{ 5.173, 4550.0 },
+			{ 5.96,  4725.0 },
+			{ 6.736, 4865.0 },
+			{ 7.554, 5100.0 }
 	};
-	public static final PolynomialRegression SHOOTER_RANGE_REGRESSION_FAR = PolynomialRegression.of(SHOOTER_RANGE_RPM_FAR, 2);
 
-	public static final double[][] SHOOTER_RANGE_RPM_CLOSE = {
-			{ 0.0, 6000.0 },
-			{ 1.79, 6000.0 },
-			{ 2.65, 6000.0 },
-			{ 3.09, 4700.0 },
-	};
 	public static final InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> SHOOTER_RANGE_RPM_LERPER_CLOSE;
 	static {
-		SHOOTER_RANGE_RPM_LERPER_CLOSE = new InterpolatingTreeMap<>(3);
+		SHOOTER_RANGE_RPM_LERPER_CLOSE = new InterpolatingTreeMap<>(SHOOTER_RANGE_RPM.length);
 
-		for (final var tuning : SHOOTER_RANGE_RPM_CLOSE) {
+		for (final var tuning : SHOOTER_RANGE_RPM) {
 			SHOOTER_RANGE_RPM_LERPER_CLOSE.put(new InterpolatingDouble(tuning[0]), new InterpolatingDouble(tuning[1]));
 		}
 	}
 
 	public static double getRPM(final double range) {
-		if (range < 3.1) {
-			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value;
+		if (range < 1.0) {
+			return WALL_SHOOTING_RPM;
+		} else if (range > 7.554) {
+			return 5000.0;
 		} else {
-			return SHOOTER_RANGE_REGRESSION_FAR.predict(range);
+			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value - 100;
 		}
 	}
 

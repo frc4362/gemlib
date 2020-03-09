@@ -65,8 +65,8 @@ public final class Inventory {
 			 .collect(Collectors.toList());
 	}
 
-	public Optional<Chamber> getOptimalLoadingChamber(final Intake intakeChannel) {
-		final List<Chamber> candidates = getCandidateChambers(intakeChannel.getLocation());
+	public Optional<Chamber> getOptimalLoadingChamber() {
+		final List<Chamber> candidates = getCandidateChambers(Location.LEFT_INTAKE);
 
 		if (candidates.isEmpty()) {
 			return Optional.empty();

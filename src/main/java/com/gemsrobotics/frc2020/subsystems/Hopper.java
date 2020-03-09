@@ -65,11 +65,10 @@ public final class Hopper extends Subsystem {
 
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
-//		m_periodicIO.observedColor = m_sensor.getRawColor();
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
 		m_periodicIO.velocityRPM = m_motor.getVelocityAngularRPM();
-		m_periodicIO.atReference = epsilonEquals(m_periodicIO.referenceRotations, m_periodicIO.positionRotations, (0.4 / 360.0))
-								   && epsilonEquals(m_periodicIO.velocityRPM, 0.0, 0.1);
+		m_periodicIO.atReference = Math.abs(m_periodicIO.referenceRotations - m_periodicIO.positionRotations) < (0.6 / 360.0)
+								   && Math.abs(m_periodicIO.velocityRPM) < 0.05;
 	}
 
 	public synchronized void rotate(final int steps) {
@@ -82,6 +81,10 @@ public final class Hopper extends Subsystem {
 		m_mode = Mode.VELOCITY;
 		m_motor.setSelectedProfile(1);
 		m_periodicIO.referenceRotations = voltage;
+	}
+
+	public synchronized void assertSafe() {
+		m_periodicIO.referenceRotations = m_periodicIO.positionRotations;
 	}
 
 	public synchronized void setDisabled() {

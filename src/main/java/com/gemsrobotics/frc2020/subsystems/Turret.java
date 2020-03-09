@@ -21,11 +21,13 @@ import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.*;
 
 public final class Turret extends Subsystem implements Loggable {
-	private static final double STICTION_VOLTS = 0.91 / 12.0; // really .9175
+	private static final double HOME_POSITION = -804.0;
+	private static final double COUNTS_PER_DEGREE = 11.03888888888889;
+	private static final double STICTION_VOLTS = 0.7 / 12.0; // really .9175
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
-	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.0 / 360.0));
+	private static final int TURRET_USABLE_RANGE = (int) (4096 * (178.5 / 360.0));
 
 	private static Turret INSTANCE;
 
@@ -46,10 +48,12 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor = MotorControllerFactory.createDefaultTalonSRX(Constants.TURRET_PORT);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
-		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative);
+		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 10);
+		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Absolute, 1, 10);
 		m_motor.getInternalController().setSensorPhase(true);
 		m_motor.setInvertedOutput(false);
 		m_motor.setSelectedProfile(0);
+		final var home = HOME_POSITION - m_motor.getInternalController().getSelectedSensorPosition(1);
 		m_motor.setEncoderRotations(0);
 		m_motor.setPIDF(TURRET_GAINS);
 		m_motor.getInternalController().configForwardSoftLimitEnable(true);
@@ -107,7 +111,15 @@ public final class Turret extends Subsystem implements Loggable {
 			reference = Rotation.radians(reference.getRadians() - copySign(Tau, setpoint));
 		}
 
+		if ((abs(reference.getDegrees() - 180.0) < 1.0)) {
+			reference = Rotation.degrees(copySign(reference.getDegrees(), 179.0));
+		}
+
 		m_periodicIO.reference = reference;
+	}
+
+	public synchronized void setPositionOffset(final Rotation amount) {
+		setReferenceRotation(m_periodicIO.position.sum(amount));
 	}
 
 	@Override
@@ -146,6 +158,10 @@ public final class Turret extends Subsystem implements Loggable {
 
 	public synchronized boolean atReference() {
 		return Math.abs(m_motor.getInternalController().getClosedLoopError()) < 10.0;
+	}
+
+	public double getAbsolutePosition() {
+		return m_motor.getInternalController().getSelectedSensorPosition(1);
 	}
 
 	@Override

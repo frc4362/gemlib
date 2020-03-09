@@ -195,9 +195,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	        switch (newControlMode) {
                 case DISABLED:
-					setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-                    m_masterMotorLeft.setNeutral();
-                    m_masterMotorRight.setNeutral();
+					setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 
                     m_controlMode = ControlMode.DISABLED;
                     break;
@@ -316,6 +314,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
         switch (m_controlMode) {
             case DISABLED:
                 // No actuation
+				m_masterMotorLeft.setNeutral();
+				m_masterMotorRight.setNeutral();
                 break;
             case OPEN_LOOP:
                 // This makes sense, since this demand was updated externally

@@ -16,6 +16,7 @@ public class MathUtils {
 
     // See: https://floating-point-gui.de/errors/comparison/
     public static boolean epsilonEquals(final double a, final double b, final double epsilon) {
+        // fuck this
         final double
                 absA = abs(a),
                 absB = abs(b),
