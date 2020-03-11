@@ -5,32 +5,21 @@ import com.gemsrobotics.frc2020.autonomous.ThreeBallAuton;
 import com.gemsrobotics.frc2020.commands.DriveStraightCommand;
 import com.gemsrobotics.frc2020.subsystems.*;
 import com.gemsrobotics.frc2020.subsystems.RobotState;
-import com.gemsrobotics.lib.commands.TrackTrajectoryCommand;
 import com.gemsrobotics.lib.commands.WaitCommand;
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
-import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
-import com.gemsrobotics.lib.trajectory.TrajectoryContainer;
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
-import com.revrobotics.CANSparkMax;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.command.Command;
-import edu.wpi.first.wpilibj.command.CommandGroup;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
-
-import java.util.Arrays;
-import java.util.Collections;
 
 public final class Wallace extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
@@ -134,7 +123,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 	public void teleopPeriodic() {
 		SmartDashboard.putString("Heading", m_chassis.getHeading().toString());
 
-		SmartDashboard.putString("Camera to Target", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("None"));
+		SmartDashboard.putString("Camera to Target", m_targetServer.getCameraToTarget().map(TargetServer.GoalState::getCameraToTarget).map(RigidTransform::toString).orElse("None"));
 
 		SmartDashboard.putString("Robot Pose", m_robotState.getLatestFieldToVehicle().toString());
 		final var target = m_robotState.getCachedFieldToTarget();

@@ -10,7 +10,6 @@ import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.drivetrain.FieldToVehicleEstimator;
 import com.gemsrobotics.lib.utils.Units;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -106,7 +105,7 @@ public final class RobotState extends Subsystem {
 	private static class PeriodicIO {
 		public boolean targetServerAlive = false;
 		public Rotation newTurretRotation = Rotation.identity();
-		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
+		public Optional<TargetServer.GoalState> newTargetInfo = Optional.empty();
 		public Optional<Target> fieldToTargetCached = Optional.empty();
 	}
 
@@ -114,7 +113,7 @@ public final class RobotState extends Subsystem {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.newTurretRotation = Turret.getInstance().getRotation();
 		m_periodicIO.targetServerAlive = TargetServer.getInstance().isAlive();
-		m_periodicIO.newTargetInfo = TargetServer.getInstance().getTargetInfo();
+		m_periodicIO.newTargetInfo = TargetServer.getInstance().getCameraToTarget();
 	}
 
 	@Override
