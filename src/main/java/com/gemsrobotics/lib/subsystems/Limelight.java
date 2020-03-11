@@ -46,7 +46,7 @@ public abstract class Limelight extends Subsystem {
 
     protected final Resolution m_resolution;
     protected final Rotation m_pitch;
-    protected final double m_heightLens, m_heightTarget;
+    protected final double m_heightDifferential;
 
     protected final PeriodicIO m_periodicIO;
 
@@ -55,8 +55,7 @@ public abstract class Limelight extends Subsystem {
 
 		m_resolution = resolution;
 		m_pitch = pitch;
-		m_heightLens = lensHeight;
-		m_heightTarget = targetHeight;
+		m_heightDifferential = targetHeight - lensHeight;
 
 		m_table = NetworkTableInstance.getDefault().getTable(name);
 
@@ -255,11 +254,8 @@ public abstract class Limelight extends Subsystem {
 			final double y = vp.getY();
 			final double z = projection.y();
 
-			final double diff = m_heightTarget - m_heightLens;
-
-			if (z < 0.0 == diff > 0.0) {
-				final double scaling = diff / -z;
-				final double distance = Math.hypot(x, y) * scaling;
+			if (z < 0.0 == m_heightDifferential > 0.0) {
+				final double distance = Math.hypot(x, y) * (m_heightDifferential / -z);
 				final var angle = new Rotation(x, y, true);
 				final var cameraToTarget = RigidTransform.fromTranslation(Translation.fromPolar(angle, distance));
 				return Optional.of(new TargetServer.GoalState(m_periodicIO.timestamp, cameraToTarget));

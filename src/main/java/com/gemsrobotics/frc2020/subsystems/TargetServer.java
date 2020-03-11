@@ -12,13 +12,10 @@ import static java.lang.Math.tan;
 
 public final class TargetServer extends Limelight {
 	private static final double LENS_HEIGHT = 0.64;
-	private static final double GOAL_CENTER_HEIGHT = 2.49555 - Units.inches2Meters(9.5);
+	// TODO add this back if we're back to targeting the center of the goal, rather than the top edge
+	private static final double GOAL_CENTER_HEIGHT = 2.49555; //  - Units.inches2Meters(9.5);
 
 	private static TargetServer INSTANCE;
-
-	protected TargetServer() {
-		super(Resolution.LOW_DEF, Rotation.degrees(31.0));
-	}
 
 	public static TargetServer getInstance() {
 		if (Objects.isNull(INSTANCE)) {
@@ -26,6 +23,10 @@ public final class TargetServer extends Limelight {
 		}
 
 		return INSTANCE;
+	}
+
+	private TargetServer() {
+		super(Resolution.LOW_DEF, Rotation.degrees(31.0), LENS_HEIGHT, GOAL_CENTER_HEIGHT);
 	}
 
 	public static class GoalState {
