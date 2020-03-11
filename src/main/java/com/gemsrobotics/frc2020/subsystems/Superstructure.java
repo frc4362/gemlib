@@ -9,10 +9,8 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Limelight;
-import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
 import edu.wpi.first.wpilibj.*;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.annotations.Log;
 
@@ -20,9 +18,7 @@ import java.awt.*;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
-import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 
 public final class Superstructure extends Subsystem {
@@ -205,7 +201,6 @@ public final class Superstructure extends Subsystem {
 	protected synchronized void onUpdate(final double timestamp) {
 		final SystemState newState;
 
-		SmartDashboard.putNumber("Intake Current", m_intakeMotor.getDrawnCurrent());
 		SmartDashboard.putString("Wanted State", m_wantedState.toString());
 		SmartDashboard.putString("Current State", m_systemState.toString());
 
@@ -265,17 +260,7 @@ public final class Superstructure extends Subsystem {
 		m_stateChangeTimer.reset();
 	}
 
-	private SystemState handleIdle() {
-		m_kicker.set(false);
-		m_turret.setDisabled();
-		m_hood.setDeployed(true);
-		m_shooter.setDisabled();
-		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
-
-		m_leds.setColor(Color.BLACK, 0.0f);
-		m_pto.set(DoubleSolenoid.Value.kReverse);
-
+	private SystemState applyWantedState() {
 		switch (m_wantedState) {
 			case CLIMB_EXTEND:
 				return SystemState.CLIMB_EXTEND;
@@ -291,6 +276,20 @@ public final class Superstructure extends Subsystem {
 			default:
 				return SystemState.IDLE;
 		}
+	}
+
+	private SystemState handleIdle() {
+		m_kicker.set(false);
+		m_turret.setDisabled();
+		m_hood.setDeployed(true);
+		m_shooter.setDisabled();
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
+
+		m_leds.setColor(Color.BLACK, 0.0f);
+		m_pto.set(DoubleSolenoid.Value.kReverse);
+
+		return applyWantedState();
 	}
 
 	private SystemState handleClimbExtend() {
@@ -367,21 +366,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.INTAKING;
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleOuttaking() {
@@ -400,21 +385,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.OUTTAKING;
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleWaitingForAlignment() {
@@ -449,21 +420,7 @@ public final class Superstructure extends Subsystem {
 			m_turret.setReferenceRotation(m_turretGuess);
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleWaitingForFlywheel() {
