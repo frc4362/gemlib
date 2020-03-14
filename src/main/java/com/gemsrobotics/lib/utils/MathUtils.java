@@ -16,23 +16,7 @@ public class MathUtils {
 
     // See: https://floating-point-gui.de/errors/comparison/
     public static boolean epsilonEquals(final double a, final double b, final double epsilon) {
-        // fuck this
-        final double
-                absA = abs(a),
-                absB = abs(b),
-                diff = abs(a - b);
-
-        // shortcut, handles infinities
-        if (a == b) {
-            return true;
-        } else if (a == 0 || b == 0 || (absA + absB < Double.MIN_NORMAL)) {
-            // a or b is zero or both are extremely close to it
-            // relative error is less meaningful here
-            return diff < epsilon;
-        } else {
-            // use relative error
-            return diff / min((absA + absB), Double.MAX_VALUE) < epsilon;
-        }
+        return (a == b) || ((a - epsilon <= b) && (a + epsilon >= b));
     }
 
     public static boolean epsilonEquals(final double a, final double b) {

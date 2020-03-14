@@ -12,8 +12,8 @@ import static java.lang.Math.tan;
 
 public final class TargetServer extends Limelight {
 	private static final double LENS_HEIGHT = 0.64;
-	private static final double GOAL_CENTER_HEIGHT = 2.49555 - Units.inches2Meters(9.5);
-	private static final Rotation LENS_PITCH = Rotation.degrees(31.0);
+	// TODO add this back if we're back to targeting the center of the goal, rather than the top edge
+	private static final double GOAL_CENTER_HEIGHT = 2.49555; //  - Units.inches2Meters(9.5);
 
 	private static TargetServer INSTANCE;
 
@@ -25,11 +25,15 @@ public final class TargetServer extends Limelight {
 		return INSTANCE;
 	}
 
-	public static class TargetInfo {
+	private TargetServer() {
+		super(Resolution.LOW_DEF, Rotation.degrees(31.0), LENS_HEIGHT, GOAL_CENTER_HEIGHT);
+	}
+
+	public static class GoalState {
 		private final double m_timestamp;
 		private final RigidTransform m_cameraToTarget;
 
-		public TargetInfo(final double timestamp, final RigidTransform cameraToTarget) {
+		public GoalState(final double timestamp, final RigidTransform cameraToTarget) {
 			m_timestamp = timestamp;
 			m_cameraToTarget = cameraToTarget;
 		}
@@ -57,18 +61,5 @@ public final class TargetServer extends Limelight {
 	@Override
 	protected void onStop(final double timestamp) {
 		//stop
-	}
-
-	public synchronized Optional<TargetInfo> getTargetInfo() {
-		if (m_periodicIO.targetPresent) {
-			final Rotation a2 = m_periodicIO.offsetVertical;
-			final double distanceMeters = ((GOAL_CENTER_HEIGHT - LENS_HEIGHT) / tan(LENS_PITCH.sum(a2).getRadians()));
-			final double correctedDistanceMeters = (distanceMeters / 1.2) + 0.2968395564; // thanks regression
-			final RigidTransform cameraToTarget = RigidTransform.fromTranslation(Translation.fromPolar(m_periodicIO.offsetHorizontal, correctedDistanceMeters));
-
-			return Optional.of(new TargetInfo(m_periodicIO.timestamp, cameraToTarget));
-		} else {
-			return Optional.empty();
-		}
 	}
 }

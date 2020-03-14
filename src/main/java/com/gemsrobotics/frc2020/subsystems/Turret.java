@@ -111,7 +111,7 @@ public final class Turret extends Subsystem implements Loggable {
 			reference = Rotation.radians(reference.getRadians() - copySign(Tau, setpoint));
 		}
 
-		if ((abs(reference.getDegrees() - 180.0) < 1.0)) {
+		if (epsilonEquals(reference.getDegrees(), 180.0, 1.0)) {
 			reference = Rotation.degrees(copySign(reference.getDegrees(), 179.0));
 		}
 
@@ -135,7 +135,6 @@ public final class Turret extends Subsystem implements Loggable {
 				break;
 			case ROTATION:
 				final double error = atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
-
 				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * STICTION_VOLTS);
 				break;
 		}

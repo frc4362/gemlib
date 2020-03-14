@@ -241,17 +241,7 @@ public final class Superstructure extends Subsystem {
 		m_stateChangeTimer.reset();
 	}
 
-	private SystemState handleIdle() {
-		m_kicker.set(false);
-		m_turret.setDisabled();
-		m_hood.setDeployed(true);
-		m_shooter.setDisabled();
-		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
-
-		m_leds.setColor(Color.BLACK, 0.0f);
-		m_pto.set(DoubleSolenoid.Value.kReverse);
-
+	private SystemState applyWantedState() {
 		switch (m_wantedState) {
 			case CLIMB_EXTEND:
 				return SystemState.CLIMB_EXTEND;
@@ -267,6 +257,20 @@ public final class Superstructure extends Subsystem {
 			default:
 				return SystemState.IDLE;
 		}
+	}
+
+	private SystemState handleIdle() {
+		m_kicker.set(false);
+		m_turret.setDisabled();
+		m_hood.setDeployed(true);
+		m_shooter.setDisabled();
+		m_intakeDeployer.set(false);
+		m_intakeMotor.setNeutral();
+
+		m_leds.setColor(Color.BLACK, 0.0f);
+		m_pto.set(DoubleSolenoid.Value.kReverse);
+
+		return applyWantedState();
 	}
 
 	private SystemState handleClimbExtend() {
@@ -328,21 +332,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.INTAKING;
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleOuttaking() {
@@ -361,21 +351,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.OUTTAKING;
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleWaitingForAlignment() {
@@ -404,21 +380,7 @@ public final class Superstructure extends Subsystem {
 			m_turret.setReferenceRotation(m_turretGuess);
 		}
 
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleWaitingForFlywheel() {
