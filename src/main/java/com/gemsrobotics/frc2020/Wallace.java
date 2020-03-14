@@ -31,8 +31,6 @@ public final class Wallace extends TimedRobot implements Loggable {
 	private Hood m_hood;
 	private Superstructure m_superstructure;
 
-	private Solenoid m_kicker;
-
 	private SubsystemManager m_subsystemManager;
 
 	private Compressor m_compressor;
@@ -57,8 +55,6 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_robotState = RobotState.getInstance();
 		m_compressor = new Compressor();
 		m_superstructure = Superstructure.getInstance();
-
-//		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
 
 		m_compressorToggler = new SendableChooser<>();
 		m_compressorToggler.setDefaultOption("Compressor OFF", false);
@@ -119,16 +115,6 @@ public final class Wallace extends TimedRobot implements Loggable {
 
 	@Override
 	public void teleopPeriodic() {
-		SmartDashboard.putString("Camera to Target", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("None"));
-
-//		if (m_gamepad.getBButtonPressed()) {
-//			m_hopper.rotate(-1);
-//		} else if (m_gamepad.getXButtonPressed()) {
-//			m_hopper.rotate(-6);
-//		} else if (m_gamepad.getYButtonPressed()) {
-//			m_hopper.assertSafe();
-//		}
-
 		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
 			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY(), -m_stickRight.getY()));
 
