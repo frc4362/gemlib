@@ -5,36 +5,25 @@ import com.gemsrobotics.frc2020.autonomous.ThreeBallAuton;
 import com.gemsrobotics.frc2020.commands.DriveStraightCommand;
 import com.gemsrobotics.frc2020.subsystems.*;
 import com.gemsrobotics.frc2020.subsystems.RobotState;
-import com.gemsrobotics.lib.commands.TrackTrajectoryCommand;
 import com.gemsrobotics.lib.commands.WaitCommand;
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
-import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
-import com.gemsrobotics.lib.trajectory.TrajectoryContainer;
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
-import com.revrobotics.CANSparkMax;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.command.Command;
-import edu.wpi.first.wpilibj.command.CommandGroup;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
-import java.util.Arrays;
-import java.util.Collections;
-
 public final class Wallace extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
-	private Hopper m_hopper;
+	private Spindexer m_spindexer;
 	private Shooter m_shooter;
 	private Turret m_turret;
 	private TargetServer m_targetServer;
@@ -62,7 +51,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_stickLeft = new Gemstick(0);
 		m_stickRight = new Gemstick(1, Gemstick.Deadbands.makeRectangleDeadband(0.06, 0.15));
 		m_shooter = Shooter.getInstance();
-		m_hopper = Hopper.getInstance();
+		m_spindexer = Spindexer.getInstance();
 		m_turret = Turret.getInstance();
 		m_targetServer = TargetServer.getInstance();
 		m_robotState = RobotState.getInstance();
@@ -75,7 +64,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_compressorToggler.setDefaultOption("Compressor OFF", false);
 		m_compressorToggler.addOption("Compressor ON", true);
 
-		m_subsystemManager = new SubsystemManager(m_targetServer, m_hopper, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter, m_hood);
+		m_subsystemManager = new SubsystemManager(m_targetServer, m_spindexer, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter, m_hood);
 		m_gamepad = new XboxController(2);
 
 		SmartDashboard.putNumber("Shooter RPM", 0.0);
@@ -128,39 +117,17 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_compressor.setClosedLoopControl(m_compressorToggler.getSelected());
 	}
 
-	int h, k;
-
 	@Override
 	public void teleopPeriodic() {
-		SmartDashboard.putString("Heading", m_chassis.getHeading().toString());
-
 		SmartDashboard.putString("Camera to Target", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("None"));
 
-		SmartDashboard.putString("Robot Pose", m_robotState.getLatestFieldToVehicle().toString());
-		final var target = m_robotState.getCachedFieldToTarget();
-//		SmartDashboard.putString("Target Pose", target.map(RobotState.CachedTarget::getFieldToOuterGoal).map(Translation::toString).orElse("None"));
-
-		SmartDashboard.putString("Horizontal Offset", m_targetServer.getOffsetHorizontal().toString());
-
-		if (m_gamepad.getBButtonPressed()) {
-			m_hopper.rotate(-1);
-		} else if (m_gamepad.getXButtonPressed()) {
-			m_hopper.rotate(-6);
-		} else if (m_gamepad.getYButtonPressed()) {
-			m_hopper.assertSafe();
-		}
-
-		SmartDashboard.putNumber("Right Throttle", -m_stickRight.getY());
-
-//		if (m_gamepad.getAButtonPressed()) {
-//			k += 1;
+//		if (m_gamepad.getBButtonPressed()) {
+//			m_hopper.rotate(-1);
+//		} else if (m_gamepad.getXButtonPressed()) {
+//			m_hopper.rotate(-6);
 //		} else if (m_gamepad.getYButtonPressed()) {
-//			h += 1;
+//			m_hopper.assertSafe();
 //		}
-
-//		m_kicker.set(k % 2 == 1);
-//		m_hood.setDeployed(h % 2 == 0);
-//		m_shooter.setRPM(SmartDashboard.getNumber("Shooter RPM", 0.0));
 
 		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
 			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY(), -m_stickRight.getY()));

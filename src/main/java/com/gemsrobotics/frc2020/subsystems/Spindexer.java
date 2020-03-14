@@ -4,7 +4,6 @@ import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
-import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
 import com.revrobotics.CANSparkMax;
@@ -12,18 +11,16 @@ import io.github.oblarg.oblog.Loggable;
 
 import java.util.Objects;
 
-import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
-
-public final class Hopper extends Subsystem {
-	private static final MotorFeedforward FEEDFORWARD = new MotorFeedforward(0.488, 20.2 / 60.0, 1.22 / 60.0);
+public final class Spindexer extends Subsystem {
+//	private static final MotorFeedforward FEEDFORWARD = new MotorFeedforward(0.488, 20.2 / 60.0, 1.22 / 60.0);
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0 / 310.30303, Units.inches2Meters(13.75) / 2.0, 1.0);
 
-	private static Hopper INSTANCE;
+	private static Spindexer INSTANCE;
 
-	public static Hopper getInstance() {
+	public static Spindexer getInstance() {
 		if (Objects.isNull(INSTANCE)) {
-			INSTANCE = new Hopper();
+			INSTANCE = new Spindexer();
 		}
 
 		return INSTANCE;
@@ -34,14 +31,14 @@ public final class Hopper extends Subsystem {
 
 	private Mode m_mode;
 
-	private Hopper() {
+	private Spindexer() {
 		m_motor = MotorControllerFactory.createSparkMax(Constants.HOPPER_PORT, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setSelectedProfile(0);
 		m_motor.setPIDF(3.98, 0.0, 0.24, 0.0);
-		m_motor.setSelectedProfile(1);
-		m_motor.setPIDF(0.409, 0.0, 0.0, 0.0);
+//		m_motor.setSelectedProfile(1);
+//		m_motor.setPIDF(0.409, 0.0, 0.0, 0.0);
 		m_motor.setInvertedOutput(false);
 		m_motor.setEncoderRotations(0.0);
 
@@ -52,8 +49,8 @@ public final class Hopper extends Subsystem {
 
 	public enum Mode {
 		DISABLED,
-		RATCHETING,
-		VELOCITY
+		POSITION,
+		AUTO_SORT
 	}
 
 	private static class PeriodicIO implements Loggable {
@@ -72,19 +69,12 @@ public final class Hopper extends Subsystem {
 	}
 
 	public synchronized void rotate(final int steps) {
-		m_mode = Mode.RATCHETING;
-		m_motor.setSelectedProfile(0);
-		m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + (1.0 / 6.0) * -steps;
+		m_mode = Mode.POSITION;
+		m_periodicIO.referenceRotations = m_periodicIO.positionRotations + (1.0 / 6.0) * -steps;
 	}
 
-	public synchronized void setVoltage(final double voltage) {
-		m_mode = Mode.VELOCITY;
-		m_motor.setSelectedProfile(1);
-		m_periodicIO.referenceRotations = voltage;
-	}
-
-	public synchronized void assertSafe() {
-		m_periodicIO.referenceRotations = m_periodicIO.positionRotations;
+	public synchronized void setSorting() {
+		m_mode = Mode.AUTO_SORT;
 	}
 
 	public synchronized void setDisabled() {
@@ -98,7 +88,7 @@ public final class Hopper extends Subsystem {
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
 		switch (m_mode) {
-			case RATCHETING:
+			case POSITION:
 				m_motor.setPositionRotations(m_periodicIO.referenceRotations);
 
 				if (m_periodicIO.atReference) {
@@ -106,10 +96,8 @@ public final class Hopper extends Subsystem {
 				}
 
 				break;
-			case VELOCITY:
-				final double acceleration = (m_periodicIO.referenceRotations - m_periodicIO.velocityRPM) / dt();
-				final double ff = FEEDFORWARD.calculateVolts(m_periodicIO.referenceRotations, acceleration) / 12.0;
-				m_motor.setDutyCycle(m_periodicIO.referenceRotations);
+			case AUTO_SORT:
+				m_motor.setDutyCycle(0.4);
 				break;
 			default:
 				m_motor.setDutyCycle(0.0);
@@ -132,5 +120,9 @@ public final class Hopper extends Subsystem {
 
 	public synchronized double getRotations() {
 		return m_periodicIO.positionRotations;
+	}
+
+	public synchronized Mode getState() {
+		return m_mode;
 	}
 }

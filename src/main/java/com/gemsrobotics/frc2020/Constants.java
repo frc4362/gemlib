@@ -12,7 +12,6 @@ public class Constants {
 
 	public static final double FIELD_LENGTH_METERS = 16.4846;
 
-	public static final boolean USE_MANAGED_INVENTORY = false;
 	public static final boolean USE_INNER_ADJUSTMENT = false;
 	public static final boolean USE_SCUFFED_WALLSHOT = true;
 	public static final Translation OUTER_TO_INNER = new Translation(0.74295, 0.0);
