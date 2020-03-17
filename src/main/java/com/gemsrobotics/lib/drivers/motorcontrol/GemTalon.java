@@ -16,6 +16,7 @@ import com.gemsrobotics.lib.utils.TalonUtils;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.RobotController;
 
+import javax.xml.stream.FactoryConfigurationError;
 import java.util.function.Supplier;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
@@ -241,10 +242,15 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	@Override
-	public synchronized boolean setMotionParameters(final MotionParameters vars) {
-		final var cruiseVelocityNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(metersPerSecond2RPM(vars.cruiseVelocity));
-		final var accelerationNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(metersPerSecond2RPM(vars.acceleration));
-		final var toleranceNativeUnits = getInversionMultiplier() * rotations2NativeUnits(vars.tolerance / (Tau * m_cylinderRadiusMeters));
+	public synchronized boolean setMotionParametersLinear(final MotionParameters vars) {
+		return setMotionParametersAngular(new MotionParameters(metersPerSecond2RPM(vars.acceleration), metersPerSecond2RPM(vars.cruiseVelocity), meters2Rotations(vars.tolerance)));
+	}
+
+	@Override
+	public synchronized boolean setMotionParametersAngular(final MotionParameters vars) {
+		final var cruiseVelocityNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.cruiseVelocity);
+		final var accelerationNativeUnits = getInversionMultiplier() * RPM2NativeUnitsPer100ms(vars.acceleration);
+		final var toleranceNativeUnits = getInversionMultiplier() * rotations2NativeUnits(vars.tolerance);
 
 		boolean success = true;
 
@@ -288,7 +294,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	@Override
 	public synchronized void setPositionRotations(final double rotations, final double feedforward) {
 		set(m_isMotionProfilingConfigured ? ControlMode.MotionMagic : ControlMode.Position,
-				getInversionMultiplier() *  rotations2NativeUnits(rotations / m_cylinderToEncoderReduction),
+				getInversionMultiplier() * rotations2NativeUnits(rotations),
 				DemandType.ArbitraryFeedForward, feedforward);
 	}
 
@@ -331,8 +337,12 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		return success;
 	}
 
+	private double meters2Rotations(final double meters) {
+		return meters / (Tau * m_cylinderRadiusMeters);
+	}
+
 	private double metersPerSecond2RPM(final double meters) {
-		return (meters / (Tau * m_cylinderRadiusMeters)) * 60;
+		return meters2Rotations(meters) * 60;
 	}
 
 	private double nativeUnits2Rotations(final double nativeUnits) {

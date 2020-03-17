@@ -65,7 +65,7 @@ public final class Superstructure extends Subsystem {
 	private final Spindexer m_spindexer;
 	private final RobotState m_robotState;
 
-	private MotorController<CANSparkMax> m_intakeMotor;
+	private MotorController<CANSparkMax> m_intakeMotorLower, m_intakeMotorUpper;
 	private Solenoid m_intakeDeployer, m_kicker;
 	private DoubleSolenoid m_pto;
 
@@ -91,8 +91,10 @@ public final class Superstructure extends Subsystem {
 		m_spindexer = Spindexer.getInstance();
 		m_robotState = RobotState.getInstance();
 
-		m_intakeMotor = MotorControllerFactory.createDefaultSparkMax(Constants.CHANNEL_LEFT_PORT);
-		m_intakeMotor.setInvertedOutput(true);
+		m_intakeMotorLower = MotorControllerFactory.createDefaultSparkMax(Constants.LOWER_INTAKE_PORT);
+		m_intakeMotorLower.setInvertedOutput(false);
+		m_intakeMotorUpper = MotorControllerFactory.createDefaultSparkMax(Constants.UPPER_INTAKE_PORT);
+		m_intakeMotorUpper.setInvertedOutput(true);
 
 		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
 		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
@@ -126,6 +128,24 @@ public final class Superstructure extends Subsystem {
 
 	public synchronized SystemState getSystemState() {
 		return m_systemState;
+	}
+
+	private SystemState applyWantedState() {
+		switch (m_wantedState) {
+			case CLIMB_EXTEND:
+				return SystemState.CLIMB_EXTEND;
+			case CLIMB_RETRACT:
+				return SystemState.CLIMB_RETRACT;
+			case INTAKING:
+				return SystemState.INTAKING;
+			case OUTTAKING:
+				return SystemState.OUTTAKING;
+			case SHOOTING:
+				return SystemState.WAITING_FOR_ALIGNMENT;
+			case IDLE:
+			default:
+				return SystemState.IDLE;
+		}
 	}
 
 	@Override
@@ -241,31 +261,14 @@ public final class Superstructure extends Subsystem {
 		m_stateChangeTimer.reset();
 	}
 
-	private SystemState applyWantedState() {
-		switch (m_wantedState) {
-			case CLIMB_EXTEND:
-				return SystemState.CLIMB_EXTEND;
-			case CLIMB_RETRACT:
-				return SystemState.CLIMB_RETRACT;
-			case INTAKING:
-				return SystemState.INTAKING;
-			case OUTTAKING:
-				return SystemState.OUTTAKING;
-			case SHOOTING:
-				return SystemState.WAITING_FOR_ALIGNMENT;
-			case IDLE:
-			default:
-				return SystemState.IDLE;
-		}
-	}
-
 	private SystemState handleIdle() {
 		m_kicker.set(false);
 		m_turret.setDisabled();
 		m_hood.setDeployed(true);
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
+		m_intakeMotorLower.setNeutral();
+		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setColor(Color.BLACK, 0.0f);
 		m_pto.set(DoubleSolenoid.Value.kReverse);
@@ -279,7 +282,8 @@ public final class Superstructure extends Subsystem {
 		m_spindexer.setDisabled();
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
+		m_intakeMotorLower.setNeutral();
+		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.75f);
@@ -302,7 +306,8 @@ public final class Superstructure extends Subsystem {
 		m_spindexer.setDisabled();
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
+		m_intakeMotorLower.setNeutral();
+		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.15f);
@@ -325,7 +330,8 @@ public final class Superstructure extends Subsystem {
 		m_intakeDeployer.set(true);
 
 		if (m_stateChangeTimer.get() > 0.1) {
-			m_intakeMotor.setDutyCycle(1.0);
+			m_intakeMotorLower.setDutyCycle(1.0);
+			m_intakeMotorUpper.setDutyCycle(1.0);
 		}
 
 		if (m_wantedState != WantedState.INTAKING && m_wantStateChangeTimer.get() < 0.1) {
@@ -343,11 +349,11 @@ public final class Superstructure extends Subsystem {
 		m_intakeDeployer.set(true);
 
 		if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() < 0.1) {
-			m_intakeMotor.setDutyCycle(0.0);
+			m_intakeMotorLower.setDutyCycle(0.0);
 		} else if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
-			m_intakeMotor.setDutyCycle(-0.5);
+			m_intakeMotorLower.setDutyCycle(-0.5);
 		} else if (m_wantedState != WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
-			m_intakeMotor.setDutyCycle(0.0);
+			m_intakeMotorLower.setDutyCycle(0.0);
 			return SystemState.OUTTAKING;
 		}
 
@@ -358,7 +364,8 @@ public final class Superstructure extends Subsystem {
 		m_leds.setOn(true);
 		m_leds.setColor(Color.YELLOW, 1.0f);
 		m_intakeDeployer.set(false);
-		m_intakeMotor.setNeutral();
+		m_intakeMotorLower.setNeutral();
+		m_intakeMotorUpper.setNeutral();
 
 		if (m_periodicIO.target.isPresent()) {
 			final var target = m_periodicIO.target.get();
@@ -419,8 +426,8 @@ public final class Superstructure extends Subsystem {
 		SmartDashboard.putBoolean("Hood At Ref", hoodAtRef);
 		SmartDashboard.putBoolean("Ready To Fire", readyToFire);
 
-		if (turretAtRef && readyToFire && m_spindexer.atRest() && epsilonEquals(m_targetServer.getOffsetHorizontal().getDegrees(), 0.0, 1.0)) {
-			return SystemState.WAITING_FOR_KICKER;
+		if (turretAtRef && readyToFire && epsilonEquals(m_targetServer.getOffsetHorizontal().getDegrees(), 0.0, 1.0)) {
+			return SystemState.WAITING_FOR_HOPPER;
 		}
 
 		switch (m_wantedState) {
@@ -444,10 +451,10 @@ public final class Superstructure extends Subsystem {
 		m_leds.setColor(Color.PINK, 1.0f);
 
 		if (m_stateChanged) {
-			m_spindexer.rotate(2);
+			m_spindexer.setShootingPosition();
 		}
 
-		if (m_spindexer.atRest() && m_stateChangeTimer.get() > 0.1) {
+		if (m_spindexer.atRest()) {
 			return SystemState.WAITING_FOR_KICKER;
 		} else {
 			return SystemState.WAITING_FOR_HOPPER;
@@ -459,7 +466,9 @@ public final class Superstructure extends Subsystem {
 			m_kicker.set(true);
 		}
 
-		if (m_stateChangeTimer.get() > 0.08) {
+		m_spindexer.setDisabled();
+
+		if (m_stateChangeTimer.get() > 0.25) {
 			return SystemState.SHOOTING;
 		} else {
 			return SystemState.WAITING_FOR_KICKER;
@@ -497,11 +506,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.SHOOTING;
 		}
 
-		if (m_wantedState == WantedState.SHOOTING) {
-			return SystemState.SHOOTING;
-		} else {
-			return SystemState.IDLE;
-		}
+		return SystemState.IDLE;
 	}
 
 	@Override
@@ -519,9 +524,7 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private boolean isReadyToFire() {
-		return m_shooter.atReference()
-			   && m_spindexer.atRest()
-			   && m_hood.isDeployed() == m_hood.wantsDeployed();
+		return m_shooter.atReference() && (m_hood.isDeployed() == m_hood.wantsDeployed());
 	}
 
 	private void setTurretTargetGoal(final Translation hint) {

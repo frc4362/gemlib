@@ -18,7 +18,7 @@ import java.util.Optional;
 
 public final class RobotState extends Subsystem {
 	private static final int BUFFER_SIZE = 400;
-	public static final int MANY_METERS = 100;
+	private static final int MANY_METERS = 100;
 	private static final Rotation INNER_SHOT_ALLOWED_DEFLECTION = Rotation.degrees(21.46);
 
 	private static final RigidTransform

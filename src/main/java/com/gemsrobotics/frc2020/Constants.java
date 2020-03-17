@@ -10,14 +10,9 @@ import com.gemsrobotics.lib.utils.Units;
 public class Constants {
 	private Constants() { }
 
-	public static final double FIELD_LENGTH_METERS = 16.4846;
-
 	public static final boolean USE_INNER_ADJUSTMENT = false;
 	public static final boolean USE_SCUFFED_WALLSHOT = true;
 	public static final Translation OUTER_TO_INNER = new Translation(0.74295, 0.0);
-
-	public static final double MAX_SHOT_RANGE_METERS = Units.feet2Meters(40.0);
-	public static final double CLOSE_SHOT_RANGE_METERS = 1.0;
 
 	public static final double WALL_SHOOTING_RPM = 6000.0;
 	public static final double[][] SHOOTER_RANGE_RPM = {
@@ -62,9 +57,8 @@ public class Constants {
 	public static final int TURRET_PORT = 13;
 	public static final int CONTROL_PANEL_MOTOR_PORT = 14;
 
-	public static final int CHANNEL_RIGHT_PORT = 30;
-	public static final int CHANNEL_CENTER_PORT = 31;
-	public static final int CHANNEL_LEFT_PORT = 32;
+	public static final int LOWER_INTAKE_PORT = 32;
+	public static final int UPPER_INTAKE_PORT = 60;
 
 	public static final int HOOD_SOLENOID_PORT = 0;
 	public static final int INTAKE_SOLENOID_PORT = 1;

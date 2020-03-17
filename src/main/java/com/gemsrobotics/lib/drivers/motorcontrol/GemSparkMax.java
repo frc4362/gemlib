@@ -166,7 +166,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
     }
 
     @Override
-    public synchronized boolean setMotionParameters(final MotionParameters vars) {
+    public synchronized boolean setMotionParametersLinear(final MotionParameters vars) {
 	    boolean success = true;
 
         success &= runWithRetries(() -> m_controller.setSmartMotionMaxAccel(vars.acceleration, m_selectedProfileID));
@@ -176,6 +176,11 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
         m_hasMotionProfilingBeenConfigured = success;
 
         return success;
+    }
+
+    @Override
+    public synchronized boolean setMotionParametersAngular(final MotionParameters vars) {
+        return setMotionParametersLinear(new MotionParameters((vars.acceleration / 60) * (Tau * m_cylinderRadiusMeters), (vars.cruiseVelocity / 60) * (Tau * m_cylinderRadiusMeters), vars.tolerance * (Tau * m_cylinderRadiusMeters)));
     }
 
     @Override

@@ -109,9 +109,14 @@ public interface MotorController<T> {
         return setPIDF(new PIDFController.Gains(kP, kI, kD, kFF));
     }
 
-    boolean setMotionParameters(MotionParameters vars);
-    default boolean setMotionParameters(final double maxAcceleration, final double cruiseVelocity, final double allowableError) {
-        return setMotionParameters(new MotionParameters(maxAcceleration, cruiseVelocity, allowableError));
+    boolean setMotionParametersLinear(MotionParameters vars);
+    default boolean setMotionParametersLinear(final double maxAcceleration, final double cruiseVelocity, final double allowableError) {
+        return setMotionParametersLinear(new MotionParameters(maxAcceleration, cruiseVelocity, allowableError));
+    }
+
+    boolean setMotionParametersAngular(MotionParameters vars);
+    default boolean setMotionParametersAngular(final double maxAcceleration, final double cruiseVelocity, final double allowableError) {
+        return setMotionParametersAngular(new MotionParameters(maxAcceleration, cruiseVelocity, allowableError));
     }
 
     /**

@@ -108,13 +108,25 @@ public final class Wallace extends TimedRobot implements Loggable {
 	public void teleopInit() {
 		Scheduler.getInstance().removeAll();
 		m_subsystemManager.start();
-		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+//		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 		m_slowDrive = false;
 		m_compressor.setClosedLoopControl(m_compressorToggler.getSelected());
 	}
 
 	@Override
 	public void teleopPeriodic() {
+//		if (m_gamepad.getXButtonPressed()) {
+//			m_spindexer.rotate(1);
+//		} else if (m_gamepad.getBButtonPressed()) {
+//			m_spindexer.rotate(6);
+//		} else if (m_gamepad.getYButtonPressed()) {
+//			m_spindexer.setShootingPosition();
+//		} else if (m_gamepad.getAButtonPressed()) {
+//			m_spindexer.setSorting();
+//		} else if (m_gamepad.getAButtonReleased()) {
+//			m_spindexer.setDisabled();
+//		}
+
 		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
 			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY(), -m_stickRight.getY()));
 

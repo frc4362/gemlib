@@ -1,20 +1,26 @@
 package com.gemsrobotics.frc2020.subsystems;
 
+import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.frc2020.Constants;
-import com.gemsrobotics.lib.controls.MotorFeedforward;
+import com.gemsrobotics.lib.data.RollingAverageDouble;
+import com.gemsrobotics.lib.drivers.motorcontrol.GemTalon;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.Units;
-import com.revrobotics.CANSparkMax;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 
 import java.util.Objects;
 
+import static java.lang.Math.*;
+
 public final class Spindexer extends Subsystem {
-//	private static final MotorFeedforward FEEDFORWARD = new MotorFeedforward(0.488, 20.2 / 60.0, 1.22 / 60.0);
+	private static final double STICTION = 0.0 / 12.0; // actually .6
+	private static final MotorController.MotionParameters MOTION_PARAMETERS =
+			new MotorController.MotionParameters(4800, 180, 0.08);
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
-			new MotorController.GearingParameters(1.0 / 310.30303, Units.inches2Meters(13.75) / 2.0, 1.0);
+			new MotorController.GearingParameters(1.0 / 30.0, Units.inches2Meters(13.75) / 2.0, 1.0);
 
 	private static Spindexer INSTANCE;
 
@@ -26,21 +32,26 @@ public final class Spindexer extends Subsystem {
 		return INSTANCE;
 	}
 
-	private final MotorController<CANSparkMax> m_motor;
+	private final GemTalon<TalonFX> m_motor;
+	private final RollingAverageDouble m_stallAverage;
 	private final PeriodicIO m_periodicIO;
 
 	private Mode m_mode;
 
 	private Spindexer() {
-		m_motor = MotorControllerFactory.createSparkMax(Constants.HOPPER_PORT, MotorControllerFactory.DEFAULT_SPARK_CONFIG);
+		m_motor = MotorControllerFactory.createDefaultTalonFX(Constants.HOPPER_PORT);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
+		m_motor.setPeakOutputs(0.33, -0.33);
+//		m_motor.setMotionParametersAngular(MOTION_PARAMETERS);
 		m_motor.setSelectedProfile(0);
-		m_motor.setPIDF(3.98, 0.0, 0.24, 0.0);
+		m_motor.setPIDF(0.4, 0.0, 0.842, 0.0);
 //		m_motor.setSelectedProfile(1);
 //		m_motor.setPIDF(0.409, 0.0, 0.0, 0.0);
 		m_motor.setInvertedOutput(false);
 		m_motor.setEncoderRotations(0.0);
+
+		m_stallAverage = new RollingAverageDouble(40);
 
 		m_periodicIO = new PeriodicIO();
 
@@ -64,13 +75,25 @@ public final class Spindexer extends Subsystem {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.positionRotations = m_motor.getPositionRotations();
 		m_periodicIO.velocityRPM = m_motor.getVelocityAngularRPM();
-		m_periodicIO.atReference = Math.abs(m_periodicIO.referenceRotations - m_periodicIO.positionRotations) < (0.6 / 360.0)
-								   && Math.abs(m_periodicIO.velocityRPM) < 0.05;
+		m_periodicIO.atReference = abs(m_periodicIO.referenceRotations - m_periodicIO.positionRotations) < (0.6 / 360.0)
+								   && abs(m_periodicIO.velocityRPM) < 0.05;
 	}
 
-	public synchronized void rotate(final int steps) {
+	public synchronized void rotate(final double steps) {
+		final var change = (1.0 / 6.0) * -steps;
+
+		if (m_mode == Mode.AUTO_SORT) {
+			m_periodicIO.referenceRotations = m_periodicIO.positionRotations + change;
+		} else {
+			m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + change;
+		}
+
 		m_mode = Mode.POSITION;
-		m_periodicIO.referenceRotations = m_periodicIO.positionRotations + (1.0 / 6.0) * -steps;
+	}
+
+	public synchronized void setShootingPosition() {
+		m_periodicIO.referenceRotations = round(m_periodicIO.positionRotations * 6.0) / 6.0;
+		m_mode = Mode.POSITION;
 	}
 
 	public synchronized void setSorting() {
@@ -87,9 +110,16 @@ public final class Spindexer extends Subsystem {
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
+		SmartDashboard.putNumber("Spindexer Current", m_motor.getDrawnCurrent());
+		SmartDashboard.putNumber("Spindexer Velocity", m_motor.getVelocityAngularRPM());
+
 		switch (m_mode) {
 			case POSITION:
-				m_motor.setPositionRotations(m_periodicIO.referenceRotations);
+				m_stallAverage.clear();
+
+				final var error = m_motor.getInternalController().getClosedLoopError();
+				final var deadbandedError = abs(error) > 10.0 ? error : 0.0;
+				m_motor.setPositionRotations(m_periodicIO.referenceRotations, signum(deadbandedError) * STICTION);
 
 				if (m_periodicIO.atReference) {
 					m_mode = Mode.DISABLED;
@@ -97,9 +127,17 @@ public final class Spindexer extends Subsystem {
 
 				break;
 			case AUTO_SORT:
-				m_motor.setDutyCycle(0.4);
+				m_stallAverage.add(m_motor.getDrawnCurrent());
+
+				if (m_stallAverage.getAverage() > 47.0 && !m_stallAverage.hasSpaceRemaining()) {
+					m_motor.setVoltage(-2.75);
+				} else {
+					m_motor.setVoltage(1.815);
+				}
+
 				break;
 			default:
+				m_stallAverage.clear();
 				m_motor.setDutyCycle(0.0);
 				break;
 		}

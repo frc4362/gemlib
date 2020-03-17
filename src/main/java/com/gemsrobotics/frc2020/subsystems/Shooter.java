@@ -154,8 +154,8 @@ public final class Shooter extends Subsystem implements Loggable {
 	}
 
 	public synchronized boolean atReference() {
-		return m_shooterSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.shooterReferenceRPM, 200.0))
-			   && m_feederSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.feederReferenceRPM, 200.0));
+		return m_shooterSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.shooterReferenceRPM, 1000.0))
+			   && m_feederSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.feederReferenceRPM, 1000.0));
 	}
 
 	public synchronized boolean isNeutral() {
