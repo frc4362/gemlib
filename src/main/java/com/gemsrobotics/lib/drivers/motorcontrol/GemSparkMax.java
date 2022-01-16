@@ -1,29 +1,22 @@
 package com.gemsrobotics.lib.drivers.motorcontrol;
 
 import com.gemsrobotics.lib.controls.PIDFController;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.revrobotics.*;
 
 import java.util.function.Supplier;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
-public final class GemSparkMax implements MotorController<CANSparkMax>, Reportable {
+public final class GemSparkMax implements MotorController<CANSparkMax> {
     private static final int MAX_TRIES = 3;
-
-    @Override
-    public String getName() {
-        return m_name;
-    }
 
     private final String m_name;
     private final CANSparkMax m_internal;
-    private final CANPIDController m_controller;
-    private final CANEncoder m_encoder;
+    private final SparkMaxPIDController m_controller;
+    private final RelativeEncoder m_encoder;
 
     private MotorController<CANSparkMax> m_leader;
-    private ControlType m_lastDemandType;
+    private CANSparkMax.ControlType m_lastDemandType;
     private int m_selectedProfileID;
     private double m_lastDemand, m_lastFeedforward;
 
@@ -53,7 +46,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 		return m_leader;
 	}
 
-	private void set(final ControlType type, final double demand, final double feedforward) {
+	private void set(final CANSparkMax.ControlType type, final double demand, final double feedforward) {
 		if (type != m_lastDemandType || demand != m_lastDemand || feedforward != m_lastFeedforward) {
 			m_lastDemandType = type;
 			m_lastDemand = demand;
@@ -185,12 +178,12 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 
     @Override
     public void setDutyCycle(final double cycle, final double feedforward) {
-        set(ControlType.kDutyCycle, cycle, feedforward);
+        set(CANSparkMax.ControlType.kDutyCycle, cycle, feedforward);
     }
 
     @Override
     public void setVoltage(final double voltage, final double feedforward) {
-        set(ControlType.kVoltage, voltage, feedforward);
+        set(CANSparkMax.ControlType.kVoltage, voltage, feedforward);
     }
 
     @Override
@@ -200,7 +193,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 
     @Override
     public void setVelocityRPM(final double rpm, final double feedforward) {
-        set(ControlType.kVelocity, rpm / m_cylinderToEncoderReduction, feedforward);
+        set(CANSparkMax.ControlType.kVelocity, rpm / m_cylinderToEncoderReduction, feedforward);
     }
 
     @Override
@@ -210,12 +203,13 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
 
     @Override
     public void setPositionRotations(final double rotations, final double feedforward) {
-        set(m_hasMotionProfilingBeenConfigured ? ControlType.kSmartMotion : ControlType.kPosition, rotations / m_cylinderToEncoderReduction, feedforward);
+        set(m_hasMotionProfilingBeenConfigured ? CANSparkMax.ControlType.kSmartMotion : CANSparkMax.ControlType.kPosition,
+    rotations / m_cylinderToEncoderReduction, feedforward);
     }
 
     @Override
     public void setNeutral() {
-       set(ControlType.kDutyCycle, 0.0, 0.0);
+       set(CANSparkMax.ControlType.kDutyCycle, 0.0, 0.0);
     }
 
     @Override
@@ -233,17 +227,17 @@ public final class GemSparkMax implements MotorController<CANSparkMax>, Reportab
         return m_selectedProfileID;
     }
 
-    private synchronized boolean runWithRetries(final Supplier<CANError> call) {
+    private synchronized boolean runWithRetries(final Supplier<REVLibError> call) {
 	    boolean success;
 
 	    int tries = 0;
 
 	    do {
-	        success = call.get() == CANError.kOk;
+	        success = call.get() == REVLibError.kOk;
         } while (!success && tries++ < MAX_TRIES);
 
 	    if (tries >= MAX_TRIES || !success) {
-	        report(Kind.ERROR, "Failed to configure SparkMax on Port " + m_internal.getDeviceId() + "!!");
+	        System.out.println("Failed to configure SparkMax on Port " + m_internal.getDeviceId() + "!!");
 	        return false;
         } else {
 	        return true;

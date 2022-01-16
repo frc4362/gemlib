@@ -23,7 +23,7 @@ import static java.lang.Math.abs;
 
 public final class Superstructure extends Subsystem {
 	public static final double TARGET_CACHE_DISTANCE = 5.0;
-	public static final double STOP_SHOOT_TIME_SECONDS = 0.250;
+	public static final double STOP_SHOOT_TIME_SECONDS = 0.6;
 	private static Superstructure INSTANCE;
 
 	public static Superstructure getInstance() {
@@ -65,7 +65,7 @@ public final class Superstructure extends Subsystem {
 	private final Spindexer m_spindexer;
 	private final RobotState m_robotState;
 
-	private MotorController<CANSparkMax> m_intakeMotorLower, m_intakeMotorUpper;
+//	private MotorController<CANSparkMax> m_intakeMotorLower, m_intakeMotorUpper;
 	private Solenoid m_intakeDeployer, m_kicker;
 	private DoubleSolenoid m_pto;
 
@@ -91,14 +91,9 @@ public final class Superstructure extends Subsystem {
 		m_spindexer = Spindexer.getInstance();
 		m_robotState = RobotState.getInstance();
 
-		m_intakeMotorLower = MotorControllerFactory.createDefaultSparkMax(Constants.LOWER_INTAKE_PORT);
-		m_intakeMotorLower.setInvertedOutput(false);
-		m_intakeMotorUpper = MotorControllerFactory.createDefaultSparkMax(Constants.UPPER_INTAKE_PORT);
-		m_intakeMotorUpper.setInvertedOutput(true);
-
-		m_kicker = new Solenoid(Constants.KICKER_SOLENOID_PORT);
-		m_intakeDeployer = new Solenoid(Constants.INTAKE_SOLENOID_PORT);
-		m_pto = new DoubleSolenoid(Constants.PTO_SOLENOID_PORT[0], Constants.PTO_SOLENOID_PORT[1]);
+		m_kicker = new Solenoid(PneumaticsModuleType.CTREPCM, Constants.KICKER_SOLENOID_PORT);
+		m_intakeDeployer = new Solenoid(PneumaticsModuleType.CTREPCM, Constants.INTAKE_SOLENOID_PORT);
+		m_pto = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, Constants.PTO_SOLENOID_PORT[0], Constants.PTO_SOLENOID_PORT[1]);
 
 		m_stateChangeTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
@@ -152,7 +147,9 @@ public final class Superstructure extends Subsystem {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.vehiclePose = m_robotState.getFieldToVehicle(timestamp);
 		m_periodicIO.turretPose = m_robotState.getFieldToTurret(timestamp);
-		m_periodicIO.target = (Constants.USE_SCUFFED_WALLSHOT && DriverStation.getInstance().getStickButton(2, 7)) ? Optional.of(new WallshotTarget(m_periodicIO.vehiclePose.getTranslation())): m_robotState.getCachedFieldToTarget();
+		m_periodicIO.target = (Constants.USE_SCUFFED_WALLSHOT && DriverStation.getStickButton(2, 7))
+						  ? Optional.of(new WallshotTarget(m_periodicIO.vehiclePose.getTranslation()))
+						  : m_robotState.getCachedFieldToTarget();
 	}
 
 	private static class WallshotTarget implements Target {
@@ -200,10 +197,6 @@ public final class Superstructure extends Subsystem {
 
 		SmartDashboard.putString("Wanted State", m_wantedState.toString());
 		SmartDashboard.putString("Current State", m_systemState.toString());
-
-		if (m_spindexer.getState() != Spindexer.Mode.POSITION) {
-			m_spindexer.setSorting();
-		}
 
 		final var facingTarget = abs(m_periodicIO.turretPose.getRotation().getDegrees()) < 75.0;
 		m_targetServer.setLEDMode(m_systemState != SystemState.CLIMB_EXTEND && m_systemState != SystemState.CLIMB_RETRACT && facingTarget ? Limelight.LEDMode.ON : Limelight.LEDMode.OFF);
@@ -262,13 +255,10 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleIdle() {
-		m_kicker.set(false);
 		m_turret.setDisabled();
 		m_hood.setDeployed(true);
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotorLower.setNeutral();
-		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setColor(Color.BLACK, 0.0f);
 		m_pto.set(DoubleSolenoid.Value.kReverse);
@@ -282,8 +272,6 @@ public final class Superstructure extends Subsystem {
 		m_spindexer.setDisabled();
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotorLower.setNeutral();
-		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.75f);
@@ -306,8 +294,6 @@ public final class Superstructure extends Subsystem {
 		m_spindexer.setDisabled();
 		m_shooter.setDisabled();
 		m_intakeDeployer.set(false);
-		m_intakeMotorLower.setNeutral();
-		m_intakeMotorUpper.setNeutral();
 
 		m_leds.setOn(true);
 		m_leds.setColorWave(Color.RED, 0.15f);
@@ -330,8 +316,8 @@ public final class Superstructure extends Subsystem {
 		m_intakeDeployer.set(true);
 
 		if (m_stateChangeTimer.get() > 0.1) {
-			m_intakeMotorLower.setDutyCycle(1.0);
-			m_intakeMotorUpper.setDutyCycle(1.0);
+//			m_intakeMotorLower.setDutyCycle(1.0);
+//			m_intakeMotorUpper.setDutyCycle(1.0);
 		}
 
 		if (m_wantedState != WantedState.INTAKING && m_wantStateChangeTimer.get() < 0.1) {
@@ -349,30 +335,26 @@ public final class Superstructure extends Subsystem {
 		m_intakeDeployer.set(true);
 
 		if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() < 0.1) {
-			m_intakeMotorLower.setDutyCycle(0.0);
 		} else if (m_wantedState == WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
-			m_intakeMotorLower.setDutyCycle(-0.5);
 		} else if (m_wantedState != WantedState.OUTTAKING && m_wantStateChangeTimer.get() > 0.1) {
-			m_intakeMotorLower.setDutyCycle(0.0);
 			return SystemState.OUTTAKING;
 		}
 
 		return applyWantedState();
 	}
 
+	// does not turn off the shooter; you can drop of out of WAITING_FOR_FLYWHEEL and recover
 	private SystemState handleWaitingForAlignment() {
 		m_leds.setOn(true);
-		m_leds.setColor(Color.YELLOW, 1.0f);
+		m_leds.setColor(Color.BLUE, 1.0f);
 		m_intakeDeployer.set(false);
-		m_intakeMotorLower.setNeutral();
-		m_intakeMotorUpper.setNeutral();
 
 		if (m_periodicIO.target.isPresent()) {
 			final var target = m_periodicIO.target.get();
 			final var goal = target.getOptimalGoal();
 			final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
-			m_hood.setDeployed(!target.isClose());
+			m_hood.setDeployed(!DriverStation.getStickButton(1, 4));
 
 			if (target.isClose()) {
 				m_turret.setReferenceRotation(Rotation.degrees(0));
@@ -381,6 +363,7 @@ public final class Superstructure extends Subsystem {
 			}
 
 			if (isAligned(target, true)) {
+				System.out.println("Alignment found, go to WAITING_FOR_FLYWHEEL");
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			}
 		} else {
@@ -410,9 +393,11 @@ public final class Superstructure extends Subsystem {
 			targetRPM = Constants.getRPM(targetDistance);
 		}
 
+//		m_shooter.setRPM(SmartDashboard.getNumber("Shooter RPM", 0));
 		m_shooter.setRPM(targetRPM);
 
 		if (!isAligned(m_periodicIO.target.get(), true)) {
+			System.out.println("Target lost, dropping back to WAITING_FOR_ALIGNMENT");
 			return SystemState.WAITING_FOR_ALIGNMENT;
 		}
 
@@ -424,9 +409,10 @@ public final class Superstructure extends Subsystem {
 		SmartDashboard.putBoolean("Turret At Ref", turretAtRef);
 		SmartDashboard.putBoolean("Shooter At Ref", shooterAtRef);
 		SmartDashboard.putBoolean("Hood At Ref", hoodAtRef);
-		SmartDashboard.putBoolean("Ready To Fire", readyToFire);
+//		SmartDashboard.putBoolean("Ready To Fire", readyToFire);
 
 		if (turretAtRef && readyToFire && epsilonEquals(m_targetServer.getOffsetHorizontal().getDegrees(), 0.0, 1.0)) {
+			System.out.println("Stopping the hopper");
 			return SystemState.WAITING_FOR_HOPPER;
 		}
 
@@ -448,13 +434,14 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleWaitingForHopper() {
-		m_leds.setColor(Color.PINK, 1.0f);
+		m_leds.setColor(Color.GREEN, 1.0f);
 
 		if (m_stateChanged) {
 			m_spindexer.setShootingPosition();
 		}
 
 		if (m_spindexer.atRest()) {
+			System.out.println("Hopper stopped, go to KICKER state");
 			return SystemState.WAITING_FOR_KICKER;
 		} else {
 			return SystemState.WAITING_FOR_HOPPER;
@@ -469,6 +456,7 @@ public final class Superstructure extends Subsystem {
 		m_spindexer.setDisabled();
 
 		if (m_stateChangeTimer.get() > 0.25) {
+			System.out.println("Kicker engaged, go to SHOOTING state");
 			return SystemState.SHOOTING;
 		} else {
 			return SystemState.WAITING_FOR_KICKER;
@@ -479,7 +467,13 @@ public final class Superstructure extends Subsystem {
 		m_leds.setColor(Color.RED, 1.0f);
 
 		if (m_stateChanged) {
-			m_spindexer.rotate(6);
+			System.out.println("Entered SHOOTING state, turning spindexer");
+			m_spindexer.rotate(8);
+		}
+
+		if (m_wantedState != WantedState.SHOOTING && m_stateChangeTimer.get() > 3.0) {
+			System.out.println("3 seconds have passed, going to IDLE state");
+			return SystemState.IDLE;
 		}
 
 		final Target target;
@@ -487,6 +481,7 @@ public final class Superstructure extends Subsystem {
 		if (m_periodicIO.target.isPresent()) {
 			target = m_periodicIO.target.get();
 		} else {
+			System.out.println("Target not found in SHOOTING state. How did you get here? Going to IDLE state");
 			return SystemState.IDLE;
 		}
 
@@ -501,12 +496,15 @@ public final class Superstructure extends Subsystem {
 			return SystemState.SHOOTING;
 		}
 
-		// make sure the last ball gets out
 		if (m_wantedState != WantedState.SHOOTING && m_wantStateChangeTimer.get() < STOP_SHOOT_TIME_SECONDS) {
+			System.out.println("Wants to transition out, keep shooting a bit");
 			return SystemState.SHOOTING;
+		} else if (m_wantedState == WantedState.SHOOTING) {
+			return SystemState.SHOOTING;
+		} else {
+			System.out.println("Shoot sequence complete, go to IDLE state");
+			return SystemState.IDLE;
 		}
-
-		return SystemState.IDLE;
 	}
 
 	@Override
@@ -518,9 +516,11 @@ public final class Superstructure extends Subsystem {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
 		final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
-		return m_turret.atReference()
-			   && (wheelSpeeds.left + wheelSpeeds.right) < 0.04
-			   && ((target.isClose() && target.getDriveDistanceSinceCapture() < TARGET_CACHE_DISTANCE) || (!target.isClose() && target.getAge() < 0.25));
+		final var a = m_turret.atReference();
+		final var b = (wheelSpeeds.left + wheelSpeeds.right) < 0.04;
+		final var c = ((target.isClose() && target.getDriveDistanceSinceCapture() < TARGET_CACHE_DISTANCE) || (!target.isClose() && target.getAge() < 0.25));
+
+		return a && b && c;
 	}
 
 	private boolean isReadyToFire() {
@@ -541,5 +541,9 @@ public final class Superstructure extends Subsystem {
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
 		m_turret.setReferenceRotation(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
+	}
+
+	public Solenoid getKicker() {
+		return m_kicker;
 	}
 }

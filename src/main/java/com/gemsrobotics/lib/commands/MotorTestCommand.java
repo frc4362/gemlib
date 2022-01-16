@@ -2,8 +2,6 @@ package com.gemsrobotics.lib.commands;
 
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import edu.wpi.first.wpilibj.command.Command;
 
 import java.util.Map;
@@ -11,7 +9,7 @@ import java.util.stream.DoubleStream;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
-public final class MotorTestCommand extends Command implements Reportable {
+public final class MotorTestCommand extends Command {
 	public static class Config {
 		public double runTime, waitTime;
 		public double dutyCycle;
@@ -60,12 +58,5 @@ public final class MotorTestCommand extends Command implements Reportable {
 
 		final boolean rpmsGood = epsilonEquals(m_rpms.build().average().orElse(Double.NaN), m_config.rpmTarget, m_config.rpmEpsilon);
 		final boolean currentsGood = epsilonEquals(m_currents.build().average().orElse(Double.NaN), m_config.currentTarget, m_config.currentEpsilon);
-
-		final Kind kind = rpmsGood && currentsGood ? Kind.INFO : Kind.HARDWARE_FAULT;
-
-		report(kind, m_name + ": Motor checking finished", Map.of(
-				"RPM OK", rpmsGood,
-				"CURRENT OK", currentsGood
-		));
 	}
 }

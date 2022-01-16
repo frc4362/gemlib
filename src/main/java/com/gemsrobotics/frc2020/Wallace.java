@@ -1,12 +1,13 @@
 package com.gemsrobotics.frc2020;
 
-import com.gemsrobotics.frc2020.autonomous.SiuxBallAuton;
-import com.gemsrobotics.frc2020.autonomous.ThreeBallAuton;
+import com.gemsrobotics.frc2020.autonomous.*;
 import com.gemsrobotics.frc2020.commands.DriveStraightCommand;
 import com.gemsrobotics.frc2020.subsystems.*;
 import com.gemsrobotics.frc2020.subsystems.RobotState;
+import com.gemsrobotics.lib.commands.CharacterizeDifferentialDrive;
 import com.gemsrobotics.lib.commands.WaitCommand;
 import com.gemsrobotics.lib.drivers.hid.Gemstick;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
@@ -20,6 +21,7 @@ import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
+import io.github.oblarg.oblog.Logger;
 
 public final class Wallace extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
@@ -53,7 +55,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_turret = Turret.getInstance();
 		m_targetServer = TargetServer.getInstance();
 		m_robotState = RobotState.getInstance();
-		m_compressor = new Compressor();
+		m_compressor = new Compressor(PneumaticsModuleType.CTREPCM);
 		m_superstructure = Superstructure.getInstance();
 
 		m_compressorToggler = new SendableChooser<>();
@@ -67,23 +69,31 @@ public final class Wallace extends TimedRobot implements Loggable {
 
 		m_autonChooser = new SendableChooser<>();
 		m_autonChooser.setDefaultOption("None", new WaitCommand(1.0));
-		m_autonChooser.addOption("3 Ball Auton (Seek Left)", new ThreeBallAuton(Rotation.degrees(160)));
-		m_autonChooser.addOption("3 Ball Auton (Seek Right)", new ThreeBallAuton(Rotation.degrees(-160)));
-		m_autonChooser.addOption("6 Ball Auton (Seek Right)", new SiuxBallAuton(Rotation.degrees(-160)));
-		m_autonChooser.addOption("Drive Straight Test", new DriveStraightCommand(m_chassis, 0.15, Units.feet2Meters(3.0)));
+		m_autonChooser.addOption("Characterize Differential Drive", new CharacterizeDifferentialDrive(m_chassis, false));
+		m_autonChooser.addOption("Bounce", new Bounce());
 
 		SmartDashboard.putData(m_compressorToggler);
 		SmartDashboard.putData(m_autonChooser);
+		SmartDashboard.putData(m_turret);
 
-		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.fromRotation(Rotation.degrees(180)));
-		m_chassis.setHeading(Rotation.degrees(180));
+		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.fromRotation(Rotation.degrees(0)));
+		m_chassis.setHeading(Rotation.degrees(0));
 
 		m_targetServer.setLEDMode(Limelight.LEDMode.OFF);
+
+		Logger.setCycleWarningsEnabled(false);
+		Logger.configureLoggingAndConfig(m_subsystemManager, false);
 	}
 
 	@Override
 	public void robotPeriodic() {
 		SmartDashboard.putNumber("Turret Absolute Encoder Position", m_turret.getAbsolutePosition());
+		final var v = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
+		SmartDashboard.putNumber("Robot Velocity Left", v.left);
+		SmartDashboard.putNumber("Robot Velocity Right", v.right);
+		SmartDashboard.putString("Wheel Positions", m_chassis.getWheelProperty(MotorController::getPositionMeters).toString());
+		SmartDashboard.putString("Robot Position", m_robotState.getLatestFieldToVehicle().toString());
+//		Logger.updateEntries();
 	}
 
 	@Override
@@ -96,7 +106,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 	public void autonomousInit() {
 		m_subsystemManager.start();
 		Scheduler.getInstance().add(m_autonChooser.getSelected());
-		m_compressor.setClosedLoopControl(false);
+		m_compressor.disable();
 	}
 
 	@Override
@@ -108,25 +118,18 @@ public final class Wallace extends TimedRobot implements Loggable {
 	public void teleopInit() {
 		Scheduler.getInstance().removeAll();
 		m_subsystemManager.start();
-//		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+		m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 		m_slowDrive = false;
-		m_compressor.setClosedLoopControl(m_compressorToggler.getSelected());
+
+		if (m_compressorToggler.getSelected()) {
+			m_compressor.enableDigital();
+		} else {
+			m_compressor.disable();
+		}
 	}
 
 	@Override
 	public void teleopPeriodic() {
-//		if (m_gamepad.getXButtonPressed()) {
-//			m_spindexer.rotate(1);
-//		} else if (m_gamepad.getBButtonPressed()) {
-//			m_spindexer.rotate(6);
-//		} else if (m_gamepad.getYButtonPressed()) {
-//			m_spindexer.setShootingPosition();
-//		} else if (m_gamepad.getAButtonPressed()) {
-//			m_spindexer.setSorting();
-//		} else if (m_gamepad.getAButtonReleased()) {
-//			m_spindexer.setDisabled();
-//		}
-
 		if (m_superstructure.getSystemState() == Superstructure.SystemState.CLIMB_EXTEND) {
 			m_chassis.setOpenLoop(new WheelState(-m_stickLeft.getY(), -m_stickRight.getY()));
 
@@ -155,7 +158,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_EXTEND);
 			} else if (m_stickRight.getRawButtonPressed(9)) {
 				m_superstructure.setWantedState(Superstructure.WantedState.CLIMB_RETRACT);
-			} else if (m_gamepad.getBumper(GenericHID.Hand.kRight)) {
+			} else if (m_gamepad.getRightBumper()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
 			} else if (m_stickRight.getRawButton(2)) {
 				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);

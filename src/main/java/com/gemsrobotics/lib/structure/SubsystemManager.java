@@ -1,8 +1,5 @@
 package com.gemsrobotics.lib.structure;
 
-import com.gemsrobotics.lib.telemetry.Pod;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.timing.DeltaTime;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
 import edu.wpi.first.wpilibj.Notifier;
@@ -17,7 +14,7 @@ import static edu.wpi.first.wpilibj.Timer.getFPGATimestamp;
 import static java.lang.Math.floor;
 
 // logs its hz and subsystems
-public final class SubsystemManager implements Reportable, Loggable {
+public final class SubsystemManager implements Loggable {
     private final double PERIOD = 10 * 1e-3;
 
 	private final ElapsedTimer m_faultCheckTimer;
@@ -55,7 +52,7 @@ public final class SubsystemManager implements Reportable, Loggable {
                         // this is better than providing the schedule dt as it will be more accurate
                         subsystem.updatePeriodicState(now);
                     } catch (final Throwable throwable) {
-                        Pod.catchThrowable(subsystem, throwable);
+						// Pod.catchThrowable(subsystem, throwable);
                     }
 
                     if (subsystem.isActive()) {
@@ -70,12 +67,12 @@ public final class SubsystemManager implements Reportable, Loggable {
                     m_subsystems.removeIf(subsystem -> {
                         switch (subsystem.checkFaulted()) {
                             case DISABLE_SUBSYSTEM:
-                                report(Kind.HARDWARE_FAULT,"Located fault in subsystem \"" + subsystem.getName() + "\".");
+                                System.out.println("Located fault in subsystem \"" + subsystem.getName() + "\".");
                                 // Please note the side effects
                                 estop(subsystem);
                                 return true;
                             case DISABLE_ROBOT:
-                                report(Kind.HARDWARE_FAULT, "Located unrecoverable systematic fault in subsystem \"" + subsystem.getName() + "\", KILLING ROBOT.");
+								System.out.println("Located unrecoverable systematic fault in subsystem \"" + subsystem.getName() + "\", KILLING ROBOT.");
                                 estop(subsystem);
                                 Scheduler.getInstance().disable();
                                 stop();
@@ -107,7 +104,7 @@ public final class SubsystemManager implements Reportable, Loggable {
                 try {
                     subsystem.onStart(getFPGATimestamp());
                 } catch (final Throwable throwable) {
-                    Pod.catchThrowable(subsystem, throwable);
+                    // Pod.catchThrowable(subsystem, throwable);
                 }
             });
 
@@ -116,7 +113,7 @@ public final class SubsystemManager implements Reportable, Loggable {
 			m_isRunning = true;
         }
 
-		report("Initializing with " + size + " registered subsystems.");
+		System.out.println("Initializing SubsystemManager with " + size + " registered subsystems.");
     }
 
     public void stop() {
@@ -128,19 +125,19 @@ public final class SubsystemManager implements Reportable, Loggable {
                     try {
                         subsystem.onStop(getFPGATimestamp());
                     } catch (final Throwable throwable) {
-                        Pod.catchThrowable(subsystem, throwable);
+                        // Pod.catchThrowable(subsystem, throwable);
                     }
                 });
 
                 m_isRunning = false;
             }
 
-            report("Disabling subsystems.");
+            System.out.println("Disabling subsystems.");
         }
     }
 
 	private void estop(final Subsystem subsystem) {
-        report(Kind.ERROR, "Estopping subsystem \"" + subsystem.getName() + "\".");
+		System.out.println("Estopping subsystem \"" + subsystem.getName() + "\".");
         subsystem.setActive(false);
         subsystem.onStop(getFPGATimestamp());
         subsystem.setSafeState();

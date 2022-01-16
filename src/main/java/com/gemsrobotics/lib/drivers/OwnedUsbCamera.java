@@ -1,8 +1,7 @@
 package com.gemsrobotics.lib.drivers;
 
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import edu.wpi.cscore.CvSink;
-import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.cscore.CvSink;
+import edu.wpi.first.cscore.UsbCamera;
 
 /**
  * A class which retains a pointer to an instance of {@link UsbCamera}
@@ -16,7 +15,7 @@ import edu.wpi.cscore.UsbCamera;
  * or Ethab#4362 on Discord
  */
 @SuppressWarnings("FieldCanBeLocal")
-public final class OwnedUsbCamera implements Reportable {
+public final class OwnedUsbCamera {
 	private static int newId = 0;
 
 	private final UsbCamera m_camera;
@@ -28,7 +27,7 @@ public final class OwnedUsbCamera implements Reportable {
 		m_sink.setSource(m_camera);
 		m_sink.setEnabled(true);
 
-		report("Ensuring ownership of UsbCamera at " + camera.getPath() + ".");
+		System.out.println("Ensuring ownership of UsbCamera at " + camera.getPath() + ".");
 	}
 
 	public UsbCamera getCamera() {

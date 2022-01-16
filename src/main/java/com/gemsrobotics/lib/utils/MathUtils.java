@@ -51,21 +51,6 @@ public class MathUtils {
         return (a * (1.0 - x)) + (b * x);
 	}
 
-    // this is a historical function
-    // just google "fast inverse square root" if you don't know
-    public static double inverseSqrt(double n) {
-        final double half = 0.5 * n;
-        long raw = Double.doubleToLongBits(n);
-        raw = 0x5fe6ec85e7de30daL - (raw >> 1);
-        n = Double.longBitsToDouble(raw);
-
-        for (int i = 0; i < 4; i++){
-            n *= (1.5 - half * n * n);
-        }
-
-        return n;
-    }
-
     // See: https://stackoverflow.com/questions/35666078/fast-integer-powers-in-java
     public static double fastLongPow(long a, long b) {
         long result = 1;

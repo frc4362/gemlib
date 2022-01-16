@@ -60,7 +60,6 @@ public final class Turret extends Subsystem implements Loggable {
 		m_motor.getInternalController().configForwardSoftLimitThreshold(+TURRET_USABLE_RANGE);
 		m_motor.getInternalController().configReverseSoftLimitEnable(true);
 		m_motor.getInternalController().configReverseSoftLimitThreshold(-TURRET_USABLE_RANGE);
-//		m_motor.setMotionParameters(MOTION_PARAMETERS);
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -156,7 +155,7 @@ public final class Turret extends Subsystem implements Loggable {
 	}
 
 	public synchronized boolean atReference() {
-		return Math.abs(m_motor.getInternalController().getClosedLoopError()) < 10.0;
+		return Math.abs(m_motor.getInternalController().getClosedLoopError()) < 20.0;
 	}
 
 	public double getAbsolutePosition() {

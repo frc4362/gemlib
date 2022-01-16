@@ -64,14 +64,4 @@ public class TestMathUtils {
             assertThat(average(Arrays.stream(ns).mapToObj(InterpolatingDouble::new).collect(Collectors.toList())).value, closeTo(correctAverage, Epsilon));
         }
     }
-
-    @Test
-    public void testInverseSqrt() {
-        final var rng = new Random();
-
-        for (int i = 0; i < 100; i++) {
-            final var n = rng.nextDouble() * rng.nextInt(100);
-            assertThat(1 / Math.sqrt(n), closeTo(MathUtils.inverseSqrt(n), Epsilon));
-        }
-    }
 }

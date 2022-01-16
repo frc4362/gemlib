@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.drivers.transmission;
 
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
 import edu.wpi.first.wpilibj.Solenoid;
 
 public class DualSpeedTransmission implements Transmission {
@@ -11,7 +12,7 @@ public class DualSpeedTransmission implements Transmission {
      * @param port The port of the single solenoid to use to shit
      */
     public DualSpeedTransmission(final int port) {
-        m_solenoid = new Solenoid(port);
+        m_solenoid = new Solenoid(PneumaticsModuleType.REVPH, port);
         m_inverted = false;
     }
 

@@ -69,10 +69,10 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Translation getFieldToOuterGoal() {
-			// L A T E N C Y=
+			// L A T E N C Y
 			final var turretPose = RobotState.this.getLatestFieldToVehicle()
-										   .transformBy(VEHICLE_TO_TURRET)
-										   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
+				   .transformBy(VEHICLE_TO_TURRET)
+				   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
 			final double vy = m_fieldToOuterGoal.y() - turretPose.getTranslation().y();
 			final double vx = m_fieldToOuterGoal.x() - turretPose.getTranslation().x();
 			final double angleToAim = Math.atan2(vy, vx);
@@ -105,7 +105,7 @@ public final class RobotState extends Subsystem {
 	private static class PeriodicIO {
 		public boolean targetServerAlive = false;
 		public Rotation newTurretRotation = Rotation.identity();
-		public Optional<TargetServer.GoalState> newTargetInfo = Optional.empty();
+		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
 		public Optional<Target> fieldToTargetCached = Optional.empty();
 	}
 
@@ -113,7 +113,7 @@ public final class RobotState extends Subsystem {
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.newTurretRotation = Turret.getInstance().getRotation();
 		m_periodicIO.targetServerAlive = TargetServer.getInstance().isAlive();
-		m_periodicIO.newTargetInfo = TargetServer.getInstance().getCameraToTarget();
+		m_periodicIO.newTargetInfo = TargetServer.getInstance().getTargetInfo();
 	}
 
 	@Override

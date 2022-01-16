@@ -1,8 +1,6 @@
 package com.gemsrobotics.lib.commands;
 
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.trajectory.Trajectory;
 import com.gemsrobotics.lib.trajectory.TrajectoryContainer;
@@ -11,7 +9,7 @@ import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.CommandGroup;
 
-public class TrackTrajectoryCommand extends Command implements Reportable {
+public class TrackTrajectoryCommand extends Command {
     protected final DifferentialDrive<?> m_chassis;
     protected final boolean m_usesHighGear;
     protected final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> m_trajectory;
@@ -42,8 +40,6 @@ public class TrackTrajectoryCommand extends Command implements Reportable {
 
     @Override
     public void end() {
-        report("Finished.");
-        report(Kind.INQUIRY, "Did it work?");
         m_chassis.setDisabled();
     }
 

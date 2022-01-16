@@ -3,7 +3,6 @@ package com.gemsrobotics.lib.controls;
 import com.gemsrobotics.lib.subsystems.drivetrain.ChassisState;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.trajectory.TrajectoryIterator;
@@ -21,7 +20,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
 // consider refactoring into a strategy-pattern with a PathController interface
-public class DriveMotionPlanner implements Reportable, Loggable {
+public class DriveMotionPlanner implements Loggable {
     @Override
     public String configureLogName() {
         return "Motion Planner";

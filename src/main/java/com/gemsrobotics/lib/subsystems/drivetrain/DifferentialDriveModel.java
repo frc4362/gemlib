@@ -87,7 +87,7 @@ public class DifferentialDriveModel {
     }
 
 	// Left/right to linear/angular (wheel)
-	// Input/demand could be either getVelocity or getAcceleration...the math is the same.
+	// Input/demand could be either velocity or acceleration...the math is the same.
 	public ChassisState forwardKinematics(final WheelState wheels) {
 	    final var ret = new ChassisState();
 	    ret.linear = (wheels.left + wheels.right) / 2 * wheelRadiusMeters;
@@ -271,7 +271,7 @@ public class DifferentialDriveModel {
             final boolean isHighGear
 	) {
 		final var transmission = getTransmission(isHighGear);
-		final var result = new Bounds(Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+		final var result = new Bounds(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY);
 
 		final WheelState wheelVelocitiesMetersPerSecond = inverseKinematics(velocity);
 
@@ -304,7 +304,7 @@ public class DifferentialDriveModel {
 				}
 
 				final double otherWheelSpeedMetersPerSecond = left ? wheelVelocitiesMetersPerSecond.right : wheelVelocitiesMetersPerSecond.left;
-				final double variableVoltage = transmission.torqueForVoltage(otherWheelSpeedMetersPerSecond, variableTorque);
+				final double variableVoltage = transmission.voltageFromTorque(otherWheelSpeedMetersPerSecond, variableTorque);
 
 				if (abs(variableVoltage) <= maxVoltage + Epsilon) {
 				    final double accelerationMetersPerSecondSquared;
@@ -317,6 +317,8 @@ public class DifferentialDriveModel {
 					} else {
 						accelerationMetersPerSecondSquared = (fixedTorque + variableTorque) / linearMomentInertiaKgMetersSquared;
 					}
+
+					System.out.println("accel: " + accelerationMetersPerSecondSquared);
 
 					result.min = min(result.min, accelerationMetersPerSecondSquared);
 					result.max = max(result.max, accelerationMetersPerSecondSquared);

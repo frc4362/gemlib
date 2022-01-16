@@ -29,45 +29,42 @@ public class TestIntegration {
         // Specify desired waypoints.
         final List<RigidTransform> waypoints = Arrays.asList(
                 new RigidTransform(0, 0, Rotation.identity()),
-				new RigidTransform(3, 0.0, Rotation.identity()));
+				new RigidTransform(4, 0, Rotation.identity()));
 
-        final double wheelRadius = Units.inches2Meters(6.0) / 2.0;
-        final double freeSpeed = 3.9 / wheelRadius; // m/s
-        final double kV = 0.23446153846153842;
-        final double kA = 0.011;
-        final double kS = 0.27;
-        final double mass = 23.0;
+        final double peakVoltage = 12.0;
+        final double wheelRadius = 0.08016875;
+        final double freeSpeed = 4.8 / wheelRadius; // m/s
+        final double kS = 0.36167; // V
+        final double kV = 0.1329; // V / (rad / s)
+        final double kA = 0.012; // V / (rad / s^2)
+        final double mass = 62.73; // kg
 
-        final var cfg = new DriveMotionPlanner.MotionConfig() {
-            {
-                beta = 2.0;
-                zeta = 0.7;
+        final var cfg = new DriveMotionPlanner.MotionConfig() {{
+            beta = 2.0;
+            zeta = 0.7;
 
-                maxDx = 0.00127;
-                maxDy = 0.00127;
-                maxDtheta = Rotation.degrees(5.0).getRadians();
-                maxVoltage = 10.0;
-                maxVelocity = 3.9;
-                maxAcceleration = 3.0;
-                maxCentripetalAcceleration = 2.5;
-            }
-        };
+            maxDx = 0.00127;
+            maxDy = 0.00127;
+            maxDtheta = Rotation.degrees(5.0).getRadians();
+            maxVoltage = 10.0;
+            maxVelocity = 4.8;
+            maxAcceleration = 3.2;
+            maxCentripetalAcceleration = 2.0;
+        }};
 
         // Create a trajectory from splines.
         Trajectory<RigidTransformWithCurvature> trajectory = TrajectoryUtils.trajectoryFromSplineWaypoints(waypoints, cfg);
 
-        final var modelProps = new DifferentialDriveModel.Properties() {
-            {
-                massKg = mass; // kg
-                angularMomentInertiaKgMetersSquared = 4.519;
-                angularDragTorquePerRadiansPerSecond = 12.0;
-                wheelRadiusMeters = wheelRadius;
-                wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
-            }
-        };
+        final var modelProps = new DifferentialDriveModel.Properties() {{
+            massKg = mass; // kg
+            angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
+            angularDragTorquePerRadiansPerSecond = 12.0;
+            wheelRadiusMeters = wheelRadius;
+            wheelbaseRadiusMeters = 0.351;
+        }};
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
-            speedRadiansPerSecondPerVolt = 1 / kV;
+            speedRadiansPerSecondPerVolt = (1 / kV);
             torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
             stictionVoltage = kS;
         }});
@@ -87,10 +84,10 @@ public class TestIntegration {
         for (int i = 1; i < timedTrajectory.length(); ++i) {
             TrajectoryPoint<TimedState<RigidTransformWithCurvature>> prev = timedTrajectory.getPoint(i - 1);
             TrajectoryPoint<TimedState<RigidTransformWithCurvature>> next = timedTrajectory.getPoint(i);
-            assertThat(prev.state().getAcceleration(), closeTo((next.state().getVelocity() - prev.state().getVelocity()) / (next.state().t() - prev.state().t()), 1e-9));
+            assertThat(prev.state().getAcceleration(), closeTo((next.state().getVelocity() - prev.state().getVelocity()) / (next.state().t() - prev.state().t()), 1e-6));
             final double dt = next.state().t() - prev.state().t();
-            assertThat(next.state().getVelocity(), closeTo(prev.state().getVelocity() + prev.state().getAcceleration() * dt, 1E-9));
-            assertThat(next.state().distance(prev.state()), closeTo(prev.state().getVelocity() * dt + 0.5 * prev.state().getAcceleration() * dt * dt, 1E-9));
+            assertThat(next.state().getVelocity(), closeTo(prev.state().getVelocity() + prev.state().getAcceleration() * dt, 1E-6));
+            assertThat(next.state().distance(prev.state()), closeTo(prev.state().getVelocity() * dt + 0.5 * prev.state().getAcceleration() * dt * dt, 1E-6));
         }
 
         // "Follow" the trajectory.
@@ -108,7 +105,7 @@ public class TestIntegration {
                     new ChassisState(state.getAcceleration(), state.getAcceleration() * state.getState().getCurvature()),
                     false);
 
-            System.out.println(dynamics.voltage);
+            System.out.println(dynamics.voltage.left);
 
             sample = iterator.advance(dt);
         } while (!iterator.isDone());

@@ -51,7 +51,7 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
     }
 
     /**
-     * Obtain a new RigidTransform2d from a (constant curvature) getVelocity. See:
+     * Obtain a new RigidTransform2d from a (constant curvature) velocity. See:
      * https://github.com/strasdat/Sophus/blob/master/sophus/se2.hpp
      */
     public static RigidTransform ofTwist(final Twist delta) {

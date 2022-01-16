@@ -217,7 +217,7 @@ public final class Gemstick extends Joystick {
 
 	/**
 	 * Gets the POV value of {@link Joystick} but makes it a usable value
-	 * @return The POV getState with a non-360 degree value3
+	 * @return The POV state with a non-360 degree value
 	 */
 	public POVDirection getPOVDirection() {
 		return POVDirection.ofDegrees(super.getPOV());

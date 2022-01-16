@@ -5,13 +5,11 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Twist;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Map;
 
-import static com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind.INFO;
 import static java.lang.Math.abs;
 
 /**
@@ -19,7 +17,7 @@ import static java.lang.Math.abs;
  * point and direction in space that defines an (x,y) coordinate system. Transforms (or poses) keep track of the spatial
  * relationship between different frames.
  */
-public class FieldToVehicleEstimator implements Loggable, Reportable {
+public class FieldToVehicleEstimator implements Loggable {
     @Override
     public String configureLogName() {
         return "Odometer";
@@ -35,7 +33,11 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
 
     private final DifferentialDriveModel m_model;
 
-    public static FieldToVehicleEstimator withStarting(final DifferentialDriveModel model, final double startTime, final RigidTransform initialPose) {
+    public static FieldToVehicleEstimator withStarting(
+            final DifferentialDriveModel model,
+            final double startTime,
+            final RigidTransform initialPose
+    ) {
         final var ret = new FieldToVehicleEstimator(model);
         ret.reset(startTime, initialPose);
         return ret;
@@ -49,8 +51,6 @@ public class FieldToVehicleEstimator implements Loggable, Reportable {
      * Resets the field to robot transform (robot's position on the field)
      */
     public synchronized void reset(final double startTime, final RigidTransform initialPose) {
-        report("Reset @ " + startTime + " with pose " + initialPose.toString());
-
         m_fieldToVehicle = new InterpolatingTreeMap<>(kObservationBufferSize);
         m_fieldToVehicle.put(new InterpolatingDouble(startTime), initialPose);
 

@@ -10,12 +10,14 @@ import com.gemsrobotics.lib.data.RollingAverageDouble;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
@@ -23,7 +25,7 @@ public final class Shooter extends Subsystem implements Loggable {
 	private static final double SHOOTER_WHEEL_RADIUS = Units.inches2Meters(3.8) / 2.0;
 	private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.293, 0.0, 0.0, 0.0);
 	private static final PIDFController.Gains FEEDER_GAINS = new PIDFController.Gains(0.0455, 0.0, 0.0, 0.0);
-	private static final int RPM_SAMPLE_SIZE = 5;
+	private static final int RPM_SAMPLE_SIZE = 10;
 
 	private static Shooter INSTANCE;
 
@@ -139,7 +141,9 @@ public final class Shooter extends Subsystem implements Loggable {
 		}
 
 		SmartDashboard.putNumber("Shooter Measured RPM", m_periodicIO.shooterMeasuredRPM);
+		SmartDashboard.putNumber("Shooter Target RPM", m_periodicIO.shooterReferenceRPM);
 		SmartDashboard.putNumber("Feeder Measured RPM", m_periodicIO.feederMeasuredRPM);
+		SmartDashboard.putNumber("Feeder Target RPM", m_periodicIO.feederReferenceRPM);
 	}
 
 	@Override
@@ -154,8 +158,9 @@ public final class Shooter extends Subsystem implements Loggable {
 	}
 
 	public synchronized boolean atReference() {
-		return m_shooterSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.shooterReferenceRPM, 1000.0))
-			   && m_feederSamples.stream().allMatch(rpm -> epsilonEquals(rpm, m_periodicIO.feederReferenceRPM, 1000.0));
+		final boolean a = MathUtils.allCloseTo(m_shooterSamples, m_periodicIO.shooterReferenceRPM, 500.0);
+		final boolean b = MathUtils.allCloseTo(m_feederSamples, m_feederSamples.stream().mapToDouble(n -> n).average().orElse(0.0), 500.0);
+		return a && b;
 	}
 
 	public synchronized boolean isNeutral() {

@@ -3,17 +3,15 @@ package com.gemsrobotics.lib.commands;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.physics.Characterizer;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.utils.FastDoubleToString;
 import edu.wpi.first.wpilibj.command.CommandGroup;
+import edu.wpi.first.wpilibj.command.PrintCommand;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-public final class CharacterizeDifferentialDrive extends CommandGroup implements Reportable {
+public final class CharacterizeDifferentialDrive extends CommandGroup {
     private final List<Characterizer.VelocityDataPoint> m_velocities;
     private final List<Characterizer.AccelerationDataPoint> m_accelerations;
 
@@ -26,9 +24,13 @@ public final class CharacterizeDifferentialDrive extends CommandGroup implements
 
         addSequential(new SetDriveGearCommand(chassis, useHighGear));
         addSequential(new WaitCommand(2.0));
+        addSequential(new PrintCommand("Velocity data collection started..."));
         addSequential(new CollectDriveVelocityData(chassis, m_velocities));
-        addSequential(new WaitCommand(2.0));
+        addSequential(new PrintCommand("Done!"));
+        addSequential(new WaitCommand(60.0));
+        addSequential(new PrintCommand("Acceleration data collection started..."));
         addSequential(new CollectDriveAccelerationData(chassis, m_accelerations));
+        addSequential(new PrintCommand("Done!"));
     }
 
     public Optional<MotorFeedforward.Constants> getCharacterizationConstants() {

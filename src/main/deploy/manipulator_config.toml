@@ -1,6 +1,0 @@
-stage1Port = 20
-stage2Port = [6, 8]
-
-extenderPort = 3
-placementPort = 1
-longPlacePort = 0

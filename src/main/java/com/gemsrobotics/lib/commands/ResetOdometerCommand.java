@@ -4,6 +4,7 @@ import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.trajectory.Trajectory;
+import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.command.InstantCommand;
 
@@ -16,8 +17,8 @@ public class ResetOdometerCommand extends InstantCommand {
         m_newPose = startingPose;
     }
 
-    public ResetOdometerCommand(final DifferentialDrive<?> chassis, final Trajectory<RigidTransformWithCurvature> trajectory) {
-        this(chassis, trajectory.getFirstState().getRigidTransform());
+    public ResetOdometerCommand(final DifferentialDrive<?> chassis, final Trajectory<TimedState<RigidTransformWithCurvature>> trajectory) {
+        this(chassis, trajectory.getFirstState().getState().getRigidTransform());
     }
 
     public ResetOdometerCommand(final DifferentialDrive<?> chassis) {

@@ -22,7 +22,7 @@ public class CollectDriveAccelerationData extends Command {
     private double m_lastTime, m_lastVelocity;
 
     /**
-     * @param data     reference to the list where data points should be stored=
+     * @param data     reference to the list where data points should be stored
      */
     public CollectDriveAccelerationData(final DifferentialDrive<?> chassis, final List<Characterizer.AccelerationDataPoint> data) {
         m_chassis = chassis;

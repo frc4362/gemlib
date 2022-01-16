@@ -49,11 +49,11 @@ public class Parameterizer {
     ) {
         final List<ConstrainedState<S>> constrainedStates = new ArrayList<>(states.size());
 
-        // Forward pass. We look at pairs of consecutive states, where the start getState has already been getVelocity
-        // parameterized (though we may adjust the getVelocity downwards during the backwards pass). We wish to find an
-        // getAcceleration that is admissible at both the start and end getState, as well as an admissible end getVelocity. If
-        // there is no admissible end getVelocity or getAcceleration, we set the end getVelocity to the getState's maximum allowed
-        // getVelocity and will repair the getAcceleration during the backward pass (by slowing down the predecessor).
+        // Forward pass. We look at pairs of consecutive states, where the start state has already been velocity
+        // parameterized (though we may adjust the velocity downwards during the backwards pass). We wish to find an
+        // acceleration that is admissible at both the start and end state, as well as an admissible end velocity. If
+        // there is no admissible end velocity or acceleration, we set the end velocity to the state's maximum allowed
+        // velocity and will repair the acceleration during the backward pass (by slowing down the predecessor).
         var predecessor = new ConstrainedState<S>();
         predecessor.state = states.get(0);
         predecessor.distance = 0.0;
@@ -62,7 +62,7 @@ public class Parameterizer {
         predecessor.accelerationMax = config.maxAcceleration;
 
         for (int i = 0; i < states.size(); ++i) {
-            // Add the new getState.
+            // Add the new state.
             constrainedStates.add(new ConstrainedState<>());
             ConstrainedState<S> constrainedState = constrainedStates.get(i);
             constrainedState.state = states.get(i);
@@ -71,10 +71,10 @@ public class Parameterizer {
 
             final String newConstrainedState = constrainedState.toString();
 
-            // We may need to iterate to find the maximum end getVelocity and common getAcceleration, since getAcceleration
-            // limits may be a function of getVelocity.
+            // We may need to iterate to find the maximum end velocity and common acceleration, since acceleration
+            // limits may be a function of velocity.
             while (true) {
-                // Enforce global max getVelocity and max reachable getVelocity by global getAcceleration limit.
+                // Enforce global max velocity and max reachable velocity by global acceleration limit.
                 // vf = sqrt(vi^2 + 2*a*d)
                 constrainedState.velocityMax = min(config.maxVelocity, sqrt(predecessor.velocityMax * predecessor.velocityMax + 2.0 * predecessor.accelerationMax * ds));
 
@@ -82,15 +82,14 @@ public class Parameterizer {
                     throw new RuntimeException();
                 }
 
-                // Enforce global max absolute getAcceleration.
+                // Enforce global max absolute acceleration.
                 constrainedState.accelerationMin = -config.maxAcceleration;
                 constrainedState.accelerationMax = config.maxAcceleration;
 
-                // At this point, the getState is full constructed, but no constraints have been applied aside from
-                // predecessor
-                // getState max accel.
+                // At this point, the state is full constructed, but no constraints have been applied aside from
+                // predecessor state max accel.
 
-                // Enforce all getVelocity constraints.
+                // Enforce all velocity constraints.
                 for (final TimingConstraint<S> constraint : constraints) {
                     final double constraintMaxVelocity = constraint.getMaxVelocity(constrainedState.state);
                     constrainedState.velocityMax = min(constrainedState.velocityMax, constraintMaxVelocity);
@@ -101,13 +100,14 @@ public class Parameterizer {
                     throw new RuntimeException();
                 }
 
-                // Now enforce all getAcceleration constraints.
+                // Now enforce all acceleration constraints.
                 for (final TimingConstraint<S> constraint : constraints) {
                     final var minMaxAcceleration = constraint.getMinMaxAcceleration(constrainedState.state, (reverse ? -1.0 : 1.0) * constrainedState.velocityMax);
 
                     if (!minMaxAcceleration.isValid()) {
                         // This should never happen if constraints are well-behaved.
-                        throw new RuntimeException();
+
+                        throw new RuntimeException("Acceleration invalid: " + minMaxAcceleration.toString());
                     }
 
                     constrainedState.accelerationMin = max(constrainedState.accelerationMin, reverse ? -minMaxAcceleration.getAccelerationMax() : minMaxAcceleration.getAccelerationMin());
@@ -123,9 +123,9 @@ public class Parameterizer {
                     break;
                 }
 
-                // If the max getAcceleration for this constraint getState is more conservative than what we had applied, we
-                // need to reduce the max accel at the predecessor getState and try again.
-                // TODO: Simply using the new max getAcceleration is guaranteed to be isValid, but may be too conservative.
+                // If the max acceleration for this constraint state is more conservative than what we had applied, we
+                // need to reduce the max accel at the predecessor state and try again.
+                // TODO: Simply using the new max acceleration is guaranteed to be isValid, but may be too conservative.
                 // Doing a search would be better.
                 final double actualAcceleration = (constrainedState.velocityMax * constrainedState.velocityMax - predecessor.velocityMax * predecessor.velocityMax) / (2.0 * ds);
 
@@ -136,7 +136,7 @@ public class Parameterizer {
                         predecessor.accelerationMax = actualAcceleration;
                     }
 
-                    // If actual getAcceleration is less than predecessor min accel, we will repair during the backward
+                    // If actual acceleration is less than predecessor min accel, we will repair during the backward
                     // pass.
                     break;
                 }
@@ -158,7 +158,7 @@ public class Parameterizer {
             final double ds = constrainedState.distance - successor.distance; // will be negative.
 
             while (true) {
-                // Enforce reverse max reachable getVelocity limit.
+                // Enforce reverse max reachable velocity limit.
                 // vf = sqrt(vi^2 + 2*a*d), where vi = successor.
                 final double newMaxVelocity = sqrt(successor.velocityMax * successor.velocityMax + 2.0 * successor.accelerationMin * ds);
 
@@ -173,7 +173,7 @@ public class Parameterizer {
                     throw new RuntimeException();
                 }
 
-                // Now check all getAcceleration constraints with the lower max getVelocity.
+                // Now check all acceleration constraints with the lower max velocity.
                 for (final TimingConstraint<S> constraint : constraints) {
                     final var minMaxAcceleration = constraint.getMinMaxAcceleration(
                             constrainedState.state,
@@ -197,9 +197,9 @@ public class Parameterizer {
                     break;
                 }
 
-                // If the min getAcceleration for this constraint getState is more conservative than what we have applied, we
+                // If the min acceleration for this constraint state is more conservative than what we have applied, we
                 // need to reduce the min accel and try again.
-                // TODO: Simply using the new min getAcceleration is guaranteed to be isValid, but may be too conservative.
+                // TODO: Simply using the new min acceleration is guaranteed to be isValid, but may be too conservative.
                 // Doing a search would be better.
                 final double actualAcceleration = (constrainedState.velocityMax * constrainedState.velocityMax - successor.velocityMax * successor.velocityMax) / (2.0 * ds);
 

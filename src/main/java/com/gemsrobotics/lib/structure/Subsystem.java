@@ -1,15 +1,11 @@
 package com.gemsrobotics.lib.structure;
 
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.timing.DeltaTime;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Config;
 import io.github.oblarg.oblog.annotations.Log;
 
-public abstract class Subsystem
-		extends edu.wpi.first.wpilibj.command.Subsystem
-		implements Loggable, Reportable
-{
+public abstract class Subsystem extends edu.wpi.first.wpilibj.command.Subsystem implements Loggable {
     @Override
     public final String configureLogName() {
         return getName();
@@ -64,7 +60,7 @@ public abstract class Subsystem
 	// or are dependant on other subsystems
     protected abstract void onStart(double timestamp);
     // called every 10ms while the subsystem is enabled
-    protected abstract void onUpdate(double timestamp);
+	protected abstract void onUpdate(double timestamp);
     // called when the robot is disabled
     protected abstract void onStop(double timestamp);
 

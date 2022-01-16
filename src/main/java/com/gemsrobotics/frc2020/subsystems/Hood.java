@@ -3,6 +3,7 @@ package com.gemsrobotics.frc2020.subsystems;
 import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.timing.ElapsedTimer;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -26,7 +27,7 @@ public final class Hood extends Subsystem {
 	private final PeriodicIO m_periodicIO;
 
 	private Hood() {
-		m_solenoid = new Solenoid(Constants.HOOD_SOLENOID_PORT);
+		m_solenoid = new Solenoid(PneumaticsModuleType.CTREPCM, Constants.HOOD_SOLENOID_PORT);
 		m_stateChangedTimer = new ElapsedTimer(STATE_CHANGE_TIME);
 		m_periodicIO = new PeriodicIO();
 	}

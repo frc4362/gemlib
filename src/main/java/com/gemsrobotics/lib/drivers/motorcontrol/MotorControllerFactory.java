@@ -6,11 +6,11 @@ import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
-import com.revrobotics.CANError;
+import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
+import com.revrobotics.REVLibError;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel;
-import com.revrobotics.ControlType;
 import edu.wpi.first.wpilibj.DriverStation;
 
 public final class MotorControllerFactory {
@@ -64,8 +64,8 @@ public final class MotorControllerFactory {
         }
     };
 
-    private static void handleCANError(final int id, final CANError error, final String message) {
-        if (error != CANError.kOk) {
+    private static void handleCANError(final int id, final REVLibError error, final String message) {
+        if (error != REVLibError.kOk) {
             DriverStation.reportError("Could not configure spark id: " + id + " error: " + error.toString() + " " + message, false);
         }
     }
@@ -119,7 +119,7 @@ public final class MotorControllerFactory {
         public int ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS;
         public int PULSE_WIDTH_STATUS_FRAME_RATE_MS;
 
-        public VelocityMeasPeriod VELOCITY_MEASUREMENT_PERIOD;
+        public SensorVelocityMeasPeriod VELOCITY_MEASUREMENT_PERIOD;
         public int VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW;
 
         public double OPEN_LOOP_RAMP_RATE;
@@ -148,7 +148,7 @@ public final class MotorControllerFactory {
              ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 1000;
              PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
 
-             VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_10Ms;
+             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_10Ms;
              VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 32;
 
              OPEN_LOOP_RAMP_RATE = 0.0;
@@ -178,7 +178,7 @@ public final class MotorControllerFactory {
             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 2;
             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
 
-            VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_10Ms;
+            VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_10Ms;
             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 32;
 
             OPEN_LOOP_RAMP_RATE = 0.0;
@@ -208,7 +208,7 @@ public final class MotorControllerFactory {
             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 1000;
             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
 
-            VELOCITY_MEASUREMENT_PERIOD = VelocityMeasPeriod.Period_100Ms;
+            VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_100Ms;
             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 64;
 
             OPEN_LOOP_RAMP_RATE = 0.0;

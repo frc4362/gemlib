@@ -2,13 +2,12 @@ package com.gemsrobotics.lib.physics;
 
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.math.PolynomialRegression;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
 import com.gemsrobotics.lib.utils.MathUtils;
 
 import java.util.List;
 import java.util.Objects;
 
-public final class Characterizer implements Reportable {
+public final class Characterizer {
     public static class VelocityDataPoint {
         protected final double velocity, power;
 

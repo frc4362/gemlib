@@ -10,8 +10,8 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.command.CommandGroup;
 
-public class SiuxBallAuton extends CommandGroup {
-	public SiuxBallAuton(final Rotation guess) {
+public class SixBallAuton extends CommandGroup {
+	public SixBallAuton(final Rotation guess) {
 		addSequential(new SetTurretGuess(Superstructure.getInstance(), guess));
 		addSequential(new SetWantedStateCommand(Superstructure.getInstance(), Superstructure.WantedState.SHOOTING));
 		addSequential(new WaitForStateCommand(Superstructure.getInstance(), Superstructure.SystemState.SHOOTING), 2.0);

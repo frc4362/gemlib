@@ -7,7 +7,6 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
 import com.gemsrobotics.lib.drivers.transmission.DualSpeedTransmission;
 import com.gemsrobotics.lib.drivers.transmission.Transmission;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint.Event.Kind;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -101,7 +100,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 new MotorModel(m_config.propertiesHighGear));
         m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
         m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
-		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.FEEDFORWARD);
+		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);
         m_periodicIO = new PeriodicIO();
 
 		m_odometer = FieldToVehicleEstimator.withStarting(m_model, 0.0, RigidTransform.identity());
@@ -117,9 +116,6 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);
 
-//		controller.setSelectedProfile(slotForGear(true));
-//		controller.setPIDF(m_config.gainsHighGear);
-
 		controller.setEncoderRotations(0.0);
 	}
 
@@ -127,7 +123,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		DISABLED,
 		OPEN_LOOP,
 		VELOCITY,
-        TRAJECTORY_TRACKING
+        TRAJECTORY_TRACKING,
+		TUNING
 	}
 
 	private final class PeriodicIO implements Loggable {
@@ -211,8 +208,12 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_forceFinishTrajectory = false;
                     m_motionPlanner.reset();
 
-                    m_controlMode = newControlMode;
+                    m_controlMode = ControlMode.TRAJECTORY_TRACKING;
                     break;
+				case TUNING:
+					setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+					m_controlMode = ControlMode.TUNING;
+					break;
             }
         }
     }
@@ -244,6 +245,12 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	public synchronized void setHoldCurrentSpeeds() {
 		setDriveVelocity(m_periodicIO.velocityMeters);
+	}
+
+	public synchronized void setTuningValues(final WheelState demand, final double kP, final double kD) {
+		configureControlMode(ControlMode.TUNING);
+		m_motorsLeft.getMaster().setPIDF(kP, 0.0, kD, 0.0);
+		m_periodicIO.demand = demand;
 	}
 
 	protected final void driveOpenLoop(final WheelState demandDutyCycle) {
@@ -322,18 +329,17 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 driveOpenLoop(m_periodicIO.demand);
                 break;
             case TRAJECTORY_TRACKING:
-                // This makes sense, since the demands are updated in this method
                 updateTrajectoryFollowingDemands(timestamp);
+			case VELOCITY: // note fallthrough
                 driveVelocity(m_periodicIO.demand, m_periodicIO.feedforward);
                 break;
-			case VELOCITY: // Please note fallthrough
-//				final var targetSpeed = m_periodicIO.demand.map(m -> m / m_model.wheelRadiusMeters);
-//				final var currentSpeed = m_periodicIO.velocityMeters.map(m -> m / m_model.wheelRadiusMeters);
-//				final var targetAcceleration = targetSpeed.difference(currentSpeed).map(v -> v / dt());
-//				final var targetDynamics = m_model.solveInverseDynamics(targetSpeed, targetAcceleration, m_periodicIO.isHighGear);
-//				m_periodicIO.feedforward = targetDynamics.voltage.map(v -> v / 12.0);
-                driveVelocity(m_periodicIO.demand, new WheelState());
-                break;
+			case TUNING:
+				final var FF = m_model.solveInverseDynamics(
+						m_periodicIO.demand.map(s -> s / m_model.wheelRadiusMeters),
+						m_periodicIO.demand.difference(m_periodicIO.velocityMeters.map(s -> s / m_model.wheelRadiusMeters)),
+						m_periodicIO.isHighGear).voltage;
+				driveVelocity(m_periodicIO.demand, FF);
+				break;
         }
 	}
 
@@ -348,12 +354,12 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	    var response = FaultedResponse.NONE;
 
 	    if (!m_masterMotorLeft.isEncoderPresent()) {
-	        report(Kind.HARDWARE_FAULT, "Left encoder lost!!");
+	        System.out.println("HARDWARE FAULT: Left encoder lost!!");
 	        response = FaultedResponse.DISABLE_SUBSYSTEM;
         }
 
 	    if (!m_masterMotorRight.isEncoderPresent()) {
-	        report(Kind.HARDWARE_FAULT, "Right encoder lost!!");
+	        System.out.println("HARDWARE FAULT: Right encoder lost!!");
             response = FaultedResponse.DISABLE_SUBSYSTEM;
         }
 

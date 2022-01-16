@@ -16,7 +16,7 @@ import java.util.Objects;
 import static java.lang.Math.*;
 
 public final class Spindexer extends Subsystem {
-	private static final double STICTION = 0.0 / 12.0; // actually .6
+	private static final double STICTION = 0.6 / 12.0; // actually .6
 	private static final MotorController.MotionParameters MOTION_PARAMETERS =
 			new MotorController.MotionParameters(4800, 180, 0.08);
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
@@ -43,11 +43,8 @@ public final class Spindexer extends Subsystem {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setPeakOutputs(0.33, -0.33);
-//		m_motor.setMotionParametersAngular(MOTION_PARAMETERS);
 		m_motor.setSelectedProfile(0);
 		m_motor.setPIDF(0.4, 0.0, 0.842, 0.0);
-//		m_motor.setSelectedProfile(1);
-//		m_motor.setPIDF(0.409, 0.0, 0.0, 0.0);
 		m_motor.setInvertedOutput(false);
 		m_motor.setEncoderRotations(0.0);
 
@@ -88,11 +85,13 @@ public final class Spindexer extends Subsystem {
 			m_periodicIO.referenceRotations = m_periodicIO.referenceRotations + change;
 		}
 
+		m_periodicIO.atReference = false;
 		m_mode = Mode.POSITION;
 	}
 
 	public synchronized void setShootingPosition() {
 		m_periodicIO.referenceRotations = round(m_periodicIO.positionRotations * 6.0) / 6.0;
+		m_periodicIO.atReference = false;
 		m_mode = Mode.POSITION;
 	}
 

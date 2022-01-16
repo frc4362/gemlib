@@ -10,26 +10,18 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.data.CachedBoolean;
-import com.gemsrobotics.lib.telemetry.reporting.Reportable;
-import com.gemsrobotics.lib.telemetry.reporting.ReportingEndpoint;
 import com.gemsrobotics.lib.utils.TalonUtils;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.RobotController;
 
-import javax.xml.stream.FactoryConfigurationError;
 import java.util.function.Supplier;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
-public class GemTalon<TalonType extends BaseTalon> implements MotorController<TalonType>, Reportable {
+public class GemTalon<TalonType extends BaseTalon> implements MotorController<TalonType> {
 	private static final int
 			MAX_TRIES = 3,
 			TIMEOUT_MS = 10;
-
-	@Override
-	public String getName() {
-		return m_name;
-	}
 
 	private final String m_name;
 	private final TalonType m_internal;
@@ -224,8 +216,9 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	@Override
+	// TODO
 	public synchronized double getVelocityAngularRPM() {
-		return nativeUnits2RPM(getInversionMultiplier() * m_internal.getSelectedSensorVelocity(m_selectedProfileID));
+		return nativeUnits2RPM(getInversionMultiplier() * (int) m_internal.getSelectedSensorVelocity(m_selectedProfileID));
 	}
 
 	@Override
@@ -379,7 +372,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		} while (!success && tries++ < MAX_TRIES);
 
 		if (tries >= MAX_TRIES || !success) {
-			report(ReportingEndpoint.Event.Kind.ERROR, "Failed to configure TalonSRX on Port " + m_internal.getDeviceID() + "!!");
+			System.out.println("Failed to configure TalonSRX on Port " + m_internal.getDeviceID() + "!!");
 			return false;
 		} else {
 			return true;

@@ -11,19 +11,31 @@ public class Constants {
 	private Constants() { }
 
 	public static final boolean USE_INNER_ADJUSTMENT = false;
-	public static final boolean USE_SCUFFED_WALLSHOT = true;
+	public static final boolean USE_SCUFFED_WALLSHOT = false;
+	public static final double CLOSE_SHOT_DISTANCE = 2.0;
 	public static final Translation OUTER_TO_INNER = new Translation(0.74295, 0.0);
 
-	public static final double WALL_SHOOTING_RPM = 6000.0;
+	public static final double WALL_SHOOTING_RPM = 5000.0;
+//	public static final double[][] SHOOTER_RANGE_RPM = {
+//			{ 1.0, 6000.0   },
+//			{ 2.385, 5750.0 },
+//			{ 3.22,  4575.0 },
+//			{ 4.11,  4475.0 },
+//			{ 5.173, 4550.0 },
+//			{ 5.96,  4725.0 },
+//			{ 6.736, 4865.0 },
+//			{ 7.554, 5100.0 }
+//	};
+
 	public static final double[][] SHOOTER_RANGE_RPM = {
-			{ 1.0, 6000.0   },
-			{ 2.385, 5750.0 },
-			{ 3.22,  4575.0 },
-			{ 4.11,  4475.0 },
-			{ 5.173, 4550.0 },
-			{ 5.96,  4725.0 },
-			{ 6.736, 4865.0 },
-			{ 7.554, 5100.0 }
+			{ 1.67, 5000.0 },
+			{ 2.78, 5300.0 },
+			{ 3.6,  4600.0 },
+			{ 4.4,  4250.0 },
+			{ 5.1,  4500.0 },
+			{ 5.6,  4520.0 },
+			{ 6.3,  4600.0 },
+			{ 7.6,  4800.0 }
 	};
 
 	public static final InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> SHOOTER_RANGE_RPM_LERPER_CLOSE;
@@ -36,12 +48,12 @@ public class Constants {
 	}
 
 	public static double getRPM(final double range) {
-		if (range < 1.0) {
+		if (range < 2.0) {
 			return WALL_SHOOTING_RPM;
-		} else if (range > 7.554) {
-			return 5000.0;
+		} else if (range > 7.6) {
+			return 4800.0;
 		} else {
-			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value - 100;
+			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value;
 		}
 	}
 

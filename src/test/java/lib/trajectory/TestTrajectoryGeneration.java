@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
@@ -58,44 +59,48 @@ public class TestTrajectoryGeneration {
 
     @Test
     public void test() {
+        final double kS = 0.36167; // V
+        final double kV = 0.1329; // V / (rad / s)
+        final double kA = 0.012; // V / (rad / s^2)
+
+        final double wheelRadius = 0.08016875;
+        final double mass = 62.73; // kg
+
         final var cfg = new DifferentialDrive.Config() {
             {
                 maxVoltage = 12.0;
-                secondsToMaxVoltage = 0.2;
+                secondsToMaxVoltage = 0.1;
 
-                motionConfig = new DriveMotionPlanner.MotionConfig() {
-                    {
-                        beta = 2.0;
-                        zeta = 0.7;
-                        maxDx = 0.0508;
-                        maxDy = 0.00127;
-                        maxDtheta = 0.1;
-                        maxVoltage = 10.0;
-                        maxVelocity = 3.96;
-                        maxAcceleration = 5.0;
-                        maxCentripetalAcceleration = 1.57;
-                    }
-                };
+                motionConfig = new DriveMotionPlanner.MotionConfig() {{
+                    beta = 2.0;
+                    zeta = 0.7;
 
-                gainsLowGear = new PIDFController.Gains(0.002, 0.0, 0.0, 0.0225);
+                    maxDx = 0.00127;
+                    maxDy = 0.00127;
+                    maxDtheta = Rotation.degrees(5.0).getRadians();
+                    maxVoltage = 10.0;
+                    maxVelocity = 4.8;
+                    maxAcceleration = 3.2;
+                    maxCentripetalAcceleration = 2.0;
+                }};
+
+                gainsLowGear = new PIDFController.Gains(5.33, 0.0, 0.0, 0.0);
                 gainsHighGear = gainsLowGear;
 
-                propertiesLowGear = new MotorModel.Properties() {
-                    {
-                        stictionVoltage = 0.3017;
-                        speedRadiansPerSecondPerVolt = 0.1862;
-                        torquePerVolt = 0.0086739979;
-                    }
-                };
+                propertiesLowGear = new MotorModel.Properties() {{
+                    speedRadiansPerSecondPerVolt = (1 / kV);
+                    torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
+                    stictionVoltage = kS;
+                }};
                 propertiesHighGear = propertiesLowGear;
 
                 propertiesModel = new DifferentialDriveModel.Properties() {
                     {
-                        massKg = 63.5;
-                        angularMomentInertiaKgMetersSquared = 4.0;
-                        angularDragTorquePerRadiansPerSecond = 1.2;
-                        wheelRadiusMeters = 0.0482;
-                        wheelbaseRadiusMeters = 0.8763;
+                        massKg = 62.73;
+                        angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
+                        angularDragTorquePerRadiansPerSecond = 12.0;
+                        wheelRadiusMeters = 0.08016875;
+                        wheelbaseRadiusMeters = 0.351;
                     }
                 };
 
@@ -123,20 +128,18 @@ public class TestTrajectoryGeneration {
         };
 
         final var transmission = new MotorModel(new MotorModel.Properties() {{
-            speedRadiansPerSecondPerVolt = Units.rpm2RadsPerSecond(65.0);
-            torquePerVolt = 0.35;
-            stictionVoltage = 1.0;
+            speedRadiansPerSecondPerVolt = (1 / kV);
+            torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
+            stictionVoltage = kS;
         }});
 
-        final var props = new DifferentialDriveModel.Properties() {
-            {
-                massKg = 63;
-                angularMomentInertiaKgMetersSquared = 84;
-                angularDragTorquePerRadiansPerSecond = 12.0;
-                wheelRadiusMeters = Units.inches2Meters(2.0);
-                wheelbaseRadiusMeters = Units.inches2Meters(25.0) / 2.0;
-            }
-        };
+        final var props = new DifferentialDriveModel.Properties() {{
+            massKg = mass; // kg
+            angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
+            angularDragTorquePerRadiansPerSecond = 12.0;
+            wheelRadiusMeters = wheelRadius;
+            wheelbaseRadiusMeters = 0.351;
+        }};
 
         model = new DifferentialDriveModel(props, transmission);
         generator = new TrajectoryGenerator(cfg.motionConfig, model);
@@ -148,13 +151,24 @@ public class TestTrajectoryGeneration {
         final var trajectory = generator.generateTrajectory(
                 false,
                 reversed,
-                Arrays.asList(
-                        RigidTransform.identity(),
-                        new RigidTransform(100 * 0.0254, 0, Rotation.degrees(0)),
-                        new RigidTransform(140, 36, Rotation.degrees(0))),
+                List.of(
+                        new RigidTransform(Translation.identity(), Rotation.identity()),
+                        new RigidTransform(new Translation(5.0, -3.5), Rotation.degrees(-90))
+                ),
                 Collections.emptyList(),
                 0.0,
                 0.0);
+
+//        final var trajectory = generator.generateTrajectory(
+//                false,
+//                reversed,
+//                Arrays.asList(
+//                        RigidTransform.identity(),
+//                        new RigidTransform(100 * 0.0254, 0, Rotation.degrees(0)),
+//                        new RigidTransform(140, 36, Rotation.degrees(0))),
+//                Collections.emptyList(),
+//                0.0,
+//                0.0);
 
         System.out.println(trajectory.getTrajectory().getTrajectory().getPoints().stream()
               .map(TrajectoryPoint::state)

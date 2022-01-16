@@ -35,10 +35,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		final double peakVoltage = 12.0;
 		final double wheelRadius = 0.08016875;
 		final double freeSpeed = 4.8 / wheelRadius; // m/s
-		final double kS = 0.25; // V
-		final double kV = 0.06875 * 2.0; // V / (rad / s)
-		final double kA = 0.011; // V / (rad / s^2)
-		final double mass = 66.678; // kg
+		final double kS = 0.36167; // V
+		final double kV = 0.1329; // V / (rad / s)
+		final double kA = 0.012; // V / (rad / s^2)
+		final double mass = 62.73; // kg
 
 		return new Config() {{
 			maxVoltage = peakVoltage;
@@ -62,14 +62,15 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
 				angularDragTorquePerRadiansPerSecond = 12.0;
 				wheelRadiusMeters = wheelRadius;
-				wheelbaseRadiusMeters = 0.351;
+//				wheelbaseRadiusMeters = 0.5265; // old
+				wheelbaseRadiusMeters = 0.6746875; // new
 			}};
 
 			motionConfig = new DriveMotionPlanner.MotionConfig() {{
 				beta = 2.0;
 				zeta = 0.7;
 
-				maxDx = 0.00127;
+				maxDx = 0.00127 * 4;
 				maxDy = 0.00127;
 				maxDtheta = Rotation.degrees(5.0).getRadians();
 				maxVoltage = 10.0;
@@ -128,7 +129,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		final var slave = MotorControllerFactory.createSlaveTalonFX(4);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
-		group.getMaster().setInvertedOutput(true);
+		group.getMaster().setInvertedOutput(false);
+		group.getMaster().getInternalController().setInverted(true);
 		return group;
 	}
 
@@ -139,6 +141,6 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected void onStop(double timestamp) {
-		report("Stopped");
+		System.out.println("Stopped chassis");
 	}
 }
