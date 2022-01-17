@@ -318,8 +318,6 @@ public class DifferentialDriveModel {
 						accelerationMetersPerSecondSquared = (fixedTorque + variableTorque) / linearMomentInertiaKgMetersSquared;
 					}
 
-					System.out.println("accel: " + accelerationMetersPerSecondSquared);
-
 					result.min = min(result.min, accelerationMetersPerSecondSquared);
 					result.max = max(result.max, accelerationMetersPerSecondSquared);
 				}
