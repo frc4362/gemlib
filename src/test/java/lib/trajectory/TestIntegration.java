@@ -105,8 +105,6 @@ public class TestIntegration {
                     new ChassisState(state.getAcceleration(), state.getAcceleration() * state.getState().getCurvature()),
                     false);
 
-            System.out.println(dynamics.voltage.left);
-
             sample = iterator.advance(dt);
         } while (!iterator.isDone());
     }

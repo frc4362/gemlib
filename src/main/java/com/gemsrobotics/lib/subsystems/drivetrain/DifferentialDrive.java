@@ -111,7 +111,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 	private void configureMotorController(final MotorController<MotorType> controller) {
 		controller.setOpenLoopVoltageRampRate(m_config.secondsToMaxVoltage);
 		controller.setGearingParameters(m_config.gearingForGear(m_transmission instanceof DualSpeedTransmission
-																&& ((DualSpeedTransmission) m_transmission).isInverted()));
+			&& ((DualSpeedTransmission) m_transmission).isInverted()));
 
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);

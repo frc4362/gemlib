@@ -170,15 +170,15 @@ public class TestTrajectoryGeneration {
 //                0.0,
 //                0.0);
 
-        System.out.println(trajectory.getTrajectory().getTrajectory().getPoints().stream()
-              .map(TrajectoryPoint::state)
-              .map(state -> {
-                  final var trans = state.getState().getTranslation();
-                  return FastDoubleToString.format(trans.x()) + ", "
-                         + FastDoubleToString.format(trans.y())
-                         + ", " + FastDoubleToString.format(state.getState().getRotation().getDegrees());
-              })
-              .collect(Collectors.joining("\n")));
+//        System.out.println(trajectory.getTrajectory().getTrajectory().getPoints().stream()
+//              .map(TrajectoryPoint::state)
+//              .map(state -> {
+//                  final var trans = state.getState().getTranslation();
+//                  return FastDoubleToString.format(trans.x()) + ", "
+//                         + FastDoubleToString.format(trans.y())
+//                         + ", " + FastDoubleToString.format(state.getState().getRotation().getDegrees());
+//              })
+//              .collect(Collectors.joining("\n")));
 
         verifyMirroredTrajectories(new MirroredTrajectory(trajectory.getTrajectory().getTrajectory()), reversed);
     }
