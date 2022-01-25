@@ -121,8 +121,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(1);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(2);
+		final var master = MotorControllerFactory.createDefaultTalonFX(0);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(1);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);
@@ -131,8 +131,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(3);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(4);
+		final var master = MotorControllerFactory.createDefaultTalonFX(2);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(3);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);
