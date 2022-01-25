@@ -36,6 +36,16 @@ public final class Demobot extends TimedRobot {
 
 	@Override
 	public void teleopPeriodic() {
-		m_chassis.setCurvatureDrive(m_gamepad.getLeftY(), m_gamepad.getRightX(), m_gamepad.getRightBumper());
+		double leftY = 0;
+		double rightX = 0;
+		//deadbanding 10%
+		if(m_gamepad.getLeftY() > 0.1 || m_gamepad.getLeftY() < -0.1){
+			leftY = m_gamepad.getLeftY();
+		}
+		if(m_gamepad.getRightX() > 0.1 || m_gamepad.getRightX() < -0.1){
+			rightX = m_gamepad.getRightX();
+		}
+
+		m_chassis.setCurvatureDrive(leftY, rightX, m_gamepad.getRightBumper());
 	}
 }
