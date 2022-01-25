@@ -12,9 +12,14 @@ public class OpenLoopDriveHelper {
 	public static class Config {
 		public boolean useSineAttack;
 
+		// Higher numbers = more severe attack on the turn
 		public double zNonLinearityHighGear, zNonLinearityLowGear;
+		// Sensitivity is simply the sensitivity of the turn
 		public double sensitivityHighGear, sensitivityLowGear;
 
+		// Negative inertia essentially "accelerates" your turns to increase responsiveness of the drive
+		// Larger scalars lead to more increased responsiveness. They are banded so that small corrections
+		// do not destroy precision
 		public double negativeInertiaScalarHigh;
 
 		public double negativeInertiaThresholdLow;
@@ -22,9 +27,14 @@ public class OpenLoopDriveHelper {
 		public double negativeInertiaCloseScalarLow;
 		public double negativeInertiaFarScalarLow;
 
+		// Quickstop variables are used to allow for quickturn to enable sharp turns with quickturn during
+		// straight forward or backwards motion
 		public double quickStopDeadband;
 		public double quickStopWeight;
 		public double quickStopScalar;
+
+		// Lower this if quickturn is too aggressive
+		public double quickTurnScalar = 1.0;
 	}
 
 	protected final transient OpenLoopDriveHelper.Config m_cfg;
@@ -59,7 +69,7 @@ public class OpenLoopDriveHelper {
 		if (m_cfg.useSineAttack) {
 			final double zNonLinearity;
 
-            // Apply a sin function scaled to make it feel better.
+            // Increase the attack of the turn. Driver preference
 			if (isHighGear) {
 				zNonLinearity = m_cfg.zNonLinearityHighGear;
 
@@ -95,10 +105,10 @@ public class OpenLoopDriveHelper {
             }
 		}
 
-        final double negativeInteriaPower = negInertia * negativeInertiaScalar;
-        m_negInertiaAccumulator += negativeInteriaPower;
+        final double negativeInertiaPower = negInertia * negativeInertiaScalar;
+        m_negInertiaAccumulator += negativeInertiaPower;
 
-		wheel += negativeInteriaPower;
+		wheel += negativeInertiaPower;
 
 		if (m_negInertiaAccumulator > 1.0) {
 			m_negInertiaAccumulator -= 1.0;
@@ -114,14 +124,15 @@ public class OpenLoopDriveHelper {
 		final double overPower;
 
 		if (isQuickTurn) {
+			// please note this is linear
 			if (abs(powers.linear) < m_cfg.quickStopDeadband) {
 				m_quickStopAccumulator = (1.0 - m_cfg.quickStopWeight) * m_quickStopAccumulator;
 				m_quickStopAccumulator += m_cfg.quickStopWeight * limit(wheel, 1.0) * m_cfg.quickStopScalar;
 			}
 
 			overPower = 1.0;
-			powers.angular = wheel;
-		} else  {
+			powers.angular = wheel * m_cfg.quickTurnScalar;
+		} else {
 			overPower = 0.0;
 			powers.angular = abs(throttle) * (wheel * signum(throttle)) * sensitivity - m_quickStopAccumulator;
 
@@ -150,6 +161,7 @@ public class OpenLoopDriveHelper {
             output.right = -1.0;
         }
 
-		return output.map(p -> limit(p, 1.0));
+		final double maxMagnitude = max(abs(output.left), abs(output.right));
+		return output.map(p -> p / maxMagnitude);
 	}
 }
