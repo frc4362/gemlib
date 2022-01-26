@@ -80,22 +80,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			}};
 
 			openLoopConfig = new OpenLoopDriveHelper.Config() {{
-				useSineAttack = true;
-				zNonLinearityHighGear = 1.0;
-				zNonLinearityLowGear = 0.85;
-
-				sensitivityHighGear = 0.65;
-				sensitivityLowGear = 0.7;
-
-				negativeInertiaScalarHigh = 4.0;
-				negativeInertiaThresholdLow = 0.65;
-				negativeInertiaTurnScalarLow = 3.5;
-				negativeInertiaCloseScalarLow = 4.0;
-				negativeInertiaFarScalarLow = 5.0;
-
-				quickStopDeadband = 0.3; // 0.5
-				quickStopScalar = 3.0; // 5.0
-				quickStopWeight = 0.1;
+				quickTurnScalar = 1.0;
 			}};
 		}};
 	}
