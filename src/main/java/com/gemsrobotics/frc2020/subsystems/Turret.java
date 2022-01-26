@@ -21,7 +21,7 @@ import static java.lang.Math.*;
 public final class Turret extends Subsystem implements Loggable {
 	private static final double HOME_POSITION = -804.0;
 	private static final double COUNTS_PER_DEGREE = 11.03888888888889;
-	private static final double STICTION_VOLTS = 0.7 / 12.0; // really .9175
+	private static final double STICTION = 0.7 / 12.0; // really .9175
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
@@ -69,7 +69,7 @@ public final class Turret extends Subsystem implements Loggable {
 
 	private static class PeriodicIO implements Loggable {
 		@Log
-		public double current = 0.0;
+		public double currentAmps = 0.0;
 		@Log.ToString
 		public Rotation reference = Rotation.identity();
 		@Log.ToString
@@ -82,7 +82,7 @@ public final class Turret extends Subsystem implements Loggable {
 
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.current = m_motor.getDrawnCurrent();
+		m_periodicIO.currentAmps = m_motor.getDrawnCurrent();
 
 		final var oldPosition = new Rotation(m_periodicIO.position);
 		final var oldVelocity = new Rotation(m_periodicIO.velocity);
@@ -132,7 +132,7 @@ public final class Turret extends Subsystem implements Loggable {
 				break;
 			case ROTATION:
 				final double error = atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
-				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * STICTION_VOLTS);
+				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * STICTION);
 				break;
 		}
 	}
