@@ -8,6 +8,7 @@ import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Turret;
 import edu.wpi.first.wpilibj.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
@@ -20,9 +21,10 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private static final double ENCODER_COUNTS_PER_REVOLUTION = 2048.0; // unused, integrated sensor
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
-	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.0047378, 0.0, 0.26229, 0.0);
+	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.47378, 0.0, 0.26229, 0.0);
 	private static final int MOTOR_PORT = 5;
 	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.63675, 2.3528);
+	public static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;
 
 	private static GreyTTurret INSTANCE;
 
@@ -47,6 +49,11 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		m_motor.setPIDF(GAINS);
 		m_motor.setInvertedOutput(true);
 		m_motor.setSelectedProfile(0);
+		m_motor.setEncoderCounts(0.0);
+		m_motor.getInternalController().configNominalOutputForward(0.0);
+		m_motor.getInternalController().configNominalOutputReverse(0.0);
+		m_motor.getInternalController().configPeakOutputForward(1.0);
+		m_motor.getInternalController().configPeakOutputReverse(-1.0);
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -58,29 +65,37 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	private static class PeriodicIO {
 		public double currentAmps = 0.0;
-		public Rotation reference;
-		public Rotation position;
-		public Rotation velocity;
+		public Rotation reference = Rotation.identity();
+		public Rotation position = Rotation.identity();
+		public Rotation velocity = Rotation.identity();
 	}
 
 	@Override
-	protected void readPeriodicInputs(double timestamp) {
+	protected synchronized void readPeriodicInputs(double timestamp) {
 		m_periodicIO.currentAmps = m_motor.getDrawnCurrentAmps();
+
+		final var oldPosition = new Rotation(m_periodicIO.position);
+		m_periodicIO.position = Rotation.radians(m_motor.getPositionRotations() * Tau);
+
+		final var currentVelocity = m_periodicIO.position.difference(oldPosition).getRadians() / dt();
+		m_periodicIO.velocity = Rotation.radians(currentVelocity);
 	}
 
 	@Override
-	protected void onStart(double timestamp) {
-
+	protected synchronized void onStart(double timestamp) {
+		setDisabled();
 	}
 
 	@Override
-	protected void onUpdate(double timestamp) {
+	protected synchronized void onUpdate(double timestamp) {
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();
 				break;
 			case ROTATION:
-				final double error = atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
+				final double error = 0.0;//atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
+//				m_motor.setDutyCycle(0.25);
+				SmartDashboard.putString("setpoint rotations", m_periodicIO.reference.toString());
 				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * (FEEDFORWARD.ks / 12));
 				break;
 		}
@@ -91,27 +106,33 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	}
 
 	@Override
-	public void setReference(Rotation reference) {
-
+	public synchronized void setReference(Rotation reference) {
+		m_mode = Mode.ROTATION;
+		m_periodicIO.reference = reference;
 	}
 
 	@Override
 	public synchronized boolean atReference() {
-		return abs(m_motor.getInternalController().getClosedLoopError()) < (Tau / 286720) * 0.0667;
+		return abs(m_motor.getInternalController().getClosedLoopError()) < ALLOWABLE_ERROR_TICKS;
 	}
 
 	@Override
-	public Rotation getRotation() {
-		return null;
+	public synchronized Rotation getRotation() {
+		return m_periodicIO.position;
+	}
+
+	public synchronized Rotation getReference() {
+		return m_periodicIO.reference;
 	}
 
 	@Override
 	protected void onStop(double timestamp) {
-
+		setDisabled();
 	}
 
 	@Override
-	public void setSafeState() {
-
+	public synchronized void setSafeState() {
+		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		m_motor.setNeutral();
 	}
 }
