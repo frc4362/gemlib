@@ -8,6 +8,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
+import com.gemsrobotics.lib.subsystems.Turret;
 import com.gemsrobotics.lib.utils.Units;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
@@ -18,7 +19,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.*;
 
-public final class Turret extends Subsystem implements Loggable {
+public final class ArmabotTurret240 extends Subsystem implements Loggable, Turret {
 	private static final double HOME_POSITION = -804.0;
 	private static final double COUNTS_PER_DEGREE = 11.03888888888889;
 	private static final double STICTION = 0.7 / 12.0; // really .9175
@@ -27,11 +28,11 @@ public final class Turret extends Subsystem implements Loggable {
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
 	private static final int TURRET_USABLE_RANGE = (int) (4096 * (178.5 / 360.0));
 
-	private static Turret INSTANCE;
+	private static ArmabotTurret240 INSTANCE;
 
-	public static Turret getInstance() {
+	public static ArmabotTurret240 getInstance() {
 		if (Objects.isNull(INSTANCE)) {
-			INSTANCE = new Turret();
+			INSTANCE = new ArmabotTurret240();
 		}
 
 		return INSTANCE;
@@ -42,7 +43,7 @@ public final class Turret extends Subsystem implements Loggable {
 
 	private Mode m_controlMode;
 
-	private Turret() {
+	private ArmabotTurret240() {
 		m_motor = MotorControllerFactory.createDefaultTalonSRX(Constants.TURRET_PORT);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
@@ -82,7 +83,7 @@ public final class Turret extends Subsystem implements Loggable {
 
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.currentAmps = m_motor.getDrawnCurrent();
+		m_periodicIO.currentAmps = m_motor.getDrawnCurrentAmps();
 
 		final var oldPosition = new Rotation(m_periodicIO.position);
 		final var oldVelocity = new Rotation(m_periodicIO.velocity);
@@ -99,7 +100,7 @@ public final class Turret extends Subsystem implements Loggable {
 		m_controlMode = Mode.DISABLED;
 	}
 
-	public synchronized void setReferenceRotation(Rotation reference) {
+	public synchronized void setReference(Rotation reference) {
 		m_controlMode = Mode.ROTATION;
 
 		final double setpoint = reference.getRadians() * (4096.0 / Tau);
@@ -116,7 +117,7 @@ public final class Turret extends Subsystem implements Loggable {
 	}
 
 	public synchronized void setPositionOffset(final Rotation amount) {
-		setReferenceRotation(m_periodicIO.position.sum(amount));
+		setReference(m_periodicIO.position.sum(amount));
 	}
 
 	@Override

@@ -86,7 +86,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	@Override
-	public double getDrawnCurrent() {
+	public double getDrawnCurrentAmps() {
 		return m_internal.getStatorCurrent();
 	}
 

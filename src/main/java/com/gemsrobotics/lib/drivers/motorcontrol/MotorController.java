@@ -45,7 +45,7 @@ public interface MotorController<T> {
     /**
      * @return Amps of the output
      */
-    double getDrawnCurrent();
+    double getDrawnCurrentAmps();
 
     int getDeviceID();
 

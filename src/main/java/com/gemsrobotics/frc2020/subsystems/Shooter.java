@@ -1,12 +1,10 @@
 package com.gemsrobotics.frc2020.subsystems;
 
-import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.data.LimitedQueue;
-import com.gemsrobotics.lib.data.RollingAverageDouble;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
@@ -17,7 +15,6 @@ import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
@@ -102,9 +99,9 @@ public final class Shooter extends Subsystem implements Loggable {
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.shooterMeasuredRPM = m_shooterMaster.getVelocityAngularRPM();
-		m_periodicIO.shooterCurrent = m_shooterMaster.getDrawnCurrent() + m_shooterSlave.getDrawnCurrent();
+		m_periodicIO.shooterCurrent = m_shooterMaster.getDrawnCurrentAmps() + m_shooterSlave.getDrawnCurrentAmps();
 		m_periodicIO.feederMeasuredRPM = m_feederMaster.getVelocityAngularRPM();
-		m_periodicIO.feederCurrent = m_feederMaster.getDrawnCurrent() + m_feederSlave.getDrawnCurrent();
+		m_periodicIO.feederCurrent = m_feederMaster.getDrawnCurrentAmps() + m_feederSlave.getDrawnCurrentAmps();
 	}
 
 	public synchronized void setRPM(final double shooterRPM) {

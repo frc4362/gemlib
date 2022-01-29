@@ -111,7 +111,7 @@ public final class RobotState extends Subsystem {
 
 	@Override
 	protected synchronized void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.newTurretRotation = Turret.getInstance().getRotation();
+		m_periodicIO.newTurretRotation = ArmabotTurret240.getInstance().getRotation();
 		m_periodicIO.targetServerAlive = TargetServer.getInstance().isAlive();
 		m_periodicIO.newTargetInfo = TargetServer.getInstance().getTargetInfo();
 	}

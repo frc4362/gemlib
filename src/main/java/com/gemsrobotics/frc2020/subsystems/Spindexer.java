@@ -109,7 +109,7 @@ public final class Spindexer extends Subsystem {
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
-		SmartDashboard.putNumber("Spindexer Current", m_motor.getDrawnCurrent());
+		SmartDashboard.putNumber("Spindexer Current", m_motor.getDrawnCurrentAmps());
 		SmartDashboard.putNumber("Spindexer Velocity", m_motor.getVelocityAngularRPM());
 
 		switch (m_mode) {
@@ -126,7 +126,7 @@ public final class Spindexer extends Subsystem {
 
 				break;
 			case AUTO_SORT:
-				m_stallAverage.add(m_motor.getDrawnCurrent());
+				m_stallAverage.add(m_motor.getDrawnCurrentAmps());
 
 				if (m_stallAverage.getAverage() > 47.0 && !m_stallAverage.hasSpaceRemaining()) {
 					m_motor.setVoltage(-2.75);

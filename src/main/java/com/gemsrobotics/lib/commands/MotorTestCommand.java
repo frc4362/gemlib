@@ -4,7 +4,6 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.command.Command;
 
-import java.util.Map;
 import java.util.stream.DoubleStream;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
@@ -43,7 +42,7 @@ public final class MotorTestCommand extends Command {
 	public void execute() {
 		if (timeSinceInitialized() > m_config.waitTime) {
 			m_rpms.add(m_motor.getVelocityAngularRPM());
-			m_currents.add(m_motor.getDrawnCurrent());
+			m_currents.add(m_motor.getDrawnCurrentAmps());
 		}
 	}
 

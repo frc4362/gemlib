@@ -1,7 +1,6 @@
 package com.gemsrobotics.frc2020;
 
 import com.gemsrobotics.frc2020.autonomous.*;
-import com.gemsrobotics.frc2020.commands.DriveStraightCommand;
 import com.gemsrobotics.frc2020.subsystems.*;
 import com.gemsrobotics.frc2020.subsystems.RobotState;
 import com.gemsrobotics.lib.commands.CharacterizeDifferentialDrive;
@@ -14,7 +13,6 @@ import com.gemsrobotics.lib.structure.SubsystemManager;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 import com.gemsrobotics.lib.utils.MathUtils;
-import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.Scheduler;
@@ -27,7 +25,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 	private Chassis m_chassis;
 	private Spindexer m_spindexer;
 	private Shooter m_shooter;
-	private Turret m_turret;
+	private ArmabotTurret240 m_turret;
 	private TargetServer m_targetServer;
 	private RobotState m_robotState;
 	private Hood m_hood;
@@ -52,7 +50,7 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_stickRight = new Gemstick(1, Gemstick.Deadbands.makeRectangleDeadband(0.06, 0.15));
 		m_shooter = Shooter.getInstance();
 		m_spindexer = Spindexer.getInstance();
-		m_turret = Turret.getInstance();
+		m_turret = ArmabotTurret240.getInstance();
 		m_targetServer = TargetServer.getInstance();
 		m_robotState = RobotState.getInstance();
 		m_compressor = new Compressor(PneumaticsModuleType.CTREPCM);

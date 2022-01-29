@@ -3,13 +3,11 @@ package com.gemsrobotics.frc2020.subsystems;
 import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.frc2020.Target;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Limelight;
-import com.revrobotics.CANSparkMax;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.annotations.Log;
@@ -60,7 +58,7 @@ public final class Superstructure extends Subsystem {
 	private final TargetServer m_targetServer;
 	private final Chassis m_chassis;
 	private final Shooter m_shooter;
-	private final Turret m_turret;
+	private final ArmabotTurret240 m_turret;
 	private final Hood m_hood;
 	private final Spindexer m_spindexer;
 	private final RobotState m_robotState;
@@ -86,7 +84,7 @@ public final class Superstructure extends Subsystem {
 		m_targetServer = TargetServer.getInstance();
 		m_chassis = Chassis.getInstance();
 		m_shooter = Shooter.getInstance();
-		m_turret = Turret.getInstance();
+		m_turret = ArmabotTurret240.getInstance();
 		m_hood = Hood.getInstance();
 		m_spindexer = Spindexer.getInstance();
 		m_robotState = RobotState.getInstance();
@@ -357,7 +355,7 @@ public final class Superstructure extends Subsystem {
 			m_hood.setDeployed(!DriverStation.getStickButton(1, 4));
 
 			if (target.isClose()) {
-				m_turret.setReferenceRotation(Rotation.degrees(0));
+				m_turret.setReference(Rotation.degrees(0));
 			} else {
 				setTurretTargetGoal(goal);
 			}
@@ -367,7 +365,7 @@ public final class Superstructure extends Subsystem {
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			}
 		} else {
-			m_turret.setReferenceRotation(m_turretGuess);
+			m_turret.setReference(m_turretGuess);
 		}
 
 		return applyWantedState();
@@ -380,7 +378,7 @@ public final class Superstructure extends Subsystem {
 		final var targetDistance = target.getOptimalGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 		if (target.isClose()) {
-			m_turret.setReferenceRotation(Rotation.degrees(0));
+			m_turret.setReference(Rotation.degrees(0));
 		} else {
 			setTurretTargetGoal(target.getOptimalGoal());
 		}
@@ -486,7 +484,7 @@ public final class Superstructure extends Subsystem {
 		}
 
 		if (target.isClose()) {
-			m_turret.setReferenceRotation(Rotation.degrees(0));
+			m_turret.setReference(Rotation.degrees(0));
 		} else {
 			setTurretTargetGoal(target.getOptimalGoal());
 		}
@@ -540,7 +538,7 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
-		m_turret.setReferenceRotation(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
+		m_turret.setReference(fieldRotation.difference(m_periodicIO.vehiclePose.getRotation()));
 	}
 
 	public Solenoid getKicker() {

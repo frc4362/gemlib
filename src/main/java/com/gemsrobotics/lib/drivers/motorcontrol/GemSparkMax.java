@@ -78,7 +78,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax> {
     }
 
     @Override
-    public double getDrawnCurrent() {
+    public double getDrawnCurrentAmps() {
         return m_internal.getOutputCurrent();
     }
 
