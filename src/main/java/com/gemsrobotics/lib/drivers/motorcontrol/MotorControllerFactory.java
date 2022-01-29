@@ -156,7 +156,7 @@ public final class MotorControllerFactory {
         }
     };
 
-    private static final TalonConfiguration HIGH_PERFORMANCE_TALON_CONFIG = new TalonConfiguration() {
+    public static final TalonConfiguration HIGH_PERFORMANCE_TALON_CONFIG = new TalonConfiguration() {
         {
             NEUTRAL_MODE = NeutralMode.Coast;
             NEUTRAL_DEADBAND = 0.02;
@@ -173,7 +173,7 @@ public final class MotorControllerFactory {
             CONTROL_FRAME_PERIOD_MS = 5;
             MOTION_CONTROL_FRAME_PERIOD_MS = 100;
             GENERAL_STATUS_FRAME_RATE_MS = 2;
-            FEEDBACK_STATUS_FRAME_RATE_MS = 10;
+            FEEDBACK_STATUS_FRAME_RATE_MS = 1;
             QUAD_ENCODER_STATUS_FRAME_RATE_MS = 1000;
             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 2;
             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;

@@ -1,6 +1,7 @@
 package com.gemsrobotics.demo2022;
 
 import com.gemsrobotics.demo2022.subsystems.Chassis;
+import com.gemsrobotics.demo2022.subsystems.GreyTTurret;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
@@ -12,6 +13,7 @@ public final class Demobot extends TimedRobot {
 	private Chassis m_chassis;
 	private SubsystemManager m_subsystemManager;
 	private XboxController m_gamepad;
+	private GreyTTurret m_greytestTurret;
 
 	@Override
 	public void robotInit() {
@@ -22,6 +24,8 @@ public final class Demobot extends TimedRobot {
 
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
+
+		m_greytestTurret = GreyTTurret.getInstance();
 	}
 
 	@Override
