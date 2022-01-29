@@ -122,7 +122,7 @@ public final class GemSparkMax implements MotorController<CANSparkMax> {
     }
 
     @Override
-    public synchronized boolean setEncoderRotations(double position) {
+    public synchronized boolean setEncoderCounts(double position) {
         return runWithRetries(() -> m_encoder.setPosition(position));
     }
 

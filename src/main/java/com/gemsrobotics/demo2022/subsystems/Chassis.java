@@ -91,7 +91,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	private void configMotors(final MotorControllerGroup<TalonFX> motors) {
 		motors.forEach(motor -> {
-			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 			motor.getInternalController().configVoltageCompSaturation(12.0);
 			motor.getInternalController().enableVoltageCompensation(true);
 			motor.getInternalController().configStatorCurrentLimit(new StatorCurrentLimitConfiguration(
@@ -106,7 +106,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
 		final var master = MotorControllerFactory.createDefaultTalonFX(0);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(1);
+		final var slave = MotorControllerFactory.createDefaultTalonFX(1);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);
@@ -116,7 +116,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
 		final var master = MotorControllerFactory.createDefaultTalonFX(2);
-		final var slave = MotorControllerFactory.createSlaveTalonFX(3);
+		final var slave = MotorControllerFactory.createDefaultTalonFX(3);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);

@@ -116,7 +116,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		controller.setSelectedProfile(slotForGear(false));
 		controller.setPIDF(m_config.gainsLowGear);
 
-		controller.setEncoderRotations(0.0);
+		controller.setEncoderCounts(0.0);
 	}
 
 	public enum ControlMode {

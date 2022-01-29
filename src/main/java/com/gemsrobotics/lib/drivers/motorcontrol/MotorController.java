@@ -95,7 +95,7 @@ public interface MotorController<T> {
      * @param position Forces the encoder to set its current position
      * @return If the operation was successful
      */
-    boolean setEncoderRotations(double position);
+    boolean setEncoderCounts(double position);
 
     /**
      * @param timeToRamp The amount of time, in seconds, to change 12V of the output

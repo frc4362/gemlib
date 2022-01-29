@@ -181,7 +181,7 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 	}
 
 	@Override
-	public synchronized boolean setEncoderRotations(final double position) {
+	public synchronized boolean setEncoderCounts(final double position) {
 		return runWithRetries(() -> m_internal.setSelectedSensorPosition((int) position, m_selectedProfileID, TIMEOUT_MS));
 	}
 

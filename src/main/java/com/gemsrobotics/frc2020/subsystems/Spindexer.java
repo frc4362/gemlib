@@ -46,7 +46,7 @@ public final class Spindexer extends Subsystem {
 		m_motor.setSelectedProfile(0);
 		m_motor.setPIDF(0.4, 0.0, 0.842, 0.0);
 		m_motor.setInvertedOutput(false);
-		m_motor.setEncoderRotations(0.0);
+		m_motor.setEncoderCounts(0.0);
 
 		m_stallAverage = new RollingAverageDouble(40);
 

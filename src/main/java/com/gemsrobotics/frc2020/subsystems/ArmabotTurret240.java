@@ -53,7 +53,7 @@ public final class ArmabotTurret240 extends Subsystem implements Loggable, Turre
 		m_motor.setInvertedOutput(false);
 		m_motor.setSelectedProfile(0);
 		final var home = HOME_POSITION - m_motor.getInternalController().getSelectedSensorPosition(1);
-		m_motor.setEncoderRotations(0);
+		m_motor.setEncoderCounts(0);
 		m_motor.setPIDF(TURRET_GAINS);
 		m_motor.getInternalController().configForwardSoftLimitEnable(true);
 		m_motor.getInternalController().configForwardSoftLimitThreshold(+TURRET_USABLE_RANGE);
