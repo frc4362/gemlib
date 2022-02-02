@@ -4,6 +4,7 @@ import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.demo2022.subsystems.Chassis;
 import com.gemsrobotics.demo2022.subsystems.GreyTTurret;
+import com.gemsrobotics.demo2022.subsystems.Shooter;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
@@ -21,15 +22,18 @@ public final class Demobot extends TimedRobot {
 	private XboxController m_gamepad;
 	private GreyTTurret m_greytestTurret;
 	private TalonFX m_turret;
+	private Shooter m_shooter;
 
 	@Override
 	public void robotInit() {
 		m_gamepad = new XboxController(0);
 		m_turret = new TalonFX(5);
 
+		m_shooter = Shooter.getInstance();
+
 		m_chassis = Chassis.getInstance();
 //		m_greytestTurret = GreyTTurret.getInstance();
-		m_subsystemManager = new SubsystemManager(m_chassis);
+		m_subsystemManager = new SubsystemManager(m_chassis, m_shooter);
 
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
