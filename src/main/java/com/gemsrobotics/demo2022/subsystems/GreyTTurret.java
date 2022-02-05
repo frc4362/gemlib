@@ -2,8 +2,10 @@ package com.gemsrobotics.demo2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.PIDFController;
+import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
+import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Turret;
@@ -24,7 +26,9 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.47378, 0.0, 0.26229, 0.0);
 	private static final int MOTOR_PORT = 5;
 	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.63675, 2.3528);
-	public static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;
+	private static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;
+	private static final int STATE_ESTIMATOR_MAX_SAMPLES = 100;
+	private static final double TIME_TO_RAMP = 0.05;
 
 	private static GreyTTurret INSTANCE;
 
@@ -38,6 +42,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 
 	private final MotorController<TalonFX> m_motor;
+	private final InterpolatingTreeMap<InterpolatingDouble, Rotation> m_turretStateEstimator;
 	private final PeriodicIO m_periodicIO;
 
 	private Mode m_mode;
@@ -54,6 +59,9 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		m_motor.getInternalController().configNominalOutputReverse(0.0);
 		m_motor.getInternalController().configPeakOutputForward(1.0);
 		m_motor.getInternalController().configPeakOutputReverse(-1.0);
+		m_motor.setClosedLoopVoltageRampRate(TIME_TO_RAMP);
+
+		m_turretStateEstimator = new InterpolatingTreeMap<>(STATE_ESTIMATOR_MAX_SAMPLES);
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -79,6 +87,8 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 		final var currentVelocity = m_periodicIO.position.difference(oldPosition).getRadians() / dt();
 		m_periodicIO.velocity = Rotation.radians(currentVelocity);
+
+		m_turretStateEstimator.put(new InterpolatingDouble(timestamp), m_periodicIO.position);
 	}
 
 	@Override
@@ -119,6 +129,11 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	@Override
 	public synchronized Rotation getRotation() {
 		return m_periodicIO.position;
+	}
+
+	// May be exact
+	public synchronized Rotation getEstimatedRotation(final double timestamp) {
+		return m_turretStateEstimator.getInterpolated(new InterpolatingDouble(timestamp));
 	}
 
 	public synchronized Rotation getReference() {

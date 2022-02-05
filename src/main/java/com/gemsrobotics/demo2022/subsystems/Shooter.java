@@ -10,19 +10,25 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
+import edu.wpi.first.wpilibj.LinearFilter;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 
 import java.util.Objects;
 
+import static com.gemsrobotics.lib.utils.MathUtils.allCloseTo;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
 public final class Shooter extends Subsystem implements Loggable {
+    private static final int
+            SHOOTER_MASTER_PORT = 6,
+            SHOOTER_SLAVE_PORT = 7;
     private static final double SHOOTER_WHEEL_RADIUS = Units.inches2Meters(3.8) / 2.0;
-    private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.293, 0.0, 0.0, 0.0);
-    private static final PIDFController.Gains FEEDER_GAINS = new PIDFController.Gains(0.0455, 0.0, 0.0, 0.0);
-    private static final int RPM_SAMPLE_SIZE = 10;
+    private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
+    private static final MotorFeedforward SHOOTER_FEEDFORWARD = new MotorFeedforward(0.0, 0.0, 0.0);
+    private static final double IIR_TIME_CONSTANT = 0.05;
+    private static final double ALLOWABLE_RPM_ERROR = 200.0;
 
     private static Shooter INSTANCE;
 
@@ -37,30 +43,23 @@ public final class Shooter extends Subsystem implements Loggable {
     private final MotorController<TalonFX>
             m_shooterMaster,
             m_shooterSlave;
-    private final MotorFeedforward
-            m_shooterFeedforward,
-            m_feederFeedforward;
-    private final LimitedQueue<Double> m_shooterSamples, m_feederSamples;
+    private final LinearFilter m_shooterFilter;
     private final PeriodicIO m_periodicIO;
 
     private Shooter() {
-        m_shooterMaster = MotorControllerFactory.createDefaultTalonFX(Constants.SHOOTER_MASTER_PORT);
+        m_shooterMaster = MotorControllerFactory.createDefaultTalonFX(SHOOTER_MASTER_PORT);
         m_shooterMaster.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
         m_shooterMaster.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
         m_shooterMaster.setInvertedOutput(false);
         m_shooterMaster.setSelectedProfile(0);
         m_shooterMaster.setPIDF(SHOOTER_GAINS);
 
-        m_shooterSlave = MotorControllerFactory.createDefaultTalonFX(Constants.SHOOTER_SLAVE_PORT);
+        m_shooterSlave = MotorControllerFactory.createDefaultTalonFX(SHOOTER_SLAVE_PORT);
         m_shooterSlave.setGearingParameters(1.0, SHOOTER_WHEEL_RADIUS, 2048);
         m_shooterSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
         m_shooterSlave.follow(m_shooterMaster, true);
 
-        m_shooterFeedforward = new MotorFeedforward(0.0249, 0.112 / 60.0, 0.0 / 60.0); // 0.0001
-        m_feederFeedforward = new MotorFeedforward(0.0141, 0.11 / 60.0, 0.0);
-
-        m_shooterSamples = new LimitedQueue<>(RPM_SAMPLE_SIZE);
-        m_feederSamples = new LimitedQueue<>(RPM_SAMPLE_SIZE);
+        m_shooterFilter = LinearFilter.singlePoleIIR(IIR_TIME_CONSTANT, 0.01);
 
         m_periodicIO = new PeriodicIO();
     }
@@ -68,30 +67,26 @@ public final class Shooter extends Subsystem implements Loggable {
     private static class PeriodicIO implements Loggable {
         @Log(name="Shooter Velocity (RPM)")
         public double shooterMeasuredRPM = 0.0;
+        public double shooterFilteredRPM = 0.0;
         @Log(name="Shooter Reference (RPM)")
         public double shooterReferenceRPM = 0.0;
         @Log(name="Shooter Current Draw (amps)")
         public double shooterCurrent = 0.0;
-        @Log(name="Feeder Velocity (RPM)")
-        public double feederMeasuredRPM = 0.0;
-        @Log(name="Feeder Reference (RPM)")
-        public double feederReferenceRPM = 0.0;
-        @Log(name="Feeder Current Draw (amps)")
-        public double feederCurrent = 0.0;
         @Log(name="Enabled?")
         public boolean enabled = false;
+        public boolean atReference = false;
     }
 
     @Override
     protected synchronized void readPeriodicInputs(final double timestamp) {
         m_periodicIO.shooterMeasuredRPM = m_shooterMaster.getVelocityAngularRPM();
         m_periodicIO.shooterCurrent = m_shooterMaster.getDrawnCurrentAmps() + m_shooterSlave.getDrawnCurrentAmps();
+        m_periodicIO.shooterFilteredRPM = m_shooterFilter.calculate(m_periodicIO.shooterMeasuredRPM);
     }
 
     public synchronized void setRPM(final double shooterRPM) {
         m_periodicIO.enabled = shooterRPM != 0.0;
         m_periodicIO.shooterReferenceRPM = shooterRPM;
-        m_periodicIO.feederReferenceRPM = shooterRPM / 1.75;
     }
 
     public synchronized void setDisabled() {
@@ -106,23 +101,14 @@ public final class Shooter extends Subsystem implements Loggable {
     @Override
     protected synchronized void onUpdate(final double timestamp) {
         if (m_periodicIO.enabled) {
-            m_feederSamples.add(m_periodicIO.feederMeasuredRPM);
-
-            final double kickerFeedforward = m_feederFeedforward.calculateVolts(m_periodicIO.feederReferenceRPM) / 12.0;
-
-            m_shooterSamples.add(m_periodicIO.shooterMeasuredRPM);
-
-            final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterMeasuredRPM) / dt();
-            final double shooterFeedforward = m_shooterFeedforward.calculateVolts(m_periodicIO.shooterReferenceRPM, accelerationSetpoint) / 12.0;
+            final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterFilteredRPM) / dt();
+            final double shooterFeedforward = SHOOTER_FEEDFORWARD.calculateVolts(
+                    Units.rpm2RadsPerSecond(m_periodicIO.shooterReferenceRPM),
+                    Units.rpm2RadsPerSecond(accelerationSetpoint)) / 12.0;
             m_shooterMaster.setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforward);
         } else {
             m_shooterMaster.setNeutral();
         }
-
-        SmartDashboard.putNumber("Shooter Measured RPM", m_periodicIO.shooterMeasuredRPM);
-        SmartDashboard.putNumber("Shooter Target RPM", m_periodicIO.shooterReferenceRPM);
-        SmartDashboard.putNumber("Feeder Measured RPM", m_periodicIO.feederMeasuredRPM);
-        SmartDashboard.putNumber("Feeder Target RPM", m_periodicIO.feederReferenceRPM);
     }
 
     @Override
@@ -136,9 +122,7 @@ public final class Shooter extends Subsystem implements Loggable {
     }
 
     public synchronized boolean atReference() {
-        final boolean a = MathUtils.allCloseTo(m_shooterSamples, m_periodicIO.shooterReferenceRPM, 500.0);
-        final boolean b = MathUtils.allCloseTo(m_feederSamples, m_feederSamples.stream().mapToDouble(n -> n).average().orElse(0.0), 500.0);
-        return a && b;
+        return epsilonEquals(m_periodicIO.shooterReferenceRPM, m_periodicIO.shooterFilteredRPM, ALLOWABLE_RPM_ERROR);
     }
 
     public synchronized boolean isNeutral() {

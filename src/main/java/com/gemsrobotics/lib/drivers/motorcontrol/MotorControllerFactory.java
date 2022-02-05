@@ -129,7 +129,7 @@ public final class MotorControllerFactory {
     private static final TalonConfiguration DEFAULT_TALON_CONFIG = new TalonConfiguration() {
         {
              NEUTRAL_MODE = NeutralMode.Coast;
-             NEUTRAL_DEADBAND = 0.04;
+             NEUTRAL_DEADBAND = 0.02;
 
              ENABLE_CURRENT_LIMIT = false;
              ENABLE_SOFT_LIMIT = false;
