@@ -1,14 +1,10 @@
-package com.gemsrobotics.demo2022;
+package com.gemsrobotics.frc2022;
 
-import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.gemsrobotics.demo2022.subsystems.Chassis;
-import com.gemsrobotics.demo2022.subsystems.GreyTTurret;
-import com.gemsrobotics.demo2022.subsystems.Shooter;
+import com.gemsrobotics.frc2022.subsystems.Chassis;
+import com.gemsrobotics.frc2022.subsystems.GreyTTurret;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.SubsystemManager;
-import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
 import com.gemsrobotics.lib.utils.MathUtils;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;

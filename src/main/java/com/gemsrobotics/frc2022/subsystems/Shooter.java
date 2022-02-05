@@ -1,18 +1,13 @@
-package com.gemsrobotics.demo2022.subsystems;
+package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.controls.PIDFController;
-import com.gemsrobotics.lib.data.LimitedQueue;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
-import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
-import edu.wpi.first.wpilibj.LinearFilter;
 import edu.wpi.first.wpilibj.MedianFilter;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
 

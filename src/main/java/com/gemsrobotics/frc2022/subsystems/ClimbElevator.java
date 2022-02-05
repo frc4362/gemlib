@@ -1,4 +1,4 @@
-package com.gemsrobotics.demo2022.subsystems;
+package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;

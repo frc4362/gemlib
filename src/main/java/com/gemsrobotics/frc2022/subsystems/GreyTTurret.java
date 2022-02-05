@@ -1,4 +1,4 @@
-package com.gemsrobotics.demo2022.subsystems;
+package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -23,7 +23,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private static final double ENCODER_COUNTS_PER_REVOLUTION = 2048.0; // unused, integrated sensor
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
-	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.47378, 0.0, 0.26229, 0.0);
+	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.24, 0.0, 0.26229, 0.0);
 	private static final int MOTOR_PORT = 5;
 	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.63675, 2.3528);
 	private static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;

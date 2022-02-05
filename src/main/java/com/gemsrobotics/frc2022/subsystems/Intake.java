@@ -1,4 +1,4 @@
-package com.gemsrobotics.demo2022.subsystems;
+package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -6,7 +6,6 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
-import edu.wpi.first.wpilibj.Relay;
 import edu.wpi.first.wpilibj.Timer;
 
 import java.util.Objects;

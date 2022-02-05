@@ -1,14 +1,11 @@
 package com.gemsrobotics.lib.subsystems;
 
-import com.ctre.phoenix.CANifier;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.Timer;
-import org.opencv.ml.EM;
 
 import java.util.Arrays;
 import java.util.List;
@@ -165,7 +162,7 @@ public abstract class Limelight extends Subsystem {
 	}
 
 	/**
-	 * @return Whether or not any contours are found in frame
+	 * @return Whether any contours are found in frame
 	 */
 	public synchronized final boolean isTargetPresent() {
 		return m_periodicIO.targetPresent;

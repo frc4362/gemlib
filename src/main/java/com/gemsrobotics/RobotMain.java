@@ -1,6 +1,6 @@
 package com.gemsrobotics;
 
-import com.gemsrobotics.demo2022.Demobot;
+import com.gemsrobotics.frc2022.Demobot;
 import edu.wpi.first.wpilibj.RobotBase;
 
 public class RobotMain {
