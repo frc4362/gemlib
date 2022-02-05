@@ -52,7 +52,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setPIDF(GAINS);
-		m_motor.setInvertedOutput(true);
+		m_motor.setInvertedOutput(false);
 		m_motor.setSelectedProfile(0);
 		m_motor.setEncoderCounts(0.0);
 		m_motor.getInternalController().configNominalOutputForward(0.0);

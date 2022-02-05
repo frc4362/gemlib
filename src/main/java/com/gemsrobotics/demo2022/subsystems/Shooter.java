@@ -11,6 +11,7 @@ import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.LinearFilter;
+import edu.wpi.first.wpilibj.MedianFilter;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import io.github.oblarg.oblog.Loggable;
 import io.github.oblarg.oblog.annotations.Log;
@@ -27,7 +28,7 @@ public final class Shooter extends Subsystem implements Loggable {
     private static final double SHOOTER_WHEEL_RADIUS = Units.inches2Meters(3.8) / 2.0;
     private static final PIDFController.Gains SHOOTER_GAINS = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
     private static final MotorFeedforward SHOOTER_FEEDFORWARD = new MotorFeedforward(0.0, 0.0, 0.0);
-    private static final double IIR_TIME_CONSTANT = 0.05;
+    private static final int MEDIAN_SAMPLES = 15;
     private static final double ALLOWABLE_RPM_ERROR = 200.0;
 
     private static Shooter INSTANCE;
@@ -43,7 +44,7 @@ public final class Shooter extends Subsystem implements Loggable {
     private final MotorController<TalonFX>
             m_shooterMaster,
             m_shooterSlave;
-    private final LinearFilter m_shooterFilter;
+    private final MedianFilter m_shooterFilter;
     private final PeriodicIO m_periodicIO;
 
     private Shooter() {
@@ -59,7 +60,7 @@ public final class Shooter extends Subsystem implements Loggable {
         m_shooterSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
         m_shooterSlave.follow(m_shooterMaster, true);
 
-        m_shooterFilter = LinearFilter.singlePoleIIR(IIR_TIME_CONSTANT, 0.01);
+        m_shooterFilter = new MedianFilter(MEDIAN_SAMPLES);
 
         m_periodicIO = new PeriodicIO();
     }
