@@ -63,7 +63,6 @@ public final class Superstructure extends Subsystem {
 	private final Spindexer m_spindexer;
 	private final RobotState m_robotState;
 
-//	private MotorController<CANSparkMax> m_intakeMotorLower, m_intakeMotorUpper;
 	private Solenoid m_intakeDeployer, m_kicker;
 	private DoubleSolenoid m_pto;
 
@@ -173,11 +172,11 @@ public final class Superstructure extends Subsystem {
 		}
 
 		@Override
-		public Translation getFieldToOuterGoal() {
+		public Translation getVehicleToOuterGoal() {
 			return m_t.getTranslation().translateBy(new Translation(1.0, 0.0));
 		}
 
-		public Optional<Translation> getFieldToInnerGoal() {
+		public Optional<Translation> getVehicleToInnerGoal() {
 			return Optional.empty();
 		}
 	}
@@ -313,11 +312,6 @@ public final class Superstructure extends Subsystem {
 
 		m_intakeDeployer.set(true);
 
-		if (m_stateChangeTimer.get() > 0.1) {
-//			m_intakeMotorLower.setDutyCycle(1.0);
-//			m_intakeMotorUpper.setDutyCycle(1.0);
-		}
-
 		if (m_wantedState != WantedState.INTAKING && m_wantStateChangeTimer.get() < 0.1) {
 			return SystemState.INTAKING;
 		}
@@ -350,7 +344,7 @@ public final class Superstructure extends Subsystem {
 		if (m_periodicIO.target.isPresent()) {
 			final var target = m_periodicIO.target.get();
 			final var goal = target.getOptimalGoal();
-			final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
+			final var outerDistance = target.getVehicleToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 			m_hood.setDeployed(!DriverStation.getStickButton(1, 4));
 
@@ -407,7 +401,6 @@ public final class Superstructure extends Subsystem {
 		SmartDashboard.putBoolean("Turret At Ref", turretAtRef);
 		SmartDashboard.putBoolean("Shooter At Ref", shooterAtRef);
 		SmartDashboard.putBoolean("Hood At Ref", hoodAtRef);
-//		SmartDashboard.putBoolean("Ready To Fire", readyToFire);
 
 		if (turretAtRef && readyToFire && epsilonEquals(m_targetServer.getOffsetHorizontal().getDegrees(), 0.0, 1.0)) {
 			System.out.println("Stopping the hopper");
@@ -512,7 +505,7 @@ public final class Superstructure extends Subsystem {
 
 	private boolean isAligned(final Target target, final boolean allowDeadspot) {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
-		final var outerDistance = target.getFieldToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
+		final var outerDistance = target.getVehicleToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 		final var a = m_turret.atReference();
 		final var b = (wheelSpeeds.left + wheelSpeeds.right) < 0.04;

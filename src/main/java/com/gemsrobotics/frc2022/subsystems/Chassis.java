@@ -109,7 +109,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		final var slave = MotorControllerFactory.createDefaultTalonFX(1);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
-		group.getMaster().setInvertedOutput(false);
+		group.getMaster().setInvertedOutput(true);
 		return group;
 	}
 
@@ -120,7 +120,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
 		group.getMaster().setInvertedOutput(false);
-		group.getMaster().getInternalController().setInverted(true);
+		group.getMaster().getInternalController().setInverted(false);
 		return group;
 	}
 

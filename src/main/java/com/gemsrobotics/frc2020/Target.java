@@ -7,12 +7,12 @@ import java.util.Optional;
 public interface Target {
 	double getAge();
 	double getDriveDistanceSinceCapture();
-	Translation getFieldToOuterGoal();
-	Optional<Translation> getFieldToInnerGoal();
+	Translation getVehicleToOuterGoal();
+	Optional<Translation> getVehicleToInnerGoal();
 	default boolean isClose() {
 		return false;
 	}
 	default Translation getOptimalGoal() {
-		return getFieldToInnerGoal().orElseGet(this::getFieldToOuterGoal);
+		return getVehicleToInnerGoal().orElseGet(this::getVehicleToOuterGoal);
 	}
 }

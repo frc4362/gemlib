@@ -68,27 +68,22 @@ public final class RobotState extends Subsystem {
 			return m_odometer.getDistanceDriven() - m_captureDriveDistance;
 		}
 
-		public Translation getFieldToOuterGoal() {
+		public Translation getVehicleToOuterGoal() {
 			// L A T E N C Y
 			final var turretPose = RobotState.this.getLatestFieldToVehicle()
 				   .transformBy(VEHICLE_TO_TURRET)
 				   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
-			final double vy = m_fieldToOuterGoal.y() - turretPose.getTranslation().y();
-			final double vx = m_fieldToOuterGoal.x() - turretPose.getTranslation().x();
-			final double angleToAim = Math.atan2(vy, vx);
-			final double range = Math.sqrt(vy * vy + vx * vx);
-
-			return Translation.fromPolar(Rotation.radians(angleToAim), range);
+			return m_fieldToOuterGoal.difference(turretPose.getTranslation());
 		}
 
-		public Optional<Translation> getFieldToInnerGoal() {
-			final var innerGoal = getFieldToOuterGoal().translateBy(Constants.OUTER_TO_INNER);
+		public Optional<Translation> getVehicleToInnerGoal() {
+			final var innerGoal = getVehicleToOuterGoal().translateBy(Constants.OUTER_TO_INNER);
 			final var innerA = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION, MANY_METERS).inverse());
 			final var innerC = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION.inverse(), MANY_METERS).inverse());
 			// get latest field to turret
 			final var turretPose = RobotState.this.getLatestFieldToVehicle()
-												   .transformBy(VEHICLE_TO_TURRET)
-												   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
+			   .transformBy(VEHICLE_TO_TURRET)
+			   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
 
 			if (turretPose.getTranslation().isWithinAngle(innerA, innerGoal, innerC)) {
 				return Optional.of(innerGoal);
@@ -98,7 +93,7 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Translation getOptimalGoal() {
-			return Constants.USE_INNER_ADJUSTMENT ? getFieldToInnerGoal().orElseGet(this::getFieldToOuterGoal) : getFieldToOuterGoal();
+			return Constants.USE_INNER_ADJUSTMENT ? getVehicleToInnerGoal().orElseGet(this::getVehicleToOuterGoal) : getVehicleToOuterGoal();
 		}
 	}
 

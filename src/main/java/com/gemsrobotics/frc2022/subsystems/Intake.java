@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public final class Intake extends Subsystem {
 	private static final int
-			INTAKE_MOTOR_PORT = 10,
+			INTAKE_MOTOR_PORT = 5,
 			INTAKE_SOLENOID_FORWARD_CHANNEL = 1,
 			INTAKE_SOLENOID_REVERSE_CHANNEL = 2;
 	private static final double EXTENSION_MOTOR_DELAY = 0.1;

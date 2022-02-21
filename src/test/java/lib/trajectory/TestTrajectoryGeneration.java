@@ -106,22 +106,7 @@ public class TestTrajectoryGeneration {
 
                 openLoopConfig = new OpenLoopDriveHelper.Config() {
                     {
-                        useSineAttack = true;
-                        zNonLinearityHighGear = 1.0;
-                        zNonLinearityLowGear = 1.0;
-
-                        sensitivityHighGear = 0.65;
-                        sensitivityLowGear = 1.0;
-
-                        negativeInertiaScalarHigh = 4.0;
-                        negativeInertiaThresholdLow = 0.65;
-                        negativeInertiaTurnScalarLow = 3.5;
-                        negativeInertiaCloseScalarLow = 4.0;
-                        negativeInertiaFarScalarLow = 5.0;
-
-                        quickStopDeadband = 0.5;
-                        quickStopScalar = 5.0;
-                        quickStopWeight = 0.1;
+                        quickTurnScalar = 1.0;
                     }
                 };
             }

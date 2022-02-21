@@ -25,11 +25,9 @@ public class OpenLoopDriveHelper {
 		final WheelState output;
 
 		if (isQuickTurn) {
-			output = new WheelState(throttle - wheel, throttle + wheel);
+			output = new WheelState(throttle + wheel * m_cfg.quickTurnScalar, throttle - wheel * m_cfg.quickTurnScalar);
 		} else {
-			output = new WheelState(
-					throttle + abs(throttle) * wheel * m_cfg.quickTurnScalar,
-					throttle - abs(throttle) * wheel * m_cfg.quickTurnScalar);
+			output = new WheelState(throttle + abs(throttle) * wheel, throttle - abs(throttle) * wheel);
 		}
 
 		final double maxMagnitude = max(1.0, max(abs(output.left), abs(output.right)));
