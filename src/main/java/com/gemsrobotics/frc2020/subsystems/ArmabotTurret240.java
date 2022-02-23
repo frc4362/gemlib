@@ -26,7 +26,7 @@ public final class ArmabotTurret240 extends Subsystem implements Loggable, Turre
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
-	private static final int TURRET_USABLE_RANGE = (int) (4096 * (178.5 / 360.0));
+	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.5 / 360.0));
 
 	private static ArmabotTurret240 INSTANCE;
 

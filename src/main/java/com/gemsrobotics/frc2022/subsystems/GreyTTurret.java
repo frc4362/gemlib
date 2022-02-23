@@ -15,8 +15,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.Objects;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
-import static java.lang.Math.abs;
-import static java.lang.Math.signum;
+import static java.lang.Math.*;
 
 public final class GreyTTurret extends Subsystem implements Turret {
 	private static final double REDUCTION = 1.0 / 140.0;
@@ -29,6 +28,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;
 	private static final int STATE_ESTIMATOR_MAX_SAMPLES = 100;
 	private static final double TIME_TO_RAMP = 0.05;
+	private static final int TURRET_USABLE_RANGE = (int) (2048 * (179.5 / 360.0));
 
 	private static GreyTTurret INSTANCE;
 
@@ -60,6 +60,11 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		m_motor.getInternalController().configPeakOutputForward(1.0);
 		m_motor.getInternalController().configPeakOutputReverse(-1.0);
 		m_motor.setClosedLoopVoltageRampRate(TIME_TO_RAMP);
+
+		m_motor.getInternalController().configForwardSoftLimitEnable(true);
+		m_motor.getInternalController().configForwardSoftLimitThreshold(+TURRET_USABLE_RANGE);
+		m_motor.getInternalController().configReverseSoftLimitEnable(true);
+		m_motor.getInternalController().configReverseSoftLimitThreshold(-TURRET_USABLE_RANGE);
 
 		m_turretStateEstimator = new InterpolatingTreeMap<>(STATE_ESTIMATOR_MAX_SAMPLES);
 
@@ -119,6 +124,12 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	public synchronized void setReference(Rotation reference) {
 		m_mode = Mode.ROTATION;
 		m_periodicIO.reference = reference;
+
+		final double setpoint = reference.getRadians() * (2048.0 / Tau);
+
+		if (abs(setpoint) > TURRET_USABLE_RANGE) {
+			reference = Rotation.radians(reference.getRadians() - copySign(Tau, setpoint));
+		}
 	}
 
 	@Override

@@ -4,10 +4,13 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
+import edu.wpi.first.wpilibj.DigitalInput;
 
 import java.util.Objects;
 
 public final class Uptake extends Subsystem {
+	DigitalInput input = new DigitalInput(14);
+
 	private static final int
 			MOTOR_PORT_TRANSFER = 6,
 			MOTOR_PORT_UPTAKE = 7;
@@ -56,9 +59,12 @@ public final class Uptake extends Subsystem {
 		if (m_wantedState == State.NEUTRAL) {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
-		} else if (m_wantedState == State.INTAKING) {
+		} else if (m_wantedState == State.INTAKING && input.get()) {
 			m_motorTransfer.setDutyCycle(0.5);
 			m_motorUptake.setDutyCycle(0.5);
+		} else if (m_wantedState == State.INTAKING && !input.get()) {
+			m_motorTransfer.setDutyCycle(0.5);
+			m_motorUptake.setNeutral();
 		}
 	}
 
