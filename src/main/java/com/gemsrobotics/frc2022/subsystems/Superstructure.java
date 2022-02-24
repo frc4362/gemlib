@@ -35,7 +35,19 @@ public final class Superstructure extends Subsystem {
 	private WantedState m_stateWanted;
 	private SystemState m_state;
 
+	private GreyTTurret m_greytestTurret;
+	private Chassis m_chassis;
+	private Intake m_intake;
+	private Uptake m_uptake;
+	private ClimbElevator m_climbElevator;
+
 	private Superstructure() {
+		m_chassis = m_chassis.getInstance();
+		m_greytestTurret = m_greytestTurret.getInstance();
+		m_intake = m_intake.getInstance();
+		m_uptake = m_uptake.getInstance();
+		m_climbElevator = m_climbElevator.getInstance();
+
 		m_stateChangeTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
 
