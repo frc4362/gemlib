@@ -10,8 +10,9 @@ import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj.MedianFilter;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
+import static java.lang.Math.signum;
 
-public abstract class Flywheel<MotorType> extends Subsystem {
+public abstract class Flywheel extends Subsystem {
 	private static final int FILTER_SAMPLE_SIZE = 10;
 
 	public static class Config {
@@ -79,10 +80,9 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 	protected synchronized void onUpdate(final double timestamp) {
 		if (m_periodicIO.enabled) {
 			final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterFilteredRPM) / dt();
-			final double shooterFeedforward = m_config.feedforward.calculateVolts(
-					Units.rpm2RadsPerSecond(m_periodicIO.shooterReferenceRPM),
-					Units.rpm2RadsPerSecond(accelerationSetpoint)) / 12.0;
-			m_motors.getMaster().setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforward);
+			final double shooterFeedforwardVolts = m_config.feedforward.calculateVolts(
+					Units.rpm2RadsPerSecond(m_periodicIO.shooterReferenceRPM));
+			m_motors.getMaster().setDutyCycle(shooterFeedforwardVolts / 12.0);
 		} else {
 			m_motors.getMaster().setNeutral();
 		}
@@ -110,6 +110,10 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 
 	public synchronized boolean atReference() {
 		return epsilonEquals(m_periodicIO.shooterReferenceRPM, m_periodicIO.shooterFilteredRPM, m_config.allowableRPMError);
+	}
+
+	public synchronized double getLinearVelocity() {
+		return m_motors.getMaster().getVelocityLinearMetersPerSecond();
 	}
 
 	public synchronized boolean isNeutral() {

@@ -1,6 +1,5 @@
-package com.gemsrobotics.frc2022.subsystems;
+package com.gemsrobotics.frc2019;
 
-import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -19,7 +18,7 @@ import com.gemsrobotics.lib.utils.Units;
 import java.util.List;
 import java.util.Objects;
 
-public final class Chassis extends DifferentialDrive<TalonFX> {
+public class Chassis extends DifferentialDrive<TalonFX> {
 	private static Chassis INSTANCE;
 
 	public static Chassis getInstance() {
@@ -35,37 +34,34 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	}
 
 	@Override
-	protected Config getConfig() {
-		final double peakVoltage = 12.0;
-		final double wheelRadius = 0.04953;
-		final double freeSpeed = 91.64774179196561; // radians/s
-		final double kS = 0.36167; // V
-		final double kV = 0.1329; // V / (rad / s)
-		final double kA = 0.012; // V / (rad / s^2)
-		final double mass = 62.73; // kg
+	protected void onStop(final double timestamp) {
+		setDisabled();
+	}
 
+	@Override
+	protected Config getConfig() {
 		return new Config() {{
-			maxVoltage = peakVoltage;
+			maxVoltage = 12.0;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 7.29, wheelRadius, 2048);
+			gearingLowGear = new MotorController.GearingParameters(1.0, 1.0, 2048);
 			gearingHighGear = gearingLowGear;
 
 			gainsLowGear = new PIDFController.Gains(5.33, 0.0, 0.0, 0.0); // 0.69
 			gainsHighGear = gainsLowGear;
 
 			propertiesLowGear = new MotorModel.Properties() {{
-				speedRadiansPerSecondPerVolt = (1 / kV);
-				torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
-				stictionVoltage = kS;
+				speedRadiansPerSecondPerVolt = 1.0;
+				torquePerVolt = 1.0;
+				stictionVoltage = 1.0;
 			}};
 			propertiesHighGear = propertiesLowGear;
 
 			propertiesModel = new DifferentialDriveModel.Properties() {{
-				massKg = mass; // kg
+				massKg = 1.0; // kg
 				angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
 				angularDragTorquePerRadiansPerSecond = 12.0;
-				wheelRadiusMeters = wheelRadius;
+				wheelRadiusMeters = 1.0;
 //				wheelbaseRadiusMeters = 0.5265; // old
 				wheelbaseRadiusMeters = 0.6746875; // new
 			}};
@@ -89,52 +85,31 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 		}};
 	}
 
-	private void configMotors(final MotorControllerGroup<TalonFX> motors) {
-		motors.forEach(motor -> {
-			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-			motor.getInternalController().configVoltageCompSaturation(12.0);
-			motor.getInternalController().enableVoltageCompensation(true);
-			motor.getInternalController().configStatorCurrentLimit(new StatorCurrentLimitConfiguration(
-							true,
-							75,
-							0,
-							0.02),
-					10);
-		});
-	}
-
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(0);
+		final var master = MotorControllerFactory.createDefaultTalonFX(1);
+		final var follower = MotorControllerFactory.createDefaultTalonFX(2);
+		final var group = new MotorControllerGroup<TalonFX>(master, List.of(follower));
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var slave = MotorControllerFactory.createDefaultTalonFX(1);
-		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var group = new MotorControllerGroup<>(master, List.of(slave));
-		configMotors(group);
-		group.getMaster().setInvertedOutput(true);
+		follower.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		group.followMaster(false);
 		return group;
 	}
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(2);
+		final var master = MotorControllerFactory.createDefaultTalonFX(3);
+		final var follower = MotorControllerFactory.createDefaultTalonFX(4);
+		final var group = new MotorControllerGroup<TalonFX>(master, List.of(follower));
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var slave = MotorControllerFactory.createDefaultTalonFX(3);
-		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var group = new MotorControllerGroup<>(master, List.of(slave));
-		configMotors(group);
-		group.getMaster().setInvertedOutput(false);
-		group.getMaster().getInternalController().setInverted(false);
+		follower.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		master.setInvertedOutput(true);
+		group.followMaster(false);
 		return group;
 	}
 
 	@Override
 	protected Transmission getTransmission() {
 		return new SingleSpeedTransmission();
-	}
-
-	@Override
-	protected void onStop(double timestamp) {
-
 	}
 }

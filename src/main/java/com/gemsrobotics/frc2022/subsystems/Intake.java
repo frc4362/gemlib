@@ -1,20 +1,20 @@
 package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
+import com.gemsrobotics.frc2022.PneumaticsContainer;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.PneumaticsModuleType;
-import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.*;
 
 import java.util.Objects;
 
 public final class Intake extends Subsystem {
 	private static final int
 			INTAKE_MOTOR_PORT = 5,
-			INTAKE_SOLENOID_FORWARD_CHANNEL = 1,
-			INTAKE_SOLENOID_REVERSE_CHANNEL = 2;
+			INTAKE_SOLENOID_BUS_ID = 1,
+			INTAKE_SOLENOID_FORWARD_CHANNEL = 8,
+			INTAKE_SOLENOID_REVERSE_CHANNEL = 9;
 	private static final double EXTENSION_MOTOR_DELAY = 0.1;
 
 	private static Intake INSTANCE;
@@ -28,27 +28,26 @@ public final class Intake extends Subsystem {
 	}
 
 	public enum State {
-		EXTENDED,
+		INTAKING,
+		OUTTAKING,
 		RETRACTED
 	}
 
 	private final MotorController<TalonFX> m_motor;
 	private final DoubleSolenoid m_extender;
+	private final Timer m_intakeExtensionTimer;
 
 	private State m_wantedState;
-	private Timer m_wantStateChangeTimer;
 
 	private Intake() {
 		m_motor = MotorControllerFactory.createDefaultTalonFX(INTAKE_MOTOR_PORT);
+		m_motor.setOpenLoopVoltageRampRate(0.05);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_motor.setInvertedOutput(false);
 
-		m_extender = new DoubleSolenoid(
-				PneumaticsModuleType.REVPH,
-				INTAKE_SOLENOID_FORWARD_CHANNEL,
-				INTAKE_SOLENOID_REVERSE_CHANNEL);
+		m_extender = PneumaticsContainer.getInstance().getIntakeSolenoid();
 
-		m_wantStateChangeTimer = new Timer();
+		m_intakeExtensionTimer = new Timer();
 	}
 
 	@Override
@@ -60,18 +59,18 @@ public final class Intake extends Subsystem {
 	protected synchronized void onStart(final double timestamp) {
 		m_extender.set(DoubleSolenoid.Value.kOff);
 
-		m_wantStateChangeTimer.start();
+		m_intakeExtensionTimer.start();
 
 		setWantedState(State.RETRACTED);
 	}
 
 	@Override
 	protected synchronized void onUpdate(final double timestamp) {
-		if (m_wantedState == State.EXTENDED) {
+		if (m_wantedState == State.INTAKING || m_wantedState == State.OUTTAKING) {
 			m_extender.set(DoubleSolenoid.Value.kForward);
 
-			if (m_wantStateChangeTimer.get() > EXTENSION_MOTOR_DELAY) {
-				m_motor.setDutyCycle(-1.0);
+			if (m_intakeExtensionTimer.get() > EXTENSION_MOTOR_DELAY) {
+				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.4 : -0.4);
 			}
 		} else {
 			m_extender.set(DoubleSolenoid.Value.kReverse);
@@ -91,8 +90,11 @@ public final class Intake extends Subsystem {
 
 	public synchronized void setWantedState(final State state) {
 		if (state != m_wantedState) {
+			if (m_wantedState == State.RETRACTED) {
+				m_intakeExtensionTimer.reset();
+			}
+
 			m_wantedState = state;
-			m_wantStateChangeTimer.reset();
 		}
 	}
 }

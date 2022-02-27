@@ -12,8 +12,8 @@ import java.util.Objects;
 
 public final class ClimbElevator extends Subsystem {
 	private static final int
-			ELEVATOR_MASTER_PORT = 8,
-			ELEVATOR_SLAVE_PORT = 9;
+			ELEVATOR_MASTER_PORT = 10,
+			ELEVATOR_SLAVE_PORT = 11;
 	private static final double
 			SPROCKET_RADIUS = 1.0,
 			ELEVATOR_HEIGHT_METERS = 1.0;
