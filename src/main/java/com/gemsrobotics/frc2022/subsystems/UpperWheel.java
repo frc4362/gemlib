@@ -1,5 +1,6 @@
 package com.gemsrobotics.frc2022.subsystems;
 
+import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -36,15 +37,17 @@ public final class UpperWheel extends Flywheel {
 		return new Config() {{
 			wheelRadius = WHEEL_RADIUS_METERS;
 			gearing = new MotorController.GearingParameters(1.0, WHEEL_RADIUS_METERS, 2048);
-			gains = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
-			feedforward = new MotorFeedforward(0.5509, .0171, 0.0);
+			gains = new PIDFController.Gains(0.1, 0.0, 0.0, 0.0);
+//			feedforward = new MotorFeedforward(0.5509, 0.0171, 0.0);
+			feedforward = new MotorFeedforward(0.0, 0.0171, 0.0);
 			allowableRPMError = ALLOWABLE_RPM_ERROR;
+			currentLimitConfiguration = new StatorCurrentLimitConfiguration(false, 100, 100, 0.1);
 		}};
 	}
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotors() {
-		final var motor = MotorControllerFactory.createDefaultTalonFX(SHOOTER_LOWER_WHEEL_PORT);
+		final var motor = MotorControllerFactory.createHighPerformanceTalonFX(SHOOTER_LOWER_WHEEL_PORT);
 		motor.setInvertedOutput(false);
 		return new MotorControllerGroup<>(motor, List.of());
 	}

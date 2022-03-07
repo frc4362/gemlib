@@ -16,19 +16,20 @@ import java.util.Objects;
 
 import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static java.lang.Math.abs;
-import static java.lang.Math.signum;
 
 public final class GreyTTurret extends Subsystem implements Turret {
 	private static final double REDUCTION = 1.0 / 140.0;
 	private static final double ENCODER_COUNTS_PER_REVOLUTION = 2048.0; // unused, integrated sensor
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
-	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.24, 0.0, 0.26229, 0.0);
+	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.1, 0.0, 0.75, 0.0);
 	private static final int MOTOR_PORT = 4;
-	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.63675, 2.3528);
-	private static final double ALLOWABLE_ERROR_TICKS = (Tau / 286720) * 0.0667;
+	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.59621, 2.3639, 0.056218);
+	private static final double TICKS_PER_DEGREE = (286720.0 / 360.0);
+	private static final double ALLOWABLE_ERROR_TICKS = TICKS_PER_DEGREE * 0.0;
 	private static final int STATE_ESTIMATOR_MAX_SAMPLES = 100;
-	private static final double TIME_TO_RAMP = 0.05;
+	private static final double TIME_TO_RAMP = 0.01;
+	private static final double SOFT_LIMIT_TICKS = TICKS_PER_DEGREE * 178.0;
 
 	private static GreyTTurret INSTANCE;
 
@@ -40,8 +41,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		return INSTANCE;
 	}
 
-
-	private final MotorController<TalonFX> m_motor;
+	public final MotorController<TalonFX> m_motor;
 	private final InterpolatingTreeMap<InterpolatingDouble, Rotation> m_turretStateEstimator;
 	private final PeriodicIO m_periodicIO;
 
@@ -50,13 +50,23 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private GreyTTurret() {
 		m_motor = MotorControllerFactory.createTalonFX(MOTOR_PORT, MotorControllerFactory.HIGH_PERFORMANCE_TALON_CONFIG, false);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		m_motor.getInternalController().configVoltageCompSaturation(10.0);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setPIDF(GAINS);
-		m_motor.setInvertedOutput(false);
+		m_motor.setInvertedOutput(true);
 		m_motor.setSelectedProfile(0);
 		m_motor.setEncoderCounts(0.0);
-		m_motor.getInternalController().configNominalOutputForward(0.0);
-		m_motor.getInternalController().configNominalOutputReverse(0.0);
+
+		// soft limits
+		m_motor.getInternalController().configForwardSoftLimitEnable(true);
+		m_motor.getInternalController().configForwardSoftLimitThreshold(SOFT_LIMIT_TICKS);
+		m_motor.getInternalController().configReverseSoftLimitEnable(true);
+		m_motor.getInternalController().configReverseSoftLimitThreshold(-SOFT_LIMIT_TICKS);
+
+		// acceptable error
+		m_motor.getInternalController().configAllowableClosedloopError(0, ALLOWABLE_ERROR_TICKS);
+		m_motor.getInternalController().configNominalOutputForward(FEEDFORWARD.ks / 12.0);
+		m_motor.getInternalController().configNominalOutputReverse(-FEEDFORWARD.ks / 12.0);
 		m_motor.getInternalController().configPeakOutputForward(1.0);
 		m_motor.getInternalController().configPeakOutputReverse(-1.0);
 		m_motor.setClosedLoopVoltageRampRate(TIME_TO_RAMP);
@@ -98,15 +108,15 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	@Override
 	protected synchronized void onUpdate(double timestamp) {
+		SmartDashboard.putNumber("Turret Position", m_motor.getPositionRotations());
+		SmartDashboard.putNumber("Turret Reference Output", m_periodicIO.reference.getRadians());
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();
 				break;
 			case ROTATION:
-				final double error = 0.0;//atReference() ? 0.0 : m_motor.getInternalController().getClosedLoopError();
-//				m_motor.setDutyCycle(0.25);
-				SmartDashboard.putString("setpoint rotations", m_periodicIO.reference.toString());
-				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau, signum(error) * (FEEDFORWARD.ks / 12));
+//				SmartDashboard.putString("setpoint rotations", m_periodicIO.reference.toString());
+				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau);
 				break;
 		}
 	}
@@ -132,11 +142,11 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	}
 
 	// May be exact
-	public synchronized Rotation getEstimatedRotation(final double timestamp) {
+	public Rotation getEstimatedRotation(final double timestamp) {
 		return m_turretStateEstimator.getInterpolated(new InterpolatingDouble(timestamp));
 	}
 
-	public synchronized Rotation getReference() {
+	public Rotation getReference() {
 		return m_periodicIO.reference;
 	}
 

@@ -5,7 +5,6 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
@@ -13,7 +12,8 @@ public final class Uptake extends Subsystem {
 	private static final int
 			MOTOR_PORT_TRANSFER = 6,
 			MOTOR_PORT_UPTAKE = 7,
-			SENSOR_PORT = 0;
+			SENSOR_PORT_UPPER = 0,
+			SENSOR_PORT_LOWER = 1;
 
 	private static Uptake INSTANCE;
 
@@ -28,7 +28,9 @@ public final class Uptake extends Subsystem {
 	private final MotorController<TalonFX>
 			m_motorTransfer,
 			m_motorUptake;
-	private final DigitalInput m_sensor;
+	private final DigitalInput
+			m_sensorUpper,
+			m_sensorLower;
 	private final PeriodicIO m_periodicIO;
 	private State m_wantedState;
 
@@ -47,18 +49,21 @@ public final class Uptake extends Subsystem {
 		m_motorUptake.setInvertedOutput(true);
 
 		// true when beam is received
-		m_sensor = new DigitalInput(0);
+		m_sensorUpper = new DigitalInput(SENSOR_PORT_UPPER);
+		m_sensorLower = new DigitalInput(SENSOR_PORT_LOWER);
 
 		m_periodicIO = new PeriodicIO();
 	}
 
 	private static class PeriodicIO {
-		public boolean sensor = false;
+		public boolean sensorUpper = false;
+		public boolean sensorLower = false;
 	}
 
 	@Override
 	protected void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.sensor = m_sensor.get();
+		m_periodicIO.sensorUpper = m_sensorUpper.get();
+		m_periodicIO.sensorLower = m_sensorLower.get();
 	}
 
 	@Override
@@ -73,14 +78,14 @@ public final class Uptake extends Subsystem {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
 		} else if (m_wantedState == State.INTAKING) {
-			m_motorTransfer.setDutyCycle(0.5);
-			m_motorUptake.setDutyCycle(!m_periodicIO.sensor ? 0.0 : 0.5);
+			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 0.5);
+			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.5);
 		} else if (m_wantedState == State.FEEDING) {
 			m_motorTransfer.setDutyCycle(0.5);
 			m_motorUptake.setDutyCycle(0.5);
 		} else if (m_wantedState == State.OUTTAKING) {
 			m_motorTransfer.setDutyCycle(-0.7);
-//			m_motorUptake.setDutyCycle(-0.5);
+			m_motorUptake.setNeutral();
 		}
 	}
 

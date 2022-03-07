@@ -2,6 +2,7 @@ package com.gemsrobotics.frc2022;
 
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticHub;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 
 import java.util.Objects;
 

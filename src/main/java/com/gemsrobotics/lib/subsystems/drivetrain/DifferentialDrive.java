@@ -61,11 +61,11 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     protected final TrajectoryGenerator m_generator;
 	protected final DriveMotionPlanner m_motionPlanner;
 
-    public final NavX m_imu;
+    protected final NavX m_imu;
 	protected final MotorControllerGroup<MotorType> m_motorsLeft, m_motorsRight;
     protected final MotorController<MotorType> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
-    public final PeriodicIO m_periodicIO;
+    protected final PeriodicIO m_periodicIO;
 
     protected FieldToVehicleEstimator m_odometer;
     protected boolean m_isHighGear, m_forceFinishTrajectory;

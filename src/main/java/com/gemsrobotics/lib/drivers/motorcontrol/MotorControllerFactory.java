@@ -2,11 +2,10 @@ package com.gemsrobotics.lib.drivers.motorcontrol;
 
 import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.*;
-import com.ctre.phoenix.motorcontrol.can.BaseTalon;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+import com.ctre.phoenix.sensors.SensorInitializationStrategy;
 import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
+import com.gemsrobotics.frc2022.drivers.CursedClimbGemTalon;
 import com.revrobotics.REVLibError;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
@@ -129,7 +128,7 @@ public final class MotorControllerFactory {
     private static final TalonConfiguration DEFAULT_TALON_CONFIG = new TalonConfiguration() {
         {
              NEUTRAL_MODE = NeutralMode.Coast;
-             NEUTRAL_DEADBAND = 0.02;
+             NEUTRAL_DEADBAND = 0.04;
 
              ENABLE_CURRENT_LIMIT = false;
              ENABLE_SOFT_LIMIT = false;
@@ -140,16 +139,16 @@ public final class MotorControllerFactory {
              INVERTED = false;
              SENSOR_PHASE = false;
 
-             CONTROL_FRAME_PERIOD_MS = 5;
+             CONTROL_FRAME_PERIOD_MS = 10;
              MOTION_CONTROL_FRAME_PERIOD_MS = 100;
-             GENERAL_STATUS_FRAME_RATE_MS = 5;
-             FEEDBACK_STATUS_FRAME_RATE_MS = 10;
-             QUAD_ENCODER_STATUS_FRAME_RATE_MS = 1000;
-             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 1000;
-             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
+             GENERAL_STATUS_FRAME_RATE_MS = 10;
+             FEEDBACK_STATUS_FRAME_RATE_MS = 20;
+             QUAD_ENCODER_STATUS_FRAME_RATE_MS = 255;
+             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 255;
+             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 255;
 
-             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_10Ms;
-             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 32;
+             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_100Ms;
+             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 64;
 
              OPEN_LOOP_RAMP_RATE = 0.0;
              CLOSED_LOOP_RAMP_RATE = 0.0;
@@ -172,11 +171,11 @@ public final class MotorControllerFactory {
 
             CONTROL_FRAME_PERIOD_MS = 5;
             MOTION_CONTROL_FRAME_PERIOD_MS = 100;
-            GENERAL_STATUS_FRAME_RATE_MS = 2;
-            FEEDBACK_STATUS_FRAME_RATE_MS = 1;
-            QUAD_ENCODER_STATUS_FRAME_RATE_MS = 1000;
-            ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 2;
-            PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
+            GENERAL_STATUS_FRAME_RATE_MS = 5;
+            FEEDBACK_STATUS_FRAME_RATE_MS = 10;
+            QUAD_ENCODER_STATUS_FRAME_RATE_MS = 255;
+            ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 255;
+            PULSE_WIDTH_STATUS_FRAME_RATE_MS = 255;
 
             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_10Ms;
             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 32;
@@ -200,13 +199,13 @@ public final class MotorControllerFactory {
             INVERTED = false;
             SENSOR_PHASE = false;
 
-            CONTROL_FRAME_PERIOD_MS = 100;
-            MOTION_CONTROL_FRAME_PERIOD_MS = 1000;
-            GENERAL_STATUS_FRAME_RATE_MS = 1000;
-            FEEDBACK_STATUS_FRAME_RATE_MS = 1000;
-            QUAD_ENCODER_STATUS_FRAME_RATE_MS = 1000;
-            ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 1000;
-            PULSE_WIDTH_STATUS_FRAME_RATE_MS = 1000;
+            CONTROL_FRAME_PERIOD_MS = 10;
+            MOTION_CONTROL_FRAME_PERIOD_MS = 100;
+            GENERAL_STATUS_FRAME_RATE_MS = 255;
+            FEEDBACK_STATUS_FRAME_RATE_MS = 255;
+            QUAD_ENCODER_STATUS_FRAME_RATE_MS = 255;
+            ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 255;
+            PULSE_WIDTH_STATUS_FRAME_RATE_MS = 255;
 
             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_100Ms;
             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 64;
@@ -216,7 +215,7 @@ public final class MotorControllerFactory {
         }
     };
 
-    private static void configureTalon(final BaseTalon talon, final TalonConfiguration config) {
+    private static void configureTalon(final TalonFX talon, final TalonConfiguration config) {
         talon.set(ControlMode.PercentOutput, 0.0);
 
         talon.clearStickyFaults(TIMEOUT_MS);
@@ -259,18 +258,19 @@ public final class MotorControllerFactory {
         talon.enableVoltageCompensation(false);
         talon.configVoltageCompSaturation(0.0, TIMEOUT_MS);
         talon.configVoltageMeasurementFilter(32, TIMEOUT_MS);
+//
+//        if (talon instanceof TalonSRX) {
+//            talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
+//            talon.clearMotionProfileHasUnderrun(TIMEOUT_MS);
+//            talon.clearMotionProfileTrajectories();
+//
+//            ((TalonSRX) talon).enableCurrentLimit(false);
+//        }
 
-        if (talon instanceof TalonSRX) {
-            talon.changeMotionControlFramePeriod(config.MOTION_CONTROL_FRAME_PERIOD_MS);
-            talon.clearMotionProfileHasUnderrun(TIMEOUT_MS);
-            talon.clearMotionProfileTrajectories();
-
-            ((TalonSRX) talon).enableCurrentLimit(false);
-        }
+        talon.configIntegratedSensorInitializationStrategy(SensorInitializationStrategy.BootToZero, TIMEOUT_MS);
 
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_1_General, config.GENERAL_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, config.FEEDBACK_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
-
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_3_Quadrature, config.QUAD_ENCODER_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_4_AinTempVbat, config.ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
         talon.setStatusFramePeriod(StatusFrameEnhanced.Status_8_PulseWidth, config.PULSE_WIDTH_STATUS_FRAME_RATE_MS, TIMEOUT_MS);
@@ -278,19 +278,19 @@ public final class MotorControllerFactory {
         talon.setControlFramePeriod(ControlFrame.Control_3_General, config.CONTROL_FRAME_PERIOD_MS);
     }
 
-    private static GemTalon<TalonSRX> createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
-        final var talon = new TalonSRX(port);
-        configureTalon(talon, config);
-        return new GemTalon<>(talon, isSlave);
-    }
+//    private static GemTalon<TalonSRX> createTalonSRX(final int port, final TalonConfiguration config, final boolean isSlave) {
+//        final var talon = new TalonSRX(port);
+//        configureTalon(talon, config);
+//        return new GemTalon<>(talon, isSlave);
+//    }
 
-    public static GemTalon<TalonSRX> createDefaultTalonSRX(final int port) {
-        return createTalonSRX(port, DEFAULT_TALON_CONFIG, false);
-    }
-
-    public static GemTalon<TalonSRX> createSlaveTalonSRX(final int port) {
-        return createTalonSRX(port, SLAVE_TALON_CONFIG, true);
-    }
+//    public static GemTalon<TalonSRX> createDefaultTalonSRX(final int port) {
+//        return createTalonSRX(port, DEFAULT_TALON_CONFIG, false);
+//    }
+//
+//    public static GemTalon<TalonSRX> createSlaveTalonSRX(final int port) {
+//        return createTalonSRX(port, SLAVE_TALON_CONFIG, true);
+//    }
 
     public static GemTalon<TalonFX> createTalonFX(final int port, final TalonConfiguration config, final boolean isSlave) {
         final var talon = new TalonFX(port);
@@ -305,5 +305,16 @@ public final class MotorControllerFactory {
 
     public static GemTalon<TalonFX> createSlaveTalonFX(final int port) {
         return createTalonFX(port, SLAVE_TALON_CONFIG, true);
+    }
+
+    public static GemTalon<TalonFX> createHighPerformanceTalonFX(final int port) {
+        return createTalonFX(port, HIGH_PERFORMANCE_TALON_CONFIG, false);
+    }
+
+    public static CursedClimbGemTalon createCursedTalonFX(final int port) {
+        final var talon = new TalonFX(port);
+        configureTalon(talon, DEFAULT_TALON_CONFIG);
+        talon.configSelectedFeedbackSensor(TalonFXFeedbackDevice.IntegratedSensor, 0, TIMEOUT_MS);
+        return new CursedClimbGemTalon(talon, false);
     }
 }

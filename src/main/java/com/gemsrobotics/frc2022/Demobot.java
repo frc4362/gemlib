@@ -1,37 +1,37 @@
 package com.gemsrobotics.frc2022;
 
-import com.ctre.phoenix.motorcontrol.NeutralMode;
-import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.frc2022.subsystems.*;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
+import com.gemsrobotics.lib.subsystems.Limelight;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.List;
 
+import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
 public final class Demobot extends TimedRobot {
-	private static final double kPeriod = 0.01;
+	private static final double kPeriod = 0.02;
 
 	public static final String DASHBOARD_KEY_TURRET_POSITION = "Turret Position (rotations)";
-	public static final int FORWARD_SENSOR_LIMIT = 198300;
 	private Chassis m_chassis;
 	private Intake m_intake;
 	private Uptake m_uptake;
 	private Flywheel m_shooterLower, m_shooterUpper;
+	private Climber m_climber;
+	private TargetServer m_targetServer;
+	private FieldState m_fieldState;
 	private Superstructure m_superstructure;
 	private SingleThreadedSubsystemManager m_subsystemManager;
 	private XboxController m_gamepad;
 
-	private TalonFX a, b;
-
-//	private GreyTTurret m_greytestTurret;
+	private GreyTTurret m_greytestTurret;
 	public Demobot() {
 		super(kPeriod);
 	}
@@ -45,39 +45,30 @@ public final class Demobot extends TimedRobot {
 		m_uptake = Uptake.getInstance();
 		m_shooterLower = LowerWheel.getInstance();
 		m_shooterUpper = UpperWheel.getInstance();
-//		m_greytestTurret = GreyTTurret.getInstance();
+		m_climber = Climber.getInstance();
+		m_greytestTurret = GreyTTurret.getInstance();
+		m_fieldState = FieldState.getInstance();
+		m_targetServer = TargetServer.getInstance();
 
 		m_superstructure = Superstructure.getInstance();
 		m_subsystemManager = new SingleThreadedSubsystemManager(List.of(
+				m_targetServer,
 				m_chassis,
 				m_intake,
 				m_uptake,
+				m_climber,
+				m_greytestTurret,
+				m_fieldState,
+				m_superstructure,
 				m_shooterLower,
-				m_shooterUpper,
-				m_superstructure
+				m_shooterUpper
 		));
 
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
 
-		SmartDashboard.setDefaultNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
-
-		a = new TalonFX(10);
-		a.setNeutralMode(NeutralMode.Brake);
-		a.setInverted(true);
-		a.configForwardSoftLimitEnable(true);
-		a.configForwardSoftLimitThreshold(FORWARD_SENSOR_LIMIT);
-		a.configReverseSoftLimitEnable(true);
-		a.configReverseSoftLimitThreshold(0);
-		a.overrideSoftLimitsEnable(true);
-		b = new TalonFX(11);
-		b.setNeutralMode(NeutralMode.Brake);
-		b.setInverted(false);
-		b.configForwardSoftLimitEnable(true);
-		b.configForwardSoftLimitThreshold(FORWARD_SENSOR_LIMIT);
-		b.configReverseSoftLimitEnable(true);
-		b.configReverseSoftLimitThreshold(0);
-		b.overrideSoftLimitsEnable(true);
+		SmartDashboard.putNumber("Shooter MPS setpoint", 0.0);
+		SmartDashboard.putNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
 	}
 
 	@Override
@@ -88,6 +79,7 @@ public final class Demobot extends TimedRobot {
 	@Override
 	public void teleopInit() {
 		m_subsystemManager.start();
+		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
 	}
 
@@ -95,42 +87,51 @@ public final class Demobot extends TimedRobot {
 	public void teleopPeriodic() {
 		// change for test commit
 
-		double leftY = 0;
-		double rightX = 0;
+		if (m_superstructure.getSystemState() != Superstructure.SystemState.GRAB_MED_BAR
+			&& m_superstructure.getSystemState() != Superstructure.SystemState.EXTEND_HIGH_BAR
+		) {
+			double leftY = 0;
+			double rightX = 0;
 
-		//deadbanding
-		if (abs(m_gamepad.getLeftY()) > 0.04) {
-			leftY = -m_gamepad.getLeftY();
+			//deadbanding
+			if (abs(m_gamepad.getLeftY()) > 0.04) {
+				leftY = -m_gamepad.getLeftY();
+			}
+
+			if (abs(m_gamepad.getRightX()) > 0.10) {
+				rightX = m_gamepad.getRightX();
+			}
+
+			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX, m_gamepad.getRightBumper());
+
+			if (m_gamepad.getAButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
+			} else if (m_gamepad.getBButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.PRECLIMBING);
+			} else if (m_gamepad.getXButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.CLIMBING);
+			} else if (m_gamepad.getYButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
+			} else if (m_gamepad.getLeftBumper()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
+			}  else {
+				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
+			}
 		}
 
-		if (abs(m_gamepad.getRightX()) > 0.10) {
-			rightX = m_gamepad.getRightX();
-		}
+		SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
+		SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
 
-		m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX, m_gamepad.getRightBumper());
+		SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
+		SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
 
-		if (m_gamepad.getAButton()) {
-			m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
-		} else if (m_gamepad.getYButton()) {
-			m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
-		} else if (m_gamepad.getLeftBumper()) {
-			m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
-		} else {
-			m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
-		}
+		SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
+		SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
 
 //		final double turretSetpoint = SmartDashboard.getNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
-//		SmartDashboard.putNumber(DASHBOARD_KEY_TURRET_POSITION + " mimic", turretSetpoint);
-//		m_greytestTurret.setReference(Rotation.radians(turretSetpoint * MathUtils.Tau));
+//		m_greytestTurret.setReference(Rotation.radians(turretSetpoint * Tau));
 
-		a.set(TalonFXControlMode.PercentOutput, m_gamepad.getLeftTriggerAxis() - m_gamepad.getRightTriggerAxis());
-		b.set(TalonFXControlMode.PercentOutput, m_gamepad.getLeftTriggerAxis() - m_gamepad.getRightTriggerAxis());
-		SmartDashboard.putNumber("lift height a", a.getSelectedSensorPosition());
-		SmartDashboard.putNumber("lift height b", b.getSelectedSensorPosition());
-
-		if (m_gamepad.getBButtonPressed()) {
-			PneumaticsContainer.getInstance().getSwingSolenoid().toggle();
-		}
+		SmartDashboard.putString("Target Distance", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("No target"));
 
 		m_subsystemManager.update();
 	}

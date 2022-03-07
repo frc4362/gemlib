@@ -20,6 +20,12 @@ import java.util.List;
 import java.util.Objects;
 
 public final class Chassis extends DifferentialDrive<TalonFX> {
+	private static final StatorCurrentLimitConfiguration CURRENT_LIMIT = new StatorCurrentLimitConfiguration(
+			true,
+			60,
+			60,
+			0.2);
+
 	private static Chassis INSTANCE;
 
 	public static Chassis getInstance() {
@@ -37,7 +43,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected Config getConfig() {
 		final double peakVoltage = 12.0;
-		final double wheelRadius = 0.04953;
+		final double wheelRadius = Units.inches2Meters(3.8) / 2.0;
 		final double freeSpeed = 91.64774179196561; // radians/s
 		final double kS = 0.36167; // V
 		final double kV = 0.1329; // V / (rad / s)
@@ -48,10 +54,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 			maxVoltage = peakVoltage;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 7.29, wheelRadius, 2048);
+			gearingLowGear = new MotorController.GearingParameters(1.0 / 5.91, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
 
-			gainsLowGear = new PIDFController.Gains(5.33, 0.0, 0.0, 0.0); // 0.69
+			gainsLowGear = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
 			gainsHighGear = gainsLowGear;
 
 			propertiesLowGear = new MotorModel.Properties() {{
@@ -66,7 +72,6 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
 				angularDragTorquePerRadiansPerSecond = 12.0;
 				wheelRadiusMeters = wheelRadius;
-//				wheelbaseRadiusMeters = 0.5265; // old
 				wheelbaseRadiusMeters = 0.6746875; // new
 			}};
 
@@ -74,32 +79,27 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				beta = 2.0;
 				zeta = 0.7;
 
-				maxDx = 0.00127 * 4;
-				maxDy = 0.00127;
+				maxDx = 0.00127 * 4; // m
+				maxDy = 0.00127; // m
 				maxDtheta = Rotation.degrees(5.0).getRadians();
-				maxVoltage = 10.0;
-				maxVelocity = 4.8;
-				maxAcceleration = 3.2;
-				maxCentripetalAcceleration = 2.0;
+				maxVoltage = 10.0; // V
+				maxVelocity = 4.8; // m / s
+				maxAcceleration = 3.2; // m / s^2
+				maxCentripetalAcceleration = 2.0; // m / s^2
 			}};
 
 			openLoopConfig = new OpenLoopDriveHelper.Config() {{
-				quickTurnScalar = 1.0;
+				quickTurnScalar = 0.5;
 			}};
 		}};
 	}
 
 	private void configMotors(final MotorControllerGroup<TalonFX> motors) {
 		motors.forEach(motor -> {
-			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+			motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 			motor.getInternalController().configVoltageCompSaturation(12.0);
 			motor.getInternalController().enableVoltageCompensation(true);
-			motor.getInternalController().configStatorCurrentLimit(new StatorCurrentLimitConfiguration(
-							true,
-							75,
-							0,
-							0.02),
-					10);
+			motor.getInternalController().configStatorCurrentLimit(CURRENT_LIMIT);
 		});
 	}
 
@@ -107,7 +107,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
 		final var master = MotorControllerFactory.createDefaultTalonFX(0);
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var slave = MotorControllerFactory.createDefaultTalonFX(1);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(1);
 		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
@@ -119,7 +119,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
 		final var master = MotorControllerFactory.createDefaultTalonFX(2);
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		final var slave = MotorControllerFactory.createDefaultTalonFX(3);
+		final var slave = MotorControllerFactory.createSlaveTalonFX(3);
 		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		final var group = new MotorControllerGroup<>(master, List.of(slave));
 		configMotors(group);
@@ -131,6 +131,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected Transmission getTransmission() {
 		return new SingleSpeedTransmission();
+	}
+
+	public Rotation getPitch() {
+		return m_imu.getPitch();
 	}
 
 	@Override

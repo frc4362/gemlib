@@ -30,7 +30,8 @@ public final class Intake extends Subsystem {
 	public enum State {
 		INTAKING,
 		OUTTAKING,
-		RETRACTED
+		RETRACTED,
+		EXTENDED
 	}
 
 	private final MotorController<TalonFX> m_motor;
@@ -51,27 +52,28 @@ public final class Intake extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void readPeriodicInputs(final double timestamp) {
+	protected void readPeriodicInputs(final double timestamp) {
 
 	}
 
 	@Override
-	protected synchronized void onStart(final double timestamp) {
+	protected void onStart(final double timestamp) {
 		m_extender.set(DoubleSolenoid.Value.kOff);
-
 		m_intakeExtensionTimer.start();
-
 		setWantedState(State.RETRACTED);
 	}
 
 	@Override
-	protected synchronized void onUpdate(final double timestamp) {
+	protected void onUpdate(final double timestamp) {
 		if (m_wantedState == State.INTAKING || m_wantedState == State.OUTTAKING) {
 			m_extender.set(DoubleSolenoid.Value.kForward);
 
 			if (m_intakeExtensionTimer.get() > EXTENSION_MOTOR_DELAY) {
 				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.4 : -0.4);
 			}
+		} else if (m_wantedState == State.EXTENDED) {
+			m_extender.set(DoubleSolenoid.Value.kForward);
+			m_motor.setDutyCycle(0.0);
 		} else {
 			m_extender.set(DoubleSolenoid.Value.kReverse);
 			m_motor.setDutyCycle(0.0);
@@ -79,7 +81,7 @@ public final class Intake extends Subsystem {
 	}
 
 	@Override
-	protected synchronized void onStop(final double timestamp) {
+	protected void onStop(final double timestamp) {
 		m_extender.set(DoubleSolenoid.Value.kReverse);
 	}
 
@@ -88,7 +90,7 @@ public final class Intake extends Subsystem {
 		m_extender.set(DoubleSolenoid.Value.kOff);
 	}
 
-	public synchronized void setWantedState(final State state) {
+	public void setWantedState(final State state) {
 		if (state != m_wantedState) {
 			if (m_wantedState == State.RETRACTED) {
 				m_intakeExtensionTimer.reset();
@@ -97,4 +99,6 @@ public final class Intake extends Subsystem {
 			m_wantedState = state;
 		}
 	}
+
+
 }
