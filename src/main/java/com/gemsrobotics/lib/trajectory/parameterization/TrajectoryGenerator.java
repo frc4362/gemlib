@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDriveModel;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
@@ -15,10 +16,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class TrajectoryGenerator {
-	private DriveMotionPlanner.MotionConfig m_config;
+	private MotionPlanner.MotionConfig m_config;
 	private DifferentialDriveModel m_model;
 
-	public TrajectoryGenerator(final DriveMotionPlanner.MotionConfig config, final DifferentialDriveModel model) {
+	public TrajectoryGenerator(final MotionPlanner.MotionConfig config, final DifferentialDriveModel model) {
 		m_config = config;
 		m_model = model;
 	}

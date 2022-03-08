@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.imu.NavX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -42,7 +43,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		public MotorModel.Properties propertiesLowGear;
 		public MotorModel.Properties propertiesHighGear;
 		public DifferentialDriveModel.Properties propertiesModel;
-		public DriveMotionPlanner.MotionConfig motionConfig;
+		public MotionPlanner.MotionConfig motionConfig;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
 
@@ -295,7 +296,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
 		final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
-								   .orElse(new DriveMotionPlanner.Output());
+								   .orElse(new MotionPlanner.Output());
 
 		m_periodicIO.trackingError = m_motionPlanner.getError();
 		m_periodicIO.trackingReference = m_motionPlanner.getReference();

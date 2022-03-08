@@ -1,6 +1,7 @@
 package lib.trajectory.timing;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.math.se2.ITranslation2d;
 import com.gemsrobotics.lib.math.se2.State;
 import com.gemsrobotics.lib.math.se2.Translation;
@@ -29,11 +30,8 @@ public class TestTimingUtil {
             new Translation(36.0, 12.0),
             new Translation(60.0, 12.0));
 
-    private static final DriveMotionPlanner.MotionConfig MOTION_CONFIG = new DriveMotionPlanner.MotionConfig() {
+    private static final MotionPlanner.MotionConfig MOTION_CONFIG = new MotionPlanner.MotionConfig() {
         {
-            beta = 2.0; // aggression coefficient, >0
-            zeta = 0.7; // dampening coefficient, [0, 1]
-
             maxDx = 0.0508; // meters
             maxDy = 0.00127; // meters
             maxDtheta = 0.1; // radians
@@ -48,7 +46,7 @@ public class TestTimingUtil {
             final DistanceView<S> distanceView,
             final double stepSize,
             final List<TimingConstraint<S>> constraints,
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final double velocityStart,
             final double velocityEnd
     ) {
@@ -60,7 +58,7 @@ public class TestTimingUtil {
     public <S extends State<S>> void checkTrajectory(
             final Trajectory<TimedState<S>> trajectory,
             final List<TimingConstraint<S>> constraints,
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final double velocityStart,
             final double velocityEnd
     ) {
@@ -93,7 +91,7 @@ public class TestTimingUtil {
         Trajectory<Translation> trajectory = new Trajectory<>(WAYPOINTS);
         DistanceView<Translation> distanceView = new DistanceView<>(trajectory);
 
-        final var cfg1 = new DriveMotionPlanner.MotionConfig() {
+        final var cfg1 = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 20.0;
                 maxAcceleration = 5.0;
@@ -102,7 +100,7 @@ public class TestTimingUtil {
         // Triangle profile.
         Trajectory<TimedState<Translation>> timedTrajectory = buildAndCheckTrajectory(distanceView, 1.0, new ArrayList<TimingConstraint<Translation>>(), cfg1,0.0, 0.0);
 
-        final var cfg2 = new DriveMotionPlanner.MotionConfig() {
+        final var cfg2 = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 10.0;
                 maxAcceleration = 0.5;
@@ -111,7 +109,7 @@ public class TestTimingUtil {
         // Trapezoidal profile.
         timedTrajectory = buildAndCheckTrajectory(distanceView, 1.0, new ArrayList<TimingConstraint<Translation>>(), cfg2, 0.0, 0.0);
 
-        final var cfg3 = new DriveMotionPlanner.MotionConfig() {
+        final var cfg3 = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 10.0;
                 maxAcceleration = 5.0;
@@ -142,7 +140,7 @@ public class TestTimingUtil {
             }
         }
 
-        final var cfg = new DriveMotionPlanner.MotionConfig() {
+        final var cfg = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 10.0;
                 maxAcceleration = 5.0;
@@ -177,7 +175,7 @@ public class TestTimingUtil {
             }
         }
 
-        final var cfg = new DriveMotionPlanner.MotionConfig() {
+        final var cfg = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 10.0;
                 maxAcceleration = 5.0;
@@ -201,7 +199,7 @@ public class TestTimingUtil {
 
         VelocityLimitRegionConstraint<Translation> constraint = new VelocityLimitRegionConstraint<>(new Translation(6.0, -6.0), new Translation(18.0, 6.0), 3.0);
 
-        final var cfg = new DriveMotionPlanner.MotionConfig() {
+        final var cfg = new MotionPlanner.MotionConfig() {
             {
                 maxVelocity = 10.0;
                 maxAcceleration = 5.0;

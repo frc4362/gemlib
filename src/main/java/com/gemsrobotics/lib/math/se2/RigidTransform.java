@@ -2,6 +2,9 @@ package com.gemsrobotics.lib.math.se2;
 
 import com.gemsrobotics.lib.utils.MathUtils;
 import com.google.gson.annotations.SerializedName;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 
 import java.util.Objects;
 
@@ -248,5 +251,9 @@ public class RigidTransform implements IRigidTransform2d<RigidTransform> {
     @Override
     public int hashCode() {
         return Objects.hash(m_translation, m_rotation);
+    }
+
+    public Pose2d toWPI() {
+        return new Pose2d(new Translation2d(m_translation.m_x, m_translation.m_y), new Rotation2d(m_rotation.getRadians()));
     }
 }

@@ -80,7 +80,7 @@ public class TestPhysics {
         };
 
         DifferentialDriveModel drive = new DifferentialDriveModel(props, transmission);
-//        // Kinematics
+        // Kinematics
         ChassisState v1 = drive.forwardKinematics(new WheelState(0.0, 0.0));
         assertThat(0.0, closeTo(v1.linear, kEpsilon));
         assertThat(0.0, closeTo(v1.angular, kEpsilon));
@@ -179,7 +179,7 @@ public class TestPhysics {
         assertThat(6.5, closeTo(d8.voltage.left, kEpsilon));
         assertThat(6.5, closeTo(d8.voltage.right, kEpsilon));
 
-//        Model.Dynamics d9 = drive.solveInverseDynamics(new Model.ChassisState(Units.inches2Meters(10.0 * 12), Units.degrees2Rads(45.0)), new Model.ChassisState(Units.inches2Meters(2.0 * 12), Units.degrees2Rads(9.0)), false);
+//        DifferentialDriveModel.Dynamics d9 = drive.solveInverseDynamics(new ChassisState(Units.inches2Meters(10.0 * 12), Units.degrees2Rads(45.0)), new ChassisState(Units.inches2Meters(2.0 * 12), Units.degrees2Rads(9.0)), false);
 //        assertThat(1.0, closeTo(d9.torque.left, kEpsilon));
 //        assertThat(1.0, closeTo(d9.torque.right, kEpsilon));
 //        assertThat(11.0, closeTo(d9.voltage.left, kEpsilon));

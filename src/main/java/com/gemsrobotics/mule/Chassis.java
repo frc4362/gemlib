@@ -2,6 +2,7 @@ package com.gemsrobotics.mule;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
@@ -66,10 +67,7 @@ public class Chassis extends DifferentialDrive<TalonFX> {
 				wheelbaseRadiusMeters = 0.6746875; // new
 			}};
 
-			motionConfig = new DriveMotionPlanner.MotionConfig() {{
-				beta = 2.0;
-				zeta = 0.7;
-
+			motionConfig = new MotionPlanner.MotionConfig() {{
 				maxDx = 0.00127 * 4;
 				maxDy = 0.00127;
 				maxDtheta = Rotation.degrees(5.0).getRadians();

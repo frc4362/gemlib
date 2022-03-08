@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.math.se2.State;
 import com.gemsrobotics.lib.trajectory.DistanceView;
 import com.gemsrobotics.lib.trajectory.Trajectory;
@@ -20,7 +21,7 @@ public class Parameterizer {
             final DistanceView<S> distanceView,
             final double stepSize,
             final List<TimingConstraint<S>> constraints,
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final double startVelocity,
             final double endVelocity
     ) {
@@ -43,7 +44,7 @@ public class Parameterizer {
             final boolean reverse,
             final List<S> states,
             final List<TimingConstraint<S>> constraints,
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final double velocityStart,
             final double velocityEnd
     ) {
