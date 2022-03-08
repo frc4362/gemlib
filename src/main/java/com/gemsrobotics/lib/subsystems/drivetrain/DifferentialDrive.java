@@ -100,7 +100,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 new MotorModel(m_config.propertiesHighGear));
         m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
         m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
-		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);
+		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.FEEDFORWARD);
         m_periodicIO = new PeriodicIO();
 
 		m_odometer = FieldToVehicleEstimator.withStarting(m_model, 0.0, RigidTransform.identity());

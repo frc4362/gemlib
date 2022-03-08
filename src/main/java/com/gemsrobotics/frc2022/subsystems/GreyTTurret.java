@@ -89,7 +89,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	}
 
 	@Override
-	protected synchronized void readPeriodicInputs(double timestamp) {
+	protected void readPeriodicInputs(final double timestamp) {
 		m_periodicIO.currentAmps = m_motor.getDrawnCurrentAmps();
 
 		final var oldPosition = new Rotation(m_periodicIO.position);
@@ -102,42 +102,39 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	}
 
 	@Override
-	protected synchronized void onStart(double timestamp) {
+	protected void onStart(final double timestamp) {
 		setDisabled();
 	}
 
 	@Override
-	protected synchronized void onUpdate(double timestamp) {
-		SmartDashboard.putNumber("Turret Position", m_motor.getPositionRotations());
-		SmartDashboard.putNumber("Turret Reference Output", m_periodicIO.reference.getRadians());
+	protected void onUpdate(final double timestamp) {
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();
 				break;
 			case ROTATION:
-//				SmartDashboard.putString("setpoint rotations", m_periodicIO.reference.toString());
 				m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau);
 				break;
 		}
 	}
 
-	public synchronized void setDisabled() {
+	public void setDisabled() {
 		m_mode = Mode.DISABLED;
 	}
 
 	@Override
-	public synchronized void setReference(Rotation reference) {
+	public void setReference(Rotation reference) {
 		m_mode = Mode.ROTATION;
 		m_periodicIO.reference = reference;
 	}
 
 	@Override
-	public synchronized boolean atReference() {
+	public boolean atReference() {
 		return abs(m_motor.getInternalController().getClosedLoopError()) < ALLOWABLE_ERROR_TICKS;
 	}
 
 	@Override
-	public synchronized Rotation getRotation() {
+	public Rotation getRotation() {
 		return m_periodicIO.position;
 	}
 
@@ -156,7 +153,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	}
 
 	@Override
-	public synchronized void setSafeState() {
+	public void setSafeState() {
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 		m_motor.setNeutral();
 	}

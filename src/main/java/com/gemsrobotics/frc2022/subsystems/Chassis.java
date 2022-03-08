@@ -20,6 +20,10 @@ import java.util.List;
 import java.util.Objects;
 
 public final class Chassis extends DifferentialDrive<TalonFX> {
+	private final static double STALL_TORQUE = 4.69; // nM
+	private final static double TORQUE_EFFICIENCY = 0.95; // magic
+	private final static int MOTOR_COUNT = 4;
+
 	private static final StatorCurrentLimitConfiguration CURRENT_LIMIT = new StatorCurrentLimitConfiguration(
 			true,
 			60,
@@ -43,36 +47,41 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected Config getConfig() {
 		final double peakVoltage = 12.0;
-		final double wheelRadius = Units.inches2Meters(3.8) / 2.0;
-		final double freeSpeed = 91.64774179196561; // radians/s
-		final double kS = 0.36167; // V
-		final double kV = 0.1329; // V / (rad / s)
-		final double kA = 0.012; // V / (rad / s^2)
-		final double mass = 62.73; // kg
+		final double wheelRadius = Units.inches2Meters(4.0) / 2.0;
+		final double freeSpeed = 4.6 / wheelRadius; // radians/s
+		final double trackWidth = 0.534; // m
+		final double mass = 62.414; // kg
+		final double gearing = 5.91; // 5.91 : 1
+		final double kS = 0.9; // V
+		final double kV = 0.10622;//12.0 / freeSpeed; // V / (rad / s)
+		final double analyticalLinearKA = 12.0 / ((gearing * STALL_TORQUE * TORQUE_EFFICIENCY * MOTOR_COUNT) / (mass * wheelRadius * wheelRadius));
+		// V / (rad / s^2)
+		final double angularKa = 2.7;
+		final double linearKa = 0.024337;
 
 		return new Config() {{
 			maxVoltage = peakVoltage;
 			secondsToMaxVoltage = 0.1;
 
-			gearingLowGear = new MotorController.GearingParameters(1.0 / 5.91, wheelRadius, 2048);
+			gearingLowGear = new MotorController.GearingParameters(1.0 / gearing, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
 
-			gainsLowGear = new PIDFController.Gains(0.0, 0.0, 0.0, 0.0);
+			gainsLowGear = new PIDFController.Gains(0.04, 0.0, 0.0, 0.0);
 			gainsHighGear = gainsLowGear;
 
 			propertiesLowGear = new MotorModel.Properties() {{
 				speedRadiansPerSecondPerVolt = (1 / kV);
-				torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * kA);
+				torquePerVolt = wheelRadius * wheelRadius * mass / (2.0 * linearKa);
 				stictionVoltage = kS;
 			}};
 			propertiesHighGear = propertiesLowGear;
 
 			propertiesModel = new DifferentialDriveModel.Properties() {{
 				massKg = mass; // kg
-				angularMomentInertiaKgMetersSquared = Math.pow(Units.inches2Meters(6.0), 2) * massKg;
+				angularMomentInertiaKgMetersSquared = (mass * trackWidth * angularKa) / (linearKa * 2.0);
 				angularDragTorquePerRadiansPerSecond = 12.0;
 				wheelRadiusMeters = wheelRadius;
-				wheelbaseRadiusMeters = 0.6746875; // new
+				wheelbaseRadiusMeters = trackWidth / 2.0;
 			}};
 
 			motionConfig = new DriveMotionPlanner.MotionConfig() {{
@@ -83,8 +92,8 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 				maxDy = 0.00127; // m
 				maxDtheta = Rotation.degrees(5.0).getRadians();
 				maxVoltage = 10.0; // V
-				maxVelocity = 4.8; // m / s
-				maxAcceleration = 3.2; // m / s^2
+				maxVelocity = 4.6; // m / s
+				maxAcceleration = 4.0; // m / s^2
 				maxCentripetalAcceleration = 2.0; // m / s^2
 			}};
 

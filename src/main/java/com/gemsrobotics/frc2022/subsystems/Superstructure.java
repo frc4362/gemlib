@@ -1,13 +1,14 @@
 package com.gemsrobotics.frc2022.subsystems;
 
+import com.gemsrobotics.frc2020.Target;
 import com.gemsrobotics.frc2022.Constants;
 import com.gemsrobotics.frc2022.FieldState;
 import com.gemsrobotics.frc2022.ShotParameters;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
-import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Flywheel;
+import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.utils.MathUtils;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -127,10 +128,9 @@ public final class Superstructure extends Subsystem {
 	protected void onUpdate(final double timestamp) {
 //		m_leds.setColor(m_state.ledState.apply(timestamp), 1.0f);
 
-		SmartDashboard.putString("Turret to Goal", m_periodicIO.shotParameters.map(ShotParameters::getCurrentTurretToGoal).map(Translation::toString).orElse("No target"));
-		SmartDashboard.putString("Turret to Goal Direction", m_periodicIO.shotParameters.map(ShotParameters::getCurrentTurretToGoal).map(Translation::direction).map(Rotation::toString).orElse("None"));
-
-		if (m_periodicIO.shotParameters.isPresent()) {
+		if (m_stateWanted == WantedState.PRECLIMBING || m_stateWanted == WantedState.CLIMBING) {
+			m_turret.setDisabled();
+		} else if (m_periodicIO.shotParameters.isPresent()) {
 			setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal().direction());
 		} else {
 			m_turret.setDisabled();
@@ -265,8 +265,14 @@ public final class Superstructure extends Subsystem {
 	private SystemState handlePreclimb() {
 		m_climber.setUseHighVoltage(true);
 		m_climber.setPreclimbHeight();
+		m_turret.setReference(Rotation.identity());
+		TargetServer.getInstance().setLEDMode(Limelight.LEDMode.OFF);
 
-		return applyWantedState();
+		if (m_stateWanted == WantedState.CLIMBING) {
+			return SystemState.GRAB_MED_BAR;
+		} else {
+			return SystemState.PRECLIMB;
+		}
 	}
 
 	private SystemState handleGrabMedBar() {
@@ -344,7 +350,7 @@ public final class Superstructure extends Subsystem {
 		return SystemState.DONE;
 	}
 
-	private double getVisionVelocity() {
+	private Double getVisionVelocity() {
 		return m_periodicIO.shotParameters.map(shotParameters -> Constants.getRPM(shotParameters.getCurrentTurretToGoal().norm())).orElse(2.0);
 	}
 

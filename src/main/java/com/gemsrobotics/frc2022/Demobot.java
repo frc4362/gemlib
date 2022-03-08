@@ -1,12 +1,16 @@
 package com.gemsrobotics.frc2022;
 
+import com.gemsrobotics.frc2022.autonomous.TestAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
+import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -32,6 +36,7 @@ public final class Demobot extends TimedRobot {
 	private XboxController m_gamepad;
 
 	private GreyTTurret m_greytestTurret;
+
 	public Demobot() {
 		super(kPeriod);
 	}
@@ -67,13 +72,30 @@ public final class Demobot extends TimedRobot {
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
 
-		SmartDashboard.putNumber("Shooter MPS setpoint", 0.0);
-		SmartDashboard.putNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
+		SmartDashboard.putNumber("Target MPS", 0.0);
+	}
+
+	@Override
+	public void robotPeriodic() {
+		SmartDashboard.putString("Robot Position", m_chassis.getOdometer().getLatestFieldToVehicleValue().toString());
 	}
 
 	@Override
 	public void disabledInit() {
 		m_subsystemManager.stop();
+	}
+
+	@Override
+	public void autonomousInit() {
+		m_subsystemManager.start();
+		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
+		Scheduler.getInstance().add(new TestAuton());
+	}
+
+	@Override
+	public void autonomousPeriodic() {
+		Scheduler.getInstance().run();
+		m_subsystemManager.update();
 	}
 
 	@Override
@@ -119,19 +141,26 @@ public final class Demobot extends TimedRobot {
 			}
 		}
 
-		SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
-		SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
-
-		SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
-		SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
-
-		SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
-		SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
+//		SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
+//		SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
+//
+//		SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
+//		SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
+//
+//		SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
+//		SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
 
 //		final double turretSetpoint = SmartDashboard.getNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
 //		m_greytestTurret.setReference(Rotation.radians(turretSetpoint * Tau));
 
-		SmartDashboard.putString("Target Distance", m_targetServer.getTargetInfo().map(TargetServer.TargetInfo::getCameraToTarget).map(RigidTransform::toString).orElse("No target"));
+//		SmartDashboard.putNumber("Volts", m_chassis.getWheelProperty(MotorController::getVoltageOutput).left);
+//		SmartDashboard.putNumber("Amps", m_chassis.getWheelProperty(MotorController::getDrawnCurrentAmps).left);
+//		SmartDashboard.putNumber("Robot Speed", m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).left);
+		SmartDashboard.putBoolean("Distance Good?", m_targetServer.getTargetInfo()
+				.map(TargetServer.TargetInfo::getCameraToTarget)
+				.map(RigidTransform::getTranslation)
+				.map(Translation::norm)
+				.map(f -> (f > 1.39 && f < 3.25)).orElse(false));
 
 		m_subsystemManager.update();
 	}
