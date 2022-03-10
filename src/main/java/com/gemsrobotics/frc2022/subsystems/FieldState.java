@@ -1,8 +1,6 @@
-package com.gemsrobotics.frc2022;
+package com.gemsrobotics.frc2022.subsystems;
 
-import com.gemsrobotics.frc2022.subsystems.Chassis;
-import com.gemsrobotics.frc2022.subsystems.TargetServer;
-import com.gemsrobotics.frc2022.subsystems.GreyTTurret;
+import com.gemsrobotics.frc2022.ShotParameters;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -101,12 +99,10 @@ public final class FieldState extends Subsystem {
 		m_turretHeading.put(new InterpolatingDouble(now), m_periodicIO.newTurretRotation);
 
 		SmartDashboard.putBoolean("Target Server/Alive", m_periodicIO.isTargetServerAlive);
-		SmartDashboard.putBoolean("Target Server/New Data Present", m_periodicIO.newTargetInfo.isPresent());
 
 		if (m_periodicIO.isTargetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
 			final var newTarget = m_periodicIO.newTargetInfo.get();
 			// this is where latency compensation happens
-			SmartDashboard.putString("Camera to Target", newTarget.getCameraToTarget().toString());
 			final var fieldToTarget = getFieldToCamera(newTarget.getTimestamp()).transformBy(newTarget.getCameraToTarget());
 			m_periodicIO.fieldToTargetCached = Optional.of(new CachedTarget(fieldToTarget.getTranslation()));
 		}

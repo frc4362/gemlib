@@ -10,15 +10,19 @@ import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
-public final class Demobot extends TimedRobot {
+public final class Blackbird extends TimedRobot {
 	private static final double kPeriod = 0.02;
 
 	public static final String DASHBOARD_KEY_TURRET_POSITION = "Turret Position (rotations)";
@@ -36,9 +40,10 @@ public final class Demobot extends TimedRobot {
 	private SingleThreadedSubsystemManager m_subsystemManager;
 	private XboxController m_pilot, m_copilot;
 
+	private SendableChooser<Command> m_autonChooser;
 	private FiveBallAuton m_fiveBall;
 
-	public Demobot() {
+	public Blackbird() {
 		super(kPeriod);
 	}
 
@@ -74,9 +79,11 @@ public final class Demobot extends TimedRobot {
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
 
-		m_fiveBall = new FiveBallAuton();
-
-		SmartDashboard.putNumber("Target MPS", 0.0);
+		m_autonChooser = new SendableChooser<>();
+		m_autonChooser.addOption("None", new WaitCommand(1.0));
+		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
+		m_autonChooser.addOption("5-Ball", new FiveBallAuton());
+		SmartDashboard.putData(m_autonChooser);
 	}
 
 	@Override
@@ -93,7 +100,10 @@ public final class Demobot extends TimedRobot {
 	public void autonomousInit() {
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
-		CommandScheduler.getInstance().schedule(m_fiveBall);
+		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
+		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected())
+				.orElse(new TwoBallAuton());
+		CommandScheduler.getInstance().schedule(autonCommand);
 	}
 
 	@Override
@@ -112,8 +122,6 @@ public final class Demobot extends TimedRobot {
 
 	@Override
 	public void teleopPeriodic() {
-		// change for test commit
-
 		if (m_superstructure.getSystemState() != Superstructure.SystemState.GRAB_MED_BAR
 			&& m_superstructure.getSystemState() != Superstructure.SystemState.EXTEND_HIGH_BAR
 		) {
@@ -140,7 +148,9 @@ public final class Demobot extends TimedRobot {
 			} else if (m_copilot.getBButton() && m_copilot.getYButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.PRECLIMBING);
 			} else if (m_copilot.getBButton() && m_copilot.getAButton()) {
-				m_superstructure.setWantedState(Superstructure.WantedState.CLIMBING);
+				m_superstructure.setWantedStateClimb(Superstructure.ClimbGoal.TRAVERSE);
+			} else if (m_copilot.getBButton() && m_copilot.getXButton()) {
+				m_superstructure.setWantedStateClimb(Superstructure.ClimbGoal.HIGH);
 			} else {
 				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 			}
@@ -152,20 +162,17 @@ public final class Demobot extends TimedRobot {
 			m_superstructure.adjustShot(-0.1);
 		}
 
-//		SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
-//		SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
-//
-//		SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
-//		SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
-//
-//		SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
-//		SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
+		if (Constants.DO_SHOOTER_LOGGING) {
+			SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
+			SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
 
-//		final double turretSetpoint = SmartDashboard.getNumber(DASHBOARD_KEY_TURRET_POSITION, 0.0);
-//		m_greytestTurret.setReference(Rotation.radians(turretSetpoint * Tau));
+			SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
+			SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
 
-//		SmartDashboard.putNumber("Volts", m_chassis.getWheelProperty(MotorController::getVoltageOutput).left);
-//		SmartDashboard.putNumber("Amps", m_chassis.getWheelProperty(MotorController::getDrawnCurrentAmps).left);
+			SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
+			SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
+		}
+
 		SmartDashboard.putBoolean("Distance Good?", m_targetServer.getTargetInfo()
 				.map(TargetServer.TargetInfo::getCameraToTarget)
 				.map(RigidTransform::getTranslation)

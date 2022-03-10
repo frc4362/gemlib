@@ -1,7 +1,6 @@
 package com.gemsrobotics.frc2022.subsystems;
 
 import com.gemsrobotics.frc2022.Constants;
-import com.gemsrobotics.frc2022.FieldState;
 import com.gemsrobotics.frc2022.ShotParameters;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -10,7 +9,6 @@ import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.utils.MathUtils;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -66,6 +64,17 @@ public final class Superstructure extends Subsystem {
 		}
 	}
 
+	public enum ClimbGoal {
+		HIGH(1),
+		TRAVERSE(2);
+
+		public final int allowedClimbs;
+
+		ClimbGoal(final int a) {
+			allowedClimbs = a;
+		}
+	}
+
 	private final Chassis m_chassis;
 	private final Intake m_intake;
 	private final Uptake m_uptake;
@@ -80,6 +89,7 @@ public final class Superstructure extends Subsystem {
 	private int m_climbCount;
 	private double m_shotAdjustment;
 	private boolean m_stateChanged, m_prepareShot;
+	private Optional<ClimbGoal> m_climbGoal;
 	private WantedState m_stateWanted;
 	private SystemState m_state;
 
@@ -103,6 +113,7 @@ public final class Superstructure extends Subsystem {
 
 		m_shotAdjustment = 0;
 		m_climbCount = 0;
+		m_climbGoal = Optional.empty();
 		m_state = SystemState.IDLE;
 		m_stateWanted = WantedState.IDLE;
 	}
@@ -131,13 +142,10 @@ public final class Superstructure extends Subsystem {
 	protected void onStart(final double timestamp) {
 		m_wantStateChangeTimer.start();
 		m_stateChangedTimer.start();
-//		m_leds.setOn(true);
 	}
 
 	@Override
 	protected void onUpdate(final double timestamp) {
-//		m_leds.setColor(m_state.ledState.apply(timestamp), 1.0f);
-
 		if (m_state == SystemState.PRECLIMB
 			|| m_state == SystemState.GRAB_MED_BAR
 			|| m_state == SystemState.EXTEND_HIGH_BAR
@@ -307,7 +315,7 @@ public final class Superstructure extends Subsystem {
 			m_climber.setUseHighVoltage(false);
 		}
 
-		if (m_climbCount >= ALLOWED_CLIMBS) {
+		if (m_climbCount >= m_climbGoal.map(goal -> goal.allowedClimbs).orElse(0)) {
 			return SystemState.DONE;
 		}
 
@@ -316,8 +324,6 @@ public final class Superstructure extends Subsystem {
 		}
 
 		m_climber.setReferencePercent(0.0);
-
-//		return SystemState.DONE;
 
 		if (m_climber.atReference()) {
 			return SystemState.EXTEND_HIGH_BAR;
@@ -329,7 +335,6 @@ public final class Superstructure extends Subsystem {
 	private SystemState handleExtendHighBar() {
 		if (m_stateChanged) {
 			m_climber.setSwingerExtended(true);
-//			m_intake.setWantedState(Intake.State.EXTENDED);
 		}
 
 		final double waitDuration;
@@ -359,7 +364,6 @@ public final class Superstructure extends Subsystem {
 
 		if (m_climber.atReference()) {
 			m_climber.setSwingerExtended(false);
-//			m_intake.setWantedState(Intake.State.RETRACTED);
 			m_climbCount++;
 			return SystemState.GRAB_MED_BAR;
 		} else {
@@ -394,6 +398,7 @@ public final class Superstructure extends Subsystem {
 		m_shooterUpper.setVelocityMetersPerSecond(velocity);
 	}
 
+	// use for preparing the shot asap
 	public void setShooterDefer() {
 		if (m_prepareShot) {
 			setShooterLinearVelocity(getVisionVelocity());
@@ -416,6 +421,11 @@ public final class Superstructure extends Subsystem {
 
 	public void adjustShot(final double adjustment) {
 		m_shotAdjustment += adjustment;
+	}
+
+	public void setWantedStateClimb(final ClimbGoal goal) {
+		setWantedState(WantedState.CLIMBING);
+		m_climbGoal = Optional.of(goal);
 	}
 
 	@Override
