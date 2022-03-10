@@ -1,4 +1,4 @@
-package com.gemsrobotics.frc2022.autonomous;
+package com.gemsrobotics.frc2022.commands;
 
 import static edu.wpi.first.wpilibj.util.ErrorMessages.requireNonNullParam;
 

@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public class Constants {
 	public static final boolean DO_SHOOTER_LOGGING = false;
+	public static final boolean DO_EARLY_FLYWHEEL = true;
 
 	private static final double[][] SHOOTER_RANGE_MPS = {
 			{ 1.39, 8.75 },

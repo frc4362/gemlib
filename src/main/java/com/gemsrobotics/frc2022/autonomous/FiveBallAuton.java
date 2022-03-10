@@ -1,6 +1,6 @@
 package com.gemsrobotics.frc2022.autonomous;
 
-import com.gemsrobotics.frc2022.commands.ResetOdometerCommand;
+import com.gemsrobotics.frc2022.commands.*;
 import com.gemsrobotics.frc2022.subsystems.Chassis;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -9,21 +9,11 @@ import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.wpilibj2.command.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class FiveBallAuton extends SequentialCommandGroup {
 	public FiveBallAuton() {
 		final var chassis = Chassis.getInstance();
 		final var origin = RigidTransform.fromRotation(Rotation.degrees(-62.5));
-		final var secondPoint = origin.transformBy(new RigidTransform(new Translation(Units.inches2Meters(24.0), 0.0), Rotation.identity()));
-//		final var trajectoryPoints1 = Stream.of(
-//				new RigidTransform(new Translation(0.0, 0.0), Rotation.identity()),
-//				new RigidTransform(new Translation(1.7, -2.0), Rotation.degrees(-120)),
-//				new RigidTransform(new Translation(0.5, -3.0), Rotation.degrees(-150)))
-//				new RigidTransform(new Translation(Units.inches2Meters(36.0), Units.inches2Meters(-50)), Rotation.degrees(-90)))
-//			.map(rt -> rt.inFrameOfReferenceOf(origin))
-//			.collect(Collectors.toList());
 
 		final var trajectory1 = chassis.getGeneratedWPITrajectory(List.of(
 				new RigidTransform(new Translation(0.0, 0.0), Rotation.degrees(0.0)),
@@ -53,6 +43,7 @@ public class FiveBallAuton extends SequentialCommandGroup {
 		addCommands(
 				new ResetOdometerCommand(chassis, trajectory1),
 				new SetTurretGuess(Rotation.degrees(150)),
+				new PrepareShotCommand(true),
 				new ParallelCommandGroup(
 						new IntakeCommand(2, 45.0),
 						new SequentialCommandGroup(
@@ -66,11 +57,20 @@ public class FiveBallAuton extends SequentialCommandGroup {
 						new GemRamseteCommand(trajectory4)
 				),
 				new ShootAllBalls(),
+				new PrepareShotCommand(false),
+				new SetTurretLockedCommand(true),
 				new ParallelDeadlineGroup(
 					new SequentialCommandGroup(
 						new GemRamseteCommand(trajectory5),
 						new WaitCommand(0.2),
-						new GemRamseteCommand(trajectory6)
+						new PrepareShotCommand(true),
+						new ParallelCommandGroup(
+								new SequentialCommandGroup(
+										new WaitCommand(1.5),
+										new SetTurretLockedCommand(false)
+								),
+								new GemRamseteCommand(trajectory6)
+						)
 					),
 					new SequentialCommandGroup(
 						new WaitCommand(1.0),

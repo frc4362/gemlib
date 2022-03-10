@@ -118,6 +118,7 @@ public final class Blackbird extends TimedRobot {
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
 		CommandScheduler.getInstance().cancelAll();
+		m_superstructure.setPrepareShot(false);
 	}
 
 	@Override
@@ -143,6 +144,8 @@ public final class Blackbird extends TimedRobot {
 				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
 			} else if (m_pilot.getYButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
+			} else if (m_pilot.getLeftTriggerAxis() > 0.7) {
+				m_superstructure.setWantedState(Superstructure.WantedState.LOW_SHOT);
 			} else if (m_pilot.getLeftBumper()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
 			} else if (m_copilot.getBButton() && m_copilot.getYButton()) {

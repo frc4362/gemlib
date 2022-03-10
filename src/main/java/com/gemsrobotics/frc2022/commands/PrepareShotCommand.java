@@ -1,7 +1,7 @@
-package com.gemsrobotics.frc2022.autonomous;
+package com.gemsrobotics.frc2022.commands;
 
 import com.gemsrobotics.frc2022.subsystems.Superstructure;
-import edu.wpi.first.wpilibj.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 
 public class PrepareShotCommand extends InstantCommand {
 	private final boolean m_prepareShot;

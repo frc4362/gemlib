@@ -1,4 +1,4 @@
-package com.gemsrobotics.frc2022.autonomous;
+package com.gemsrobotics.frc2022.commands;
 
 import com.gemsrobotics.frc2022.subsystems.Superstructure;
 import edu.wpi.first.wpilibj.Timer;
