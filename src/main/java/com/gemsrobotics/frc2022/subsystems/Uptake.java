@@ -78,14 +78,26 @@ public final class Uptake extends Subsystem {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
 		} else if (m_wantedState == State.INTAKING) {
-			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 0.5);
-			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.5);
+			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 0.9);
+			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
 		} else if (m_wantedState == State.FEEDING) {
-			m_motorTransfer.setDutyCycle(0.5);
-			m_motorUptake.setDutyCycle(0.5);
+			m_motorTransfer.setDutyCycle(1.0);
+			m_motorUptake.setDutyCycle(0.7);
 		} else if (m_wantedState == State.OUTTAKING) {
 			m_motorTransfer.setDutyCycle(-0.7);
-			m_motorUptake.setNeutral();
+			m_motorUptake.setDutyCycle(-0.5);
+		}
+	}
+
+	public int getBallCount() {
+		if (!m_periodicIO.sensorUpper && !m_periodicIO.sensorLower) {
+			return 2;
+		} else if (!m_periodicIO.sensorLower && m_periodicIO.sensorUpper) {
+			return 0;
+		} else if (!m_periodicIO.sensorUpper && m_periodicIO.sensorLower) {
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 

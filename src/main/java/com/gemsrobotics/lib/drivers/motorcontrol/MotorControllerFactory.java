@@ -155,6 +155,36 @@ public final class MotorControllerFactory {
         }
     };
 
+    private static final TalonConfiguration DRIVE_TALON = new TalonConfiguration() {
+        {
+            NEUTRAL_MODE = NeutralMode.Brake;
+            NEUTRAL_DEADBAND = 0.04;
+
+            ENABLE_CURRENT_LIMIT = false;
+            ENABLE_SOFT_LIMIT = false;
+            ENABLE_LIMIT_SWITCH = false;
+            FORWARD_SOFT_LIMIT = 0;
+            REVERSE_SOFT_LIMIT = 0;
+
+            INVERTED = false;
+            SENSOR_PHASE = false;
+
+            CONTROL_FRAME_PERIOD_MS = 10;
+            MOTION_CONTROL_FRAME_PERIOD_MS = 100;
+            GENERAL_STATUS_FRAME_RATE_MS = 10;
+            FEEDBACK_STATUS_FRAME_RATE_MS = 20;
+            QUAD_ENCODER_STATUS_FRAME_RATE_MS = 255;
+            ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 255;
+            PULSE_WIDTH_STATUS_FRAME_RATE_MS = 255;
+
+            VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_25Ms;
+            VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 8;
+
+            OPEN_LOOP_RAMP_RATE = 0.0;
+            CLOSED_LOOP_RAMP_RATE = 0.0;
+        }
+    };
+
     public static final TalonConfiguration HIGH_PERFORMANCE_TALON_CONFIG = new TalonConfiguration() {
         {
             NEUTRAL_MODE = NeutralMode.Coast;
@@ -305,6 +335,10 @@ public final class MotorControllerFactory {
 
     public static GemTalon<TalonFX> createSlaveTalonFX(final int port) {
         return createTalonFX(port, SLAVE_TALON_CONFIG, true);
+    }
+
+    public static GemTalon<TalonFX> createDriveTalonFX(final int port) {
+        return createTalonFX(port, DRIVE_TALON, false);
     }
 
     public static GemTalon<TalonFX> createHighPerformanceTalonFX(final int port) {

@@ -104,6 +104,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	@Override
 	protected void onStart(final double timestamp) {
 		setDisabled();
+		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 	}
 
 	@Override
@@ -150,6 +151,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	@Override
 	protected void onStop(double timestamp) {
 		setDisabled();
+		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
 	}
 
 	@Override

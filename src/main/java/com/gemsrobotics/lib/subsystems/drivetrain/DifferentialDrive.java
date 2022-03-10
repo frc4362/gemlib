@@ -125,7 +125,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		OPEN_LOOP,
 		VELOCITY,
         TRAJECTORY_TRACKING,
-		TUNING
+		TUNING,
+		VOLTAGE
 	}
 
 	private final class PeriodicIO implements Loggable {
@@ -198,9 +199,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_controlMode = ControlMode.DISABLED;
                     break;
                 case OPEN_LOOP:
+				case VOLTAGE:
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 
-                    m_controlMode = ControlMode.OPEN_LOOP;
+                    m_controlMode = newControlMode;
                     break;
 				case VELOCITY:
                 case TRAJECTORY_TRACKING:
@@ -231,6 +233,11 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     public synchronized void setOpenLoop(final WheelState wheelState) {
 		configureControlMode(ControlMode.OPEN_LOOP);
 		m_periodicIO.demand = wheelState;
+	}
+
+	public void setVoltages(final WheelState voltages) {
+		configureControlMode(ControlMode.VOLTAGE);
+		m_periodicIO.demand = voltages;
 	}
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
@@ -329,6 +336,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 // This makes sense, since this demand was updated externally
                 driveOpenLoop(m_periodicIO.demand);
                 break;
+			case VOLTAGE:
+				m_masterMotorLeft.setVoltage(m_periodicIO.demand.left);
+				m_masterMotorRight.setVoltage(m_periodicIO.demand.right);
+				break;
             case TRAJECTORY_TRACKING:
                 updateTrajectoryFollowingDemands(timestamp);
 			case VELOCITY: // note fallthrough

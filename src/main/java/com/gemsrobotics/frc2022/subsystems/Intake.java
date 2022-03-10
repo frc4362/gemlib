@@ -15,7 +15,7 @@ public final class Intake extends Subsystem {
 			INTAKE_SOLENOID_BUS_ID = 1,
 			INTAKE_SOLENOID_FORWARD_CHANNEL = 8,
 			INTAKE_SOLENOID_REVERSE_CHANNEL = 9;
-	private static final double EXTENSION_MOTOR_DELAY = 0.1;
+	private static final double EXTENSION_MOTOR_DELAY = 0.25;
 
 	private static Intake INSTANCE;
 
@@ -69,7 +69,7 @@ public final class Intake extends Subsystem {
 			m_extender.set(DoubleSolenoid.Value.kForward);
 
 			if (m_intakeExtensionTimer.get() > EXTENSION_MOTOR_DELAY) {
-				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.4 : -0.4);
+				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.6 : -0.6);
 			}
 		} else if (m_wantedState == State.EXTENDED) {
 			m_extender.set(DoubleSolenoid.Value.kForward);

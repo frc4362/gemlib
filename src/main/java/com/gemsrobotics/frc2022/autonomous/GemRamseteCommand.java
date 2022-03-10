@@ -16,12 +16,14 @@ import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.command.Command;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-public class GemRamseteCommand extends Command {
+public class GemRamseteCommand implements Command {
 	private final Timer m_timer = new Timer();
 	private final Chassis m_chassis;
 	private final Trajectory m_trajectory;
@@ -45,7 +47,7 @@ public class GemRamseteCommand extends Command {
 			return new Pose2d(new Translation2d(t.x(), t.y()), Rotation2d.fromDegrees(rt.getRotation().getDegrees()));
 		};
 
-		m_follower = new RamseteController();
+		m_follower = new RamseteController(2.0, 0.7);
 		m_feedforward = new SimpleMotorFeedforward(Chassis.kS, Chassis.kV, Chassis.linearKa);
 		m_kinematics = new DifferentialDriveKinematics(Chassis.trackWidth);
 
@@ -56,7 +58,7 @@ public class GemRamseteCommand extends Command {
 
 		m_leftController = m_chassis.makePIDController();
 		m_rightController = m_chassis.makePIDController();
-		m_output = (l, r) -> m_chassis.setOpenLoop(new WheelState(l, r));
+		m_output = (l, r) -> m_chassis.setVoltages(new WheelState(l, r));
 	}
 
 	@Override
@@ -101,7 +103,7 @@ public class GemRamseteCommand extends Command {
 	}
 
 	@Override
-	public void end() {
+	public void end(final boolean interrupted) {
 		m_timer.stop();
 		m_output.accept(0.0, 0.0);
 	}
@@ -109,5 +111,10 @@ public class GemRamseteCommand extends Command {
 	@Override
 	public boolean isFinished() {
 		return m_timer.hasElapsed(m_trajectory.getTotalTimeSeconds());
+	}
+
+	@Override
+	public Set<Subsystem> getRequirements() {
+		return Set.of();
 	}
 }

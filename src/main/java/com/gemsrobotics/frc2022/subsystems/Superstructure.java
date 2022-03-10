@@ -1,15 +1,16 @@
 package com.gemsrobotics.frc2022.subsystems;
 
-import com.gemsrobotics.frc2020.Target;
 import com.gemsrobotics.frc2022.Constants;
 import com.gemsrobotics.frc2022.FieldState;
 import com.gemsrobotics.frc2022.ShotParameters;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import com.gemsrobotics.lib.utils.MathUtils;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -18,8 +19,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static java.lang.Math.abs;
+
 public final class Superstructure extends Subsystem {
 	private static final int ALLOWED_CLIMBS = 2;
+	public static final double SHOOTING_ALLOWED_SPEED = 0.1;
 	private static Superstructure INSTANCE;
 
 	public static Superstructure getInstance() {
@@ -72,8 +76,10 @@ public final class Superstructure extends Subsystem {
 
 	private final Timer m_stateChangedTimer, m_wantStateChangeTimer;
 	private final PeriodicIO m_periodicIO;
+	private Optional<Rotation> m_turretGuess;
 	private int m_climbCount;
-	private boolean m_stateChanged;
+	private double m_shotAdjustment;
+	private boolean m_stateChanged, m_prepareShot;
 	private WantedState m_stateWanted;
 	private SystemState m_state;
 
@@ -86,12 +92,16 @@ public final class Superstructure extends Subsystem {
 		m_chassis = Chassis.getInstance();
 		m_fieldState = FieldState.getInstance();
 		m_turret = GreyTTurret.getInstance();
+		m_turretGuess = Optional.empty();
 
 		m_stateChangedTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
 
 		m_periodicIO = new PeriodicIO();
 
+		m_prepareShot = false;
+
+		m_shotAdjustment = 0;
 		m_climbCount = 0;
 		m_state = SystemState.IDLE;
 		m_stateWanted = WantedState.IDLE;
@@ -128,10 +138,18 @@ public final class Superstructure extends Subsystem {
 	protected void onUpdate(final double timestamp) {
 //		m_leds.setColor(m_state.ledState.apply(timestamp), 1.0f);
 
-		if (m_stateWanted == WantedState.PRECLIMBING || m_stateWanted == WantedState.CLIMBING) {
-			m_turret.setDisabled();
+		if (m_state == SystemState.PRECLIMB
+			|| m_state == SystemState.GRAB_MED_BAR
+			|| m_state == SystemState.EXTEND_HIGH_BAR
+			|| m_state == SystemState.GRAB_HIGH_BAR
+			|| m_state == SystemState.DONE
+		) {
+			m_turret.setReference(Rotation.identity());
 		} else if (m_periodicIO.shotParameters.isPresent()) {
 			setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal().direction());
+//			m_turret.setDisabled();
+		} else if (m_turretGuess.isPresent()) {
+			m_turret.setReference(m_turretGuess.get());
 		} else {
 			m_turret.setDisabled();
 		}
@@ -140,6 +158,7 @@ public final class Superstructure extends Subsystem {
 
 		SmartDashboard.putString("Wanted State", m_stateWanted.toString());
 		SmartDashboard.putString("Current State", m_state.toString());
+		SmartDashboard.putNumber("Shot Adjustment", m_shotAdjustment);
 
 		switch (m_state) {
 			case IDLE:
@@ -237,11 +256,20 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleWaitingForFlywheel() {
+//		setShooterLinearVelocity(DriverStation.getStickButton(0, B button number) ? 2.5 : getVisionVelocity());
 		setShooterLinearVelocity(getVisionVelocity());
 
 		m_intake.setWantedState(Intake.State.RETRACTED);
 
-		if (m_shooterUpper.atReference() && m_shooterLower.atReference()) {
+		final var chassisSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
+		final var leftOk = abs(chassisSpeeds.left) < SHOOTING_ALLOWED_SPEED;
+		final var rightOk = abs(chassisSpeeds.right) < SHOOTING_ALLOWED_SPEED;
+
+		if (m_shooterUpper.atReference()
+			&& m_shooterLower.atReference()
+			&& leftOk
+			&& rightOk
+		) {
 			return SystemState.SHOOTING;
 		} else if (m_stateWanted == WantedState.SHOOTING) {
 			return SystemState.WAITING_FOR_FLYWHEEL;
@@ -265,7 +293,6 @@ public final class Superstructure extends Subsystem {
 	private SystemState handlePreclimb() {
 		m_climber.setUseHighVoltage(true);
 		m_climber.setPreclimbHeight();
-		m_turret.setReference(Rotation.identity());
 		TargetServer.getInstance().setLEDMode(Limelight.LEDMode.OFF);
 
 		if (m_stateWanted == WantedState.CLIMBING) {
@@ -351,7 +378,7 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private Double getVisionVelocity() {
-		return m_periodicIO.shotParameters.map(shotParameters -> Constants.getRPM(shotParameters.getCurrentTurretToGoal().norm())).orElse(2.0);
+		return m_periodicIO.shotParameters.map(shotParameters -> Constants.getRPM(shotParameters.getCurrentTurretToGoal().norm())).orElse(0.0);
 	}
 
 	private void setTurretFieldRotation(final Rotation fieldRotation) {
@@ -360,14 +387,35 @@ public final class Superstructure extends Subsystem {
 
 	private void setShooterLinearVelocity(double velocity) {
 		// constrain to peak linear velocity of the top wheel
+		velocity += m_shotAdjustment;
 		velocity = MathUtils.coerce(0.0, velocity, 19.93);
 
 		m_shooterLower.setVelocityMetersPerSecond(velocity);
 		m_shooterUpper.setVelocityMetersPerSecond(velocity);
 	}
 
+	public void setShooterDefer() {
+		if (m_prepareShot) {
+			setShooterLinearVelocity(getVisionVelocity());
+		} else {
+			setShooterLinearVelocity(0.0);
+		}
+	}
+
+	public void setTurretGuess(final Rotation guess) {
+		m_turretGuess = Optional.of(guess);
+	}
+
+	public void setPrepareShot(final boolean prepareShot) {
+		m_prepareShot = prepareShot;
+	}
+
 	public SystemState getSystemState() {
 		return m_state;
+	}
+
+	public void adjustShot(final double adjustment) {
+		m_shotAdjustment += adjustment;
 	}
 
 	@Override

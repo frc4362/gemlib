@@ -37,7 +37,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	public static final double peakVoltage = 12.0;
 	public static final double wheelRadius = Units.inches2Meters(4.0) / 2.0;
 	public static final double freeSpeed = 4.6 / wheelRadius; // radians/s
-	public static final double trackWidth = 0.534; // m
+	public static final double trackWidth = 0.567; // m
 	public static final double mass = 62.414; // kg
 	public static final double gearing = 5.91; // 5.91 : 1
 	public static final double kS = 0.65; // V
@@ -48,7 +48,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	public static final double angularKa = 2.7;
 
 	private static final double
-			kP = 0.0,
+			kP = 4.4,
 			kI = 0.0,
 			kD = 0.0;
 
@@ -71,21 +71,27 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	private final DifferentialDriveKinematics m_kinematics;
 	private final DifferentialDriveVoltageConstraint m_autoVoltageConstraint;
 	private final TrajectoryConfig m_trajectoryConfig;
+	private final TrajectoryConfig m_reversedTrajectoryConfig;
 
 	private Chassis() {
 		super();
 		m_kinematics = new DifferentialDriveKinematics(trackWidth);
-		m_autoVoltageConstraint = new DifferentialDriveVoltageConstraint(new SimpleMotorFeedforward(kS, kV, linearKa), m_kinematics, 10);
-		m_trajectoryConfig = new TrajectoryConfig(4.6, 3.5)
+		m_autoVoltageConstraint = new DifferentialDriveVoltageConstraint(new SimpleMotorFeedforward(0.7065, 1.98693, 0.39), m_kinematics, 10);
+		m_trajectoryConfig = new TrajectoryConfig(3.0, 3.0)
 				.setKinematics(m_kinematics)
-				.addConstraint(m_autoVoltageConstraint);
+				.addConstraint(m_autoVoltageConstraint)
+			    .setReversed(false);
+		m_reversedTrajectoryConfig = new TrajectoryConfig(3.0, 3.0)
+				.setKinematics(m_kinematics)
+				.addConstraint(m_autoVoltageConstraint)
+				.setReversed(true);
 	}
 
 	@Override
 	protected Config getConfig() {
 		return new Config() {{
 			maxVoltage = peakVoltage;
-			secondsToMaxVoltage = 0.1;
+			secondsToMaxVoltage = 0.05;
 
 			gearingLowGear = new MotorController.GearingParameters(1.0 / gearing, wheelRadius, 2048);
 			gearingHighGear = gearingLowGear;
@@ -135,7 +141,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersLeft() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(0);
+		final var master = MotorControllerFactory.createDriveTalonFX(0);
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		final var slave = MotorControllerFactory.createSlaveTalonFX(1);
 		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
@@ -147,7 +153,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 
 	@Override
 	protected MotorControllerGroup<TalonFX> getMotorControllersRight() {
-		final var master = MotorControllerFactory.createDefaultTalonFX(2);
+		final var master = MotorControllerFactory.createDriveTalonFX(2);
 		master.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		final var slave = MotorControllerFactory.createSlaveTalonFX(3);
 		slave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
@@ -179,5 +185,10 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	public Trajectory getGeneratedWPITrajectory(final List<RigidTransform> points) {
 		final var newPoints = points.stream().map(RigidTransform::toWPI).collect(Collectors.toList());
 		return TrajectoryGenerator.generateTrajectory(newPoints, m_trajectoryConfig);
+	}
+
+	public Trajectory getReversedTrajectory(final List<RigidTransform> points) {
+		final var newPoints = points.stream().map(RigidTransform::toWPI).collect(Collectors.toList());
+		return TrajectoryGenerator.generateTrajectory(newPoints, m_reversedTrajectoryConfig);
 	}
 }

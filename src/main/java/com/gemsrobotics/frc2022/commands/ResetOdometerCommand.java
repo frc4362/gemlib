@@ -1,14 +1,14 @@
-package com.gemsrobotics.lib.commands;
+package com.gemsrobotics.frc2022.commands;
 
+import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.subsystems.drivetrain.DifferentialDrive;
-import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.trajectory.Trajectory;
 import com.gemsrobotics.lib.trajectory.parameterization.TimedState;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 
 public class ResetOdometerCommand extends InstantCommand {
     private final DifferentialDrive<?> m_chassis;
@@ -36,7 +36,7 @@ public class ResetOdometerCommand extends InstantCommand {
     }
 
     @Override
-    protected void initialize() {
+    public void initialize() {
         m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), m_newPose);
         m_chassis.setHeading(m_newPose.getRotation());
     }

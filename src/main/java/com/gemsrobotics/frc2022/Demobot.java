@@ -1,8 +1,8 @@
 package com.gemsrobotics.frc2022;
 
-import com.gemsrobotics.frc2022.autonomous.TestAuton;
+import com.gemsrobotics.frc2022.autonomous.FiveBallAuton;
+import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
@@ -10,13 +10,11 @@ import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import edu.wpi.first.wpilibj.*;
-import edu.wpi.first.wpilibj.command.Scheduler;
-import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import java.util.List;
 
-import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
@@ -29,13 +27,16 @@ public final class Demobot extends TimedRobot {
 	private Uptake m_uptake;
 	private Flywheel m_shooterLower, m_shooterUpper;
 	private Climber m_climber;
-	private TargetServer m_targetServer;
-	private FieldState m_fieldState;
-	private Superstructure m_superstructure;
-	private SingleThreadedSubsystemManager m_subsystemManager;
-	private XboxController m_gamepad;
 
 	private GreyTTurret m_greytestTurret;
+	private TargetServer m_targetServer;
+	private FieldState m_fieldState;
+
+	private Superstructure m_superstructure;
+	private SingleThreadedSubsystemManager m_subsystemManager;
+	private XboxController m_pilot, m_copilot;
+
+	private FiveBallAuton m_fiveBall;
 
 	public Demobot() {
 		super(kPeriod);
@@ -43,7 +44,8 @@ public final class Demobot extends TimedRobot {
 
 	@Override
 	public void robotInit() {
-		m_gamepad = new XboxController(0);
+		m_pilot = new XboxController(0);
+		m_copilot = new XboxController(1);
 
 		m_chassis = Chassis.getInstance();
 		m_intake = Intake.getInstance();
@@ -72,6 +74,8 @@ public final class Demobot extends TimedRobot {
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
 		m_chassis.setHeading(Rotation.degrees(0));
 
+		m_fiveBall = new FiveBallAuton();
+
 		SmartDashboard.putNumber("Target MPS", 0.0);
 	}
 
@@ -89,12 +93,12 @@ public final class Demobot extends TimedRobot {
 	public void autonomousInit() {
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
-		Scheduler.getInstance().add(new TestAuton());
+		CommandScheduler.getInstance().schedule(m_fiveBall);
 	}
 
 	@Override
 	public void autonomousPeriodic() {
-		Scheduler.getInstance().run();
+		CommandScheduler.getInstance().run();
 		m_subsystemManager.update();
 	}
 
@@ -103,6 +107,7 @@ public final class Demobot extends TimedRobot {
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
+		CommandScheduler.getInstance().cancelAll();
 	}
 
 	@Override
@@ -116,29 +121,35 @@ public final class Demobot extends TimedRobot {
 			double rightX = 0;
 
 			//deadbanding
-			if (abs(m_gamepad.getLeftY()) > 0.04) {
-				leftY = -m_gamepad.getLeftY();
+			if (abs(m_pilot.getLeftY()) > 0.04) {
+				leftY = -m_pilot.getLeftY();
 			}
 
-			if (abs(m_gamepad.getRightX()) > 0.10) {
-				rightX = m_gamepad.getRightX();
+			if (abs(m_pilot.getRightX()) > 0.10) {
+				rightX = m_pilot.getRightX();
 			}
 
-			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX, m_gamepad.getRightBumper());
+			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX, m_pilot.getRightBumper());
 
-			if (m_gamepad.getAButton()) {
+			if (m_pilot.getAButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
-			} else if (m_gamepad.getBButton()) {
-				m_superstructure.setWantedState(Superstructure.WantedState.PRECLIMBING);
-			} else if (m_gamepad.getXButton()) {
-				m_superstructure.setWantedState(Superstructure.WantedState.CLIMBING);
-			} else if (m_gamepad.getYButton()) {
+			} else if (m_pilot.getYButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
-			} else if (m_gamepad.getLeftBumper()) {
+			} else if (m_pilot.getLeftBumper()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
-			}  else {
+			} else if (m_copilot.getBButton() && m_copilot.getYButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.PRECLIMBING);
+			} else if (m_copilot.getBButton() && m_copilot.getAButton()) {
+				m_superstructure.setWantedState(Superstructure.WantedState.CLIMBING);
+			} else {
 				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);
 			}
+		}
+
+		if (m_copilot.getLeftBumper()) {
+			m_superstructure.adjustShot(0.1);
+		} else if (m_copilot.getRightBumper()) {
+			m_superstructure.adjustShot(-0.1);
 		}
 
 //		SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
@@ -155,7 +166,6 @@ public final class Demobot extends TimedRobot {
 
 //		SmartDashboard.putNumber("Volts", m_chassis.getWheelProperty(MotorController::getVoltageOutput).left);
 //		SmartDashboard.putNumber("Amps", m_chassis.getWheelProperty(MotorController::getDrawnCurrentAmps).left);
-//		SmartDashboard.putNumber("Robot Speed", m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).left);
 		SmartDashboard.putBoolean("Distance Good?", m_targetServer.getTargetInfo()
 				.map(TargetServer.TargetInfo::getCameraToTarget)
 				.map(RigidTransform::getTranslation)
