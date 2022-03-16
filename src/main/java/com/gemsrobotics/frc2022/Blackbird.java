@@ -138,7 +138,7 @@ public final class Blackbird extends TimedRobot {
 				rightX = m_pilot.getRightX();
 			}
 
-			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX, m_pilot.getRightBumper());
+			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX * 0.65, m_pilot.getRightBumper());
 
 			if (m_pilot.getAButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
@@ -176,11 +176,12 @@ public final class Blackbird extends TimedRobot {
 			SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
 		}
 
-		SmartDashboard.putBoolean("Distance Good?", m_targetServer.getTargetInfo()
+		final var distance = m_targetServer.getTargetInfo()
 				.map(TargetServer.TargetInfo::getCameraToTarget)
 				.map(RigidTransform::getTranslation)
-				.map(Translation::norm)
-				.map(f -> (f > 1.39 && f < 3.25)).orElse(false));
+				.map(Translation::norm);
+		SmartDashboard.putNumber("Distance", distance.orElse(0.0));
+		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > 1.39 && f < 2.75)).orElse(false));
 
 		m_subsystemManager.update();
 	}

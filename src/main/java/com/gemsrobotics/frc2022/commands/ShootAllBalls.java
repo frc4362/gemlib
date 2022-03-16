@@ -11,13 +11,14 @@ public class ShootAllBalls implements Command {
 	private final Superstructure m_superstructure;
 	private final Timer m_timer;
 	private final Timer m_waitingForShotTimer;
-	private boolean m_hasAttainedSpeed;
+	private boolean m_hasAttainedSpeed, m_firstShots;
 
-	public ShootAllBalls() {
+	public ShootAllBalls(boolean firstshots) {
 		m_superstructure = Superstructure.getInstance();
 		m_timer = new Timer();
 		m_waitingForShotTimer = new Timer();
 		m_hasAttainedSpeed = false;
+		m_firstShots = firstshots;
 	}
 
 	@Override

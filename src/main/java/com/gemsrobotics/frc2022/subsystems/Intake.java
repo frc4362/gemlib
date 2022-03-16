@@ -15,7 +15,7 @@ public final class Intake extends Subsystem {
 			INTAKE_SOLENOID_BUS_ID = 1,
 			INTAKE_SOLENOID_FORWARD_CHANNEL = 8,
 			INTAKE_SOLENOID_REVERSE_CHANNEL = 9;
-	private static final double EXTENSION_MOTOR_DELAY = 0.25;
+	private static final double EXTENSION_MOTOR_DELAY = 0.3;
 
 	private static Intake INSTANCE;
 

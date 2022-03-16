@@ -1,5 +1,6 @@
 package com.gemsrobotics.frc2022.autonomous;
 
+import com.gemsrobotics.frc2020.subsystems.Superstructure;
 import com.gemsrobotics.frc2022.commands.*;
 import com.gemsrobotics.frc2022.subsystems.Chassis;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -13,7 +14,6 @@ import java.util.List;
 public class FiveBallAuton extends SequentialCommandGroup {
 	public FiveBallAuton() {
 		final var chassis = Chassis.getInstance();
-		final var origin = RigidTransform.fromRotation(Rotation.degrees(-62.5));
 
 		final var trajectory1 = chassis.getGeneratedWPITrajectory(List.of(
 				new RigidTransform(new Translation(0.0, 0.0), Rotation.degrees(0.0)),
@@ -32,11 +32,11 @@ public class FiveBallAuton extends SequentialCommandGroup {
 
 		final var trajectory5 = chassis.getGeneratedWPITrajectory(List.of(
 				new RigidTransform(new Translation(Units.inches2Meters(-5), Units.inches2Meters(-80)), Rotation.degrees(-87)),
-				new RigidTransform(new Translation(Units.inches2Meters(15), Units.inches2Meters(-80 - (13.0 * 12))), Rotation.degrees(-60))
+				new RigidTransform(new Translation(Units.inches2Meters(20), Units.inches2Meters(-80 - (13.5 * 12))), Rotation.degrees(-60))
 		));
 
 		final var trajectory6 = chassis.getReversedTrajectory(List.of(
-				new RigidTransform(new Translation(Units.inches2Meters(15), Units.inches2Meters(-80 - (13.0 * 12))), Rotation.degrees(-60)),
+				new RigidTransform(new Translation(Units.inches2Meters(20), Units.inches2Meters(-80 - (13.5 * 12))), Rotation.degrees(-60)),
 				new RigidTransform(new Translation(Units.inches2Meters(-30), Units.inches2Meters(-120)), Rotation.degrees(-100))
 		));
 

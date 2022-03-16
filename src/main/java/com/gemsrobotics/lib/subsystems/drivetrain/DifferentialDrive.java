@@ -214,7 +214,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_controlMode = ControlMode.TRAJECTORY_TRACKING;
                     break;
 				case TUNING:
-					setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+					setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 					m_controlMode = ControlMode.TUNING;
 					break;
             }

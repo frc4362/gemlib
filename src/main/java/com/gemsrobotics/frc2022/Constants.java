@@ -10,13 +10,13 @@ public class Constants {
 	public static final boolean DO_EARLY_FLYWHEEL = true;
 
 	private static final double[][] SHOOTER_RANGE_MPS = {
-			{ 1.39, 8.75 },
-			{ 1.67, 9.5 },
+			{ 1.39, 8.75 + 0.25 },
+			{ 1.67, 9.5 + 0.1},
 			{ 1.97, 10.25 },
 			{ 2.24, 10.5 },
 			{ 2.50, 11.0 },
 			{ 2.80, 12.5 },
-			{ 3.25, 14.0 }
+			{ 3.25, 12.5 }
 	};
 
 	private static final InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> SHOOTER_RANGE_RPM_LERPER_CLOSE;
@@ -32,7 +32,7 @@ public class Constants {
 		if (range < SHOOTER_RANGE_MPS[0][0]) {
 			return 8.75;
 		} else if (range > SHOOTER_RANGE_MPS[SHOOTER_RANGE_MPS.length - 1][0]) {
-			return 14.0;
+			return 12.5;
 		} else {
 			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value;
 		}

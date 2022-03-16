@@ -109,6 +109,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putNumber("Turret Velocity", m_periodicIO.velocity.getDegrees());
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();
@@ -146,6 +147,10 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	public Rotation getReference() {
 		return m_periodicIO.reference;
+	}
+
+	public Rotation getVelocityPerSecond() {
+		return m_periodicIO.velocity;
 	}
 
 	@Override

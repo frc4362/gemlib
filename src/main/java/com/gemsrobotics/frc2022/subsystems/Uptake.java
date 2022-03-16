@@ -5,6 +5,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
@@ -74,6 +75,10 @@ public final class Uptake extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putBoolean("Bottom Broken", !m_periodicIO.sensorLower);
+		SmartDashboard.putBoolean("Upper Broken", !m_periodicIO.sensorUpper);
+		
+
 		if (m_wantedState == State.NEUTRAL) {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
