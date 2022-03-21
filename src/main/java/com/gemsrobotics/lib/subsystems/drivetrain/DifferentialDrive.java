@@ -163,7 +163,9 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
     public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
         // please note the use of the NON short-circuiting operator (&&)
-        return m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode)) & m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+		final var left = m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+		final var right = m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+        return left && right;
     }
 
 	public synchronized void setHighGear(final boolean wantsHighGear) {

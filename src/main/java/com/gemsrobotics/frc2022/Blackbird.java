@@ -1,8 +1,11 @@
 package com.gemsrobotics.frc2022;
 
-import com.gemsrobotics.frc2022.autonomous.FiveBallAuton;
+import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithFender;
+import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
 import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
+import com.gemsrobotics.frc2022.commands.TurnToHeading;
 import com.gemsrobotics.frc2022.subsystems.*;
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
@@ -10,6 +13,7 @@ import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -41,7 +45,9 @@ public final class Blackbird extends TimedRobot {
 	private XboxController m_pilot, m_copilot;
 
 	private SendableChooser<Command> m_autonChooser;
-	private FiveBallAuton m_fiveBall;
+	private FiveBallAutonWithFender m_fiveBall;
+
+	private Timer m_brakeTimer;
 
 	public Blackbird() {
 		super(kPeriod);
@@ -81,19 +87,35 @@ public final class Blackbird extends TimedRobot {
 
 		m_autonChooser = new SendableChooser<>();
 		m_autonChooser.addOption("None", new WaitCommand(1.0));
-		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
-		m_autonChooser.addOption("5-Ball", new FiveBallAuton());
+//		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
+		m_autonChooser.addOption("5-Ball", new FiveBallAutonWithSafe());
 		SmartDashboard.putData(m_autonChooser);
+
+		LiveWindow.disableAllTelemetry();
+
+		m_brakeTimer = new Timer();
 	}
 
 	@Override
 	public void robotPeriodic() {
 		SmartDashboard.putString("Robot Position", m_chassis.getOdometer().getLatestFieldToVehicleValue().toString());
+		SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
 	}
 
 	@Override
 	public void disabledInit() {
 		m_subsystemManager.stop();
+		m_brakeTimer.reset();
+		m_brakeTimer.start();
+	}
+
+	@Override
+	public void disabledPeriodic() {
+		if (m_brakeTimer.hasElapsed(2.0)) {
+			m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+			m_brakeTimer.reset();
+			m_brakeTimer.stop();
+		}
 	}
 
 	@Override
@@ -103,7 +125,9 @@ public final class Blackbird extends TimedRobot {
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
 		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected())
 				.orElse(new TwoBallAuton());
+		CommandScheduler.getInstance().cancelAll();
 		CommandScheduler.getInstance().schedule(autonCommand);
+		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 	}
 
 	@Override
@@ -114,11 +138,13 @@ public final class Blackbird extends TimedRobot {
 
 	@Override
 	public void teleopInit() {
+		CommandScheduler.getInstance().cancelAll();
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
-		CommandScheduler.getInstance().cancelAll();
 		m_superstructure.setPrepareShot(false);
+		m_superstructure.setTurretLocked(false);
+		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 	}
 
 	@Override
@@ -134,7 +160,7 @@ public final class Blackbird extends TimedRobot {
 				leftY = -m_pilot.getLeftY();
 			}
 
-			if (abs(m_pilot.getRightX()) > 0.10) {
+			if (abs(m_pilot.getRightX()) > 0.05) {
 				rightX = m_pilot.getRightX();
 			}
 
@@ -150,9 +176,9 @@ public final class Blackbird extends TimedRobot {
 				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
 			} else if (m_copilot.getBButton() && m_copilot.getYButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.PRECLIMBING);
-			} else if (m_copilot.getBButton() && m_copilot.getAButton()) {
+			} else if (m_superstructure.getSystemState() == Superstructure.SystemState.PRECLIMB && m_copilot.getBButton() && m_copilot.getAButton()) {
 				m_superstructure.setWantedStateClimb(Superstructure.ClimbGoal.TRAVERSE);
-			} else if (m_copilot.getBButton() && m_copilot.getXButton()) {
+			} else if (m_superstructure.getSystemState() == Superstructure.SystemState.PRECLIMB && m_copilot.getBButton() && m_copilot.getXButton()) {
 				m_superstructure.setWantedStateClimb(Superstructure.ClimbGoal.HIGH);
 			} else {
 				m_superstructure.setWantedState(Superstructure.WantedState.IDLE);

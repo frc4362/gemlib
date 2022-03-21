@@ -83,7 +83,7 @@ public final class Uptake extends Subsystem {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
 		} else if (m_wantedState == State.INTAKING) {
-			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 0.9);
+			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 1.0);
 			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
 		} else if (m_wantedState == State.FEEDING) {
 			m_motorTransfer.setDutyCycle(1.0);

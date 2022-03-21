@@ -39,6 +39,7 @@ public final class Superstructure extends Subsystem {
 		OUTTAKING,
 		LOW_SHOT,
 		SHOOTING,
+		SHOOTING_AND_INTAKING,
 		PRECLIMBING,
 		CLIMBING
 	}
@@ -239,6 +240,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 				return SystemState.OUTTAKING;
 			case LOW_SHOT:
 			case SHOOTING:
+			case SHOOTING_AND_INTAKING:
 				return SystemState.WAITING_FOR_FLYWHEEL;
 			case PRECLIMBING:
 				return SystemState.PRECLIMB;
@@ -278,12 +280,13 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 //		setShooterLinearVelocity(DriverStation.getStickButton(0, B button number) ? 2.5 : getVisionVelocity());
 		setShooterLinearVelocity(getVisionVelocity());
 
-		m_intake.setWantedState(Intake.State.RETRACTED);
+		m_intake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Intake.State.INTAKING : Intake.State.RETRACTED);
+		m_uptake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Uptake.State.INTAKING : Uptake.State.NEUTRAL);
 
 		final var chassisSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		final var leftOk = abs(chassisSpeeds.left) < SHOOTING_ALLOWED_SPEED;
 		final var rightOk = abs(chassisSpeeds.right) < SHOOTING_ALLOWED_SPEED;
-		final var rangeOk = getVisionDistance().map(distance -> distance > 1.39 && distance < 2.75).orElse(true);
+		final var rangeOk = true;//getVisionDistance().map(distance -> distance > 1.39 && distance < 2.75).orElse(true);
 
 		if (m_shooterUpper.atReference()
 			&& m_shooterLower.atReference()
@@ -304,6 +307,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	private SystemState handleShooting() {
 		setShooterLinearVelocity(getVisionVelocity());
 
+		m_intake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Intake.State.INTAKING : Intake.State.RETRACTED);
 		m_uptake.setWantedState(Uptake.State.FEEDING);
 
 		if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
@@ -401,6 +405,8 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	}
 
 	private double getVisionVelocity() {
+//		return SmartDashboard.getNumber("Shooter Velocity Meters", 0.0);
+
 		if (m_stateWanted == WantedState.LOW_SHOT) {
 			return 2.5;
 		}
@@ -414,24 +420,16 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	}
 
 	private void setShooterLinearVelocity(double velocity) {
-		setShooterLinearVelocity(velocity, false);
-	}
-
-	private void setShooterLinearVelocity(double velocity, boolean firstShots) {
 		// constrain to peak linear velocity of the top wheel
 		velocity += m_shotAdjustment;
 		velocity = MathUtils.coerce(0.0, velocity, 19.93);
-
-		if (firstShots) {
-			velocity += .25;
-		}
 
 		if (velocity <= 1) {
 			m_shooterLower.setVelocityMetersPerSecond(0);
 			m_shooterUpper.setVelocityMetersPerSecond(0);
 		} else {
-			m_shooterLower.setVelocityMetersPerSecond(velocity - 1);
-			m_shooterUpper.setVelocityMetersPerSecond(velocity - 1);
+			m_shooterLower.setVelocityMetersPerSecond(velocity - 0.5);
+			m_shooterUpper.setVelocityMetersPerSecond(velocity - 0.5);
 		}
 	}
 

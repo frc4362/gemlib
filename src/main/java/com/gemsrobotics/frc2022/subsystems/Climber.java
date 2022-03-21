@@ -37,6 +37,8 @@ public final class Climber extends Subsystem {
 	private static final ElevatorFeedforward ELEVATOR_FEEDFORWARD = new ElevatorFeedforward(0.51654, 0.36935, 16.29, 0.40084);
 	private static final StatorCurrentLimitConfiguration ELEVATOR_CURRENT_LIMIT =
 			new StatorCurrentLimitConfiguration(false, 100, 100, 1.0);
+	private static final double SLOW_EXTEND_DUTY_CYCLE = 0.375;
+	private static final double SLOW_RETRACT_DUTY_CYCLE = -0.25;
 
 	private static Climber INSTANCE;
 
@@ -70,8 +72,6 @@ public final class Climber extends Subsystem {
 		m_motorMaster.getInternalController().configReverseSoftLimitThreshold(0);
 		m_motorMaster.getInternalController().overrideSoftLimitsEnable(true);
 		m_motorMaster.getInternalController().configAllowableClosedloopError(0, 200);
-		m_motorMaster.getInternalController().configPeakOutputForward(0.5);
-		m_motorMaster.getInternalController().configPeakOutputReverse(-0.25);
 
 		m_motorSlave = MotorControllerFactory.createSlaveTalonFX(ELEVATOR_SLAVE_PORT);
 		m_motorSlave.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
@@ -82,14 +82,14 @@ public final class Climber extends Subsystem {
 		m_motorSlave.getInternalController().configReverseSoftLimitEnable(true);
 		m_motorSlave.getInternalController().configReverseSoftLimitThreshold(0);
 		m_motorSlave.getInternalController().overrideSoftLimitsEnable(true);
-		m_motorSlave.getInternalController().configPeakOutputForward(0.5);
-		m_motorSlave.getInternalController().configPeakOutputReverse(-0.25);
 
 		m_motorSlave.follow(m_motorMaster, true);
 
 		m_swinger = PneumaticsContainer.getInstance().getSwingSolenoid();
 
 		m_periodicIO = new PeriodicIO();
+
+		setUseHighVoltage(true);
 	}
 
 	private static class PeriodicIO {
@@ -101,8 +101,7 @@ public final class Climber extends Subsystem {
 
 	private enum Mode {
 		DISABLED,
-		POSITION,
-		COASTED
+		POSITION
 	}
 
 	@Override
@@ -118,6 +117,9 @@ public final class Climber extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putNumber("Volts Applied", m_motorMaster.getVoltageOutput());
+		SmartDashboard.putNumber("Current Drawn", m_motorMaster.getDrawnCurrentAmps());
+
 		m_swinger.set(m_periodicIO.swingerExtended ? DoubleSolenoid.Value.kReverse : DoubleSolenoid.Value.kForward);
 		switch (m_mode) {
 			case DISABLED:
@@ -160,10 +162,10 @@ public final class Climber extends Subsystem {
 			m_motorSlave.getInternalController().configPeakOutputForward(1.0);
 			m_motorSlave.getInternalController().configPeakOutputReverse(-1.0);
 		} else {
-			m_motorMaster.getInternalController().configPeakOutputForward(0.375);
-			m_motorMaster.getInternalController().configPeakOutputReverse(-0.25);
-			m_motorSlave.getInternalController().configPeakOutputForward(0.375);
-			m_motorSlave.getInternalController().configPeakOutputReverse(-0.25);
+			m_motorMaster.getInternalController().configPeakOutputForward(SLOW_EXTEND_DUTY_CYCLE);
+			m_motorMaster.getInternalController().configPeakOutputReverse(SLOW_RETRACT_DUTY_CYCLE);
+			m_motorSlave.getInternalController().configPeakOutputForward(SLOW_EXTEND_DUTY_CYCLE);
+			m_motorSlave.getInternalController().configPeakOutputReverse(SLOW_RETRACT_DUTY_CYCLE);
 		}
 	}
 
