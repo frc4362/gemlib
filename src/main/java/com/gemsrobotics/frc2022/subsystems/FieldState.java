@@ -98,7 +98,7 @@ public final class FieldState extends Subsystem {
 	protected void onUpdate(final double now) {
 		m_turretHeading.put(new InterpolatingDouble(now), m_periodicIO.newTurretRotation);
 
-		SmartDashboard.putBoolean("Target Server/Alive", m_periodicIO.isTargetServerAlive);
+		SmartDashboard.putBoolean("TargetServer Alive", m_periodicIO.isTargetServerAlive);
 
 		if (m_periodicIO.isTargetServerAlive && m_periodicIO.newTargetInfo.isPresent()) {
 			final var newTarget = m_periodicIO.newTargetInfo.get();

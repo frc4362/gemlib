@@ -2,7 +2,6 @@ package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.fasterxml.jackson.databind.ser.impl.PropertySerializerMap;
 import com.gemsrobotics.frc2022.PneumaticsContainer;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -12,7 +11,6 @@ import com.gemsrobotics.lib.utils.MathUtils;
 import com.gemsrobotics.lib.utils.Units;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
@@ -89,7 +87,7 @@ public final class Climber extends Subsystem {
 
 		m_periodicIO = new PeriodicIO();
 
-		setUseHighVoltage(true);
+		setVoltageSettings(VoltageSetting.LOW);
 	}
 
 	private static class PeriodicIO {
@@ -117,8 +115,8 @@ public final class Climber extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
-		SmartDashboard.putNumber("Volts Applied", m_motorMaster.getVoltageOutput());
-		SmartDashboard.putNumber("Current Drawn", m_motorMaster.getDrawnCurrentAmps());
+//		SmartDashboard.putNumber("Volts Applied", m_motorMaster.getVoltageOutput());
+//		SmartDashboard.putNumber("Current Drawn", m_motorMaster.getDrawnCurrentAmps());
 
 		m_swinger.set(m_periodicIO.swingerExtended ? DoubleSolenoid.Value.kReverse : DoubleSolenoid.Value.kForward);
 		switch (m_mode) {
@@ -155,18 +153,24 @@ public final class Climber extends Subsystem {
 		return MathUtils.epsilonEquals(m_periodicIO.position, m_periodicIO.referencePosition, Units.inches2Meters(1.0));
 	}
 
-	public void setUseHighVoltage(final boolean sf) {
-		if (sf) {
-			m_motorMaster.getInternalController().configPeakOutputForward(1.0);
-			m_motorMaster.getInternalController().configPeakOutputReverse(-1.0);
-			m_motorSlave.getInternalController().configPeakOutputForward(1.0);
-			m_motorSlave.getInternalController().configPeakOutputReverse(-1.0);
-		} else {
-			m_motorMaster.getInternalController().configPeakOutputForward(SLOW_EXTEND_DUTY_CYCLE);
-			m_motorMaster.getInternalController().configPeakOutputReverse(SLOW_RETRACT_DUTY_CYCLE);
-			m_motorSlave.getInternalController().configPeakOutputForward(SLOW_EXTEND_DUTY_CYCLE);
-			m_motorSlave.getInternalController().configPeakOutputReverse(SLOW_RETRACT_DUTY_CYCLE);
+	public enum VoltageSetting {
+		LOW(.375, -2.0 / 3.0),
+		MID(.375, -2.0 / 3.0),
+		HIGH(1.0, -1.0);
+
+		public final double forwardLimit, reverseLimit;
+
+		VoltageSetting(final double f, final double r) {
+			forwardLimit = f;
+			reverseLimit = r;
 		}
+	}
+
+	public void setVoltageSettings(final VoltageSetting sf) {
+		m_motorMaster.getInternalController().configPeakOutputForward(sf.forwardLimit);
+		m_motorMaster.getInternalController().configPeakOutputReverse(sf.reverseLimit);
+		m_motorSlave.getInternalController().configPeakOutputForward(sf.forwardLimit);
+		m_motorSlave.getInternalController().configPeakOutputReverse(sf.reverseLimit);
 	}
 
 	public void setPreclimbHeight() {

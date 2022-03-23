@@ -13,10 +13,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import java.awt.*;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 import static java.lang.Math.abs;
 
@@ -51,21 +49,12 @@ public final class Superstructure extends Subsystem {
 		LOW_SHOT,
 		WAITING_FOR_FLYWHEEL,
 		SHOOTING,
-		PRECLIMB(f -> Color.RED),
-		GRAB_MED_BAR(f -> Color.BLUE),
-		EXTEND_HIGH_BAR(f -> Color.GREEN),
-		GRAB_HIGH_BAR(f -> Color.YELLOW),
-		DONE(f -> Color.ORANGE);
-
-		public final Function<Double, Color> ledState;
-
-		SystemState(final Function<Double, Color> s) {
-			ledState = s;
-		}
-
-		SystemState() {
-			this(f -> Color.BLACK);
-		}
+		PRECLIMB,
+		PULL_TO_BAR,
+		PLACE_ON_BAR,
+		EXTEND_TO_BAR,
+		GRAB_BAR,
+		DONE;
 	}
 
 	public enum ClimbGoal {
@@ -153,9 +142,9 @@ public final class Superstructure extends Subsystem {
 	@Override
 	protected void onUpdate(final double timestamp) {
 		if (m_state == SystemState.PRECLIMB
-			|| m_state == SystemState.GRAB_MED_BAR
-			|| m_state == SystemState.EXTEND_HIGH_BAR
-			|| m_state == SystemState.GRAB_HIGH_BAR
+			|| m_state == SystemState.PULL_TO_BAR
+			|| m_state == SystemState.PLACE_ON_BAR
+			|| m_state == SystemState.GRAB_BAR
 			|| m_state == SystemState.DONE
 			|| m_state == SystemState.LOW_SHOT
 		) {
@@ -198,14 +187,17 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 			case PRECLIMB:
 				newState = handlePreclimb();
 				break;
-			case GRAB_MED_BAR:
-				newState = handleGrabMedBar();
+			case PULL_TO_BAR:
+				newState = handlePullToBar();
 				break;
-			case EXTEND_HIGH_BAR:
-				newState = handleExtendHighBar();
+			case PLACE_ON_BAR:
+				newState = handlePlaceOnBar();
 				break;
-			case GRAB_HIGH_BAR:
-				newState = handleGrabHighBar();
+			case EXTEND_TO_BAR:
+				newState = handleExtendToBar();
+				break;
+			case GRAB_BAR:
+				newState = handleGrabBar();
 				break;
 			case DONE:
 				newState = handleDone();
@@ -245,7 +237,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 			case PRECLIMBING:
 				return SystemState.PRECLIMB;
 			case CLIMBING:
-				return SystemState.GRAB_MED_BAR;
+				return SystemState.PULL_TO_BAR;
 			case IDLE:
 			default:
 				return SystemState.IDLE;
@@ -318,75 +310,84 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	}
 
 	private SystemState handlePreclimb() {
-		m_climber.setUseHighVoltage(true);
+		m_climber.setVoltageSettings(Climber.VoltageSetting.HIGH);
 		m_climber.setPreclimbHeight();
 		TargetServer.getInstance().setLEDMode(Limelight.LEDMode.OFF);
 
 		if (m_stateWanted == WantedState.CLIMBING) {
-			return SystemState.GRAB_MED_BAR;
+			return SystemState.PULL_TO_BAR;
 		} else {
 			return SystemState.PRECLIMB;
 		}
 	}
 
-	private SystemState handleGrabMedBar() {
+	private SystemState handlePullToBar() {
 		if (m_stateChanged) {
-			m_climber.setUseHighVoltage(false);
+			m_climber.setVoltageSettings(Climber.VoltageSetting.LOW);
 		}
 
 		if (m_climbCount >= m_climbGoal.map(goal -> goal.allowedClimbs).orElse(0)) {
 			return SystemState.DONE;
 		}
 
-		if (m_climbCount > 0 && m_stateChangedTimer.get() < 1.5) {
-			return SystemState.GRAB_MED_BAR;
+		if (m_climbCount > 0 && m_stateChangedTimer.get() < .5) {
+			return SystemState.PULL_TO_BAR;
 		}
 
 		m_climber.setReferencePercent(0.0);
 
 		if (m_climber.atReference()) {
-			return SystemState.EXTEND_HIGH_BAR;
+			return SystemState.PLACE_ON_BAR;
 		} else {
-			return SystemState.GRAB_MED_BAR;
+			return SystemState.PULL_TO_BAR;
 		}
 	}
 
-	private SystemState handleExtendHighBar() {
+	private SystemState handlePlaceOnBar() {
 		if (m_stateChanged) {
 			m_climber.setSwingerExtended(true);
+			m_climber.setVoltageSettings(Climber.VoltageSetting.LOW);
 		}
 
-		final double waitDuration;
-
-		if (m_climbCount == 1) {
-			waitDuration = 2.5;
-		} else {
-			waitDuration = 1.0;
-		}
+		final double waitDuration = 1.0;
 
 //		once the solenoid has actuated, reach for the high bar
 		if (m_stateChangedTimer.get() > waitDuration) {
-			m_climber.setReferencePercent(0.75);
+			m_climber.setReferencePercent(0.08);
 		} else {
-			return SystemState.EXTEND_HIGH_BAR;
+			return SystemState.PLACE_ON_BAR;
 		}
 
-		if (m_chassis.getPitch().getDegrees() < -37.5 && m_climber.atReference()) {
-			return SystemState.GRAB_HIGH_BAR;
+		if (m_climber.atReference()) {
+			return SystemState.EXTEND_TO_BAR;
 		}
 
-		return SystemState.EXTEND_HIGH_BAR;
+		return SystemState.PLACE_ON_BAR;
 	}
 
-	private SystemState handleGrabHighBar() {
+	private SystemState handleExtendToBar() {
+		if (m_stateChanged) {
+			m_climber.setVoltageSettings(Climber.VoltageSetting.MID);
+		}
+
+		m_climber.setReferencePercent(0.72);
+
+		if (m_chassis.getPitch().getDegrees() < -37.5 && m_climber.atReference()) {
+			return SystemState.GRAB_BAR;
+		} else {
+			return SystemState.EXTEND_TO_BAR;
+		}
+	}
+
+	private SystemState handleGrabBar() {
 		m_climber.setReferencePercent(0.95);
 
 		if (m_climber.atReference()) {
 			m_climber.setSwingerExtended(false);
 			m_climbCount++;
-			return SystemState.GRAB_MED_BAR;
+			return SystemState.PULL_TO_BAR;
 		} else {
-			return SystemState.GRAB_HIGH_BAR;
+			return SystemState.GRAB_BAR;
 		}
 	}
 

@@ -77,7 +77,6 @@ public final class Uptake extends Subsystem {
 	protected void onUpdate(final double timestamp) {
 		SmartDashboard.putBoolean("Bottom Broken", !m_periodicIO.sensorLower);
 		SmartDashboard.putBoolean("Upper Broken", !m_periodicIO.sensorUpper);
-		
 
 		if (m_wantedState == State.NEUTRAL) {
 			m_motorTransfer.setNeutral();

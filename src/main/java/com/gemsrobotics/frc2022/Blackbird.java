@@ -3,7 +3,6 @@ package com.gemsrobotics.frc2022;
 import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithFender;
 import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
 import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
-import com.gemsrobotics.frc2022.commands.TurnToHeading;
 import com.gemsrobotics.frc2022.subsystems.*;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -29,7 +28,6 @@ import static java.lang.Math.abs;
 public final class Blackbird extends TimedRobot {
 	private static final double kPeriod = 0.02;
 
-	public static final String DASHBOARD_KEY_TURRET_POSITION = "Turret Position (rotations)";
 	private Chassis m_chassis;
 	private Intake m_intake;
 	private Uptake m_uptake;
@@ -120,12 +118,12 @@ public final class Blackbird extends TimedRobot {
 
 	@Override
 	public void autonomousInit() {
+		CommandScheduler.getInstance().cancelAll();
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
 		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected())
 				.orElse(new TwoBallAuton());
-		CommandScheduler.getInstance().cancelAll();
 		CommandScheduler.getInstance().schedule(autonCommand);
 		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 	}
@@ -149,8 +147,8 @@ public final class Blackbird extends TimedRobot {
 
 	@Override
 	public void teleopPeriodic() {
-		if (m_superstructure.getSystemState() != Superstructure.SystemState.GRAB_MED_BAR
-			&& m_superstructure.getSystemState() != Superstructure.SystemState.EXTEND_HIGH_BAR
+		if (m_superstructure.getSystemState() != Superstructure.SystemState.PULL_TO_BAR
+			&& m_superstructure.getSystemState() != Superstructure.SystemState.PLACE_ON_BAR
 		) {
 			double leftY = 0;
 			double rightX = 0;

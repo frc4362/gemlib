@@ -63,8 +63,6 @@ public final class Wallace extends TimedRobot implements Loggable {
 		m_subsystemManager = new SubsystemManager(m_targetServer, m_spindexer, m_chassis, m_turret, m_robotState, m_superstructure, m_shooter, m_hood);
 		m_gamepad = new XboxController(2);
 
-		SmartDashboard.putNumber("Shooter RPM", 0.0);
-
 		m_autonChooser = new SendableChooser<>();
 		m_autonChooser.setDefaultOption("None", new WaitCommand(1.0));
 		m_autonChooser.addOption("Characterize Differential Drive", new CharacterizeDifferentialDrive(m_chassis, false));
