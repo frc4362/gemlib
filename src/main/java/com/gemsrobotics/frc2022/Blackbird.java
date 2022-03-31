@@ -4,6 +4,7 @@ import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithFender;
 import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
 import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
+import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -11,6 +12,7 @@ import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
+import edu.wpi.first.util.datalog.DataLogEntry;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -85,13 +87,15 @@ public final class Blackbird extends TimedRobot {
 
 		m_autonChooser = new SendableChooser<>();
 		m_autonChooser.addOption("None", new WaitCommand(1.0));
-//		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
+		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
 		m_autonChooser.addOption("5-Ball", new FiveBallAutonWithSafe());
 		SmartDashboard.putData(m_autonChooser);
 
 		LiveWindow.disableAllTelemetry();
 
 		m_brakeTimer = new Timer();
+
+		DataLogManager.start();
 	}
 
 	@Override
@@ -205,7 +209,7 @@ public final class Blackbird extends TimedRobot {
 				.map(RigidTransform::getTranslation)
 				.map(Translation::norm);
 		SmartDashboard.putNumber("Distance", distance.orElse(0.0));
-		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > 1.39 && f < 2.75)).orElse(false));
+		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > 1.7 && f < 2.85)).orElse(false));
 
 		m_subsystemManager.update();
 	}

@@ -6,8 +6,9 @@ import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import java.util.Optional;
 
 public class Constants {
-	public static final boolean DO_SHOOTER_LOGGING = false;
+	public static final boolean DO_SHOOTER_LOGGING = true;
 	public static final boolean DO_EARLY_FLYWHEEL = true;
+	public static final boolean DO_CARGO_REJECT = false;
 
 //	private static final double[][] SHOOTER_RANGE_MPS = {
 //			{ 1.39, 8.75 + 0.45 },
@@ -20,17 +21,16 @@ public class Constants {
 //	};
 
 	private static final double[][] SHOOTER_RANGE_MPS = {
-			{ 1.25, 9.0 },
-			{ 1.4, 9.0 },
-			{ 1.55, 9.2 },
-			{ 1.7, 9.45 },
-			{ 2.00, 9.65 },
+			{ 1.25, 9.15 },
+			{ 1.4, 9.25 },
+			{ 1.55, 9.6 },
+			{ 1.7, 9.8 },
+			{ 2.00, 10.0 },
 			{ 2.17, 10.7 },
-			{ 2.45, 11.0 - .5 },
+			{ 2.45, 11.0 },
 			{ 2.63, 12.0 },
-			{ 2.86, 13.0 },
-			{ 3.1, 13.6 },
-			{ 3.27, 14 }
+			{ 3.1, 13.9 },
+			{ 3.27, 14.2 }
 	};
 
 	private static final InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> SHOOTER_RANGE_RPM_LERPER_CLOSE;

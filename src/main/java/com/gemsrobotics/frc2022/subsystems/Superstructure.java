@@ -2,13 +2,19 @@ package com.gemsrobotics.frc2022.subsystems;
 
 import com.gemsrobotics.frc2022.Constants;
 import com.gemsrobotics.frc2022.ShotParameters;
+import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
+import com.gemsrobotics.lib.utils.FastDoubleToString;
 import com.gemsrobotics.lib.utils.MathUtils;
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DataLogEntry;
+import edu.wpi.first.util.datalog.StringLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -19,8 +25,8 @@ import java.util.Optional;
 import static java.lang.Math.abs;
 
 public final class Superstructure extends Subsystem {
-	private static final int ALLOWED_CLIMBS = 2;
-	public static final double SHOOTING_ALLOWED_SPEED = 0.1;
+	private static final double SHOOTING_ALLOWED_SPEED = 0.1;
+	private static final double SHOOTER_REJECT_VELOCITY = 4.0;
 	private static Superstructure INSTANCE;
 
 	public static Superstructure getInstance() {
@@ -49,12 +55,13 @@ public final class Superstructure extends Subsystem {
 		LOW_SHOT,
 		WAITING_FOR_FLYWHEEL,
 		SHOOTING,
+		REJECTING_CARGO,
 		PRECLIMB,
 		PULL_TO_BAR,
 		PLACE_ON_BAR,
 		EXTEND_TO_BAR,
 		GRAB_BAR,
-		DONE;
+		DONE
 	}
 
 	public enum ClimbGoal {
@@ -75,9 +82,11 @@ public final class Superstructure extends Subsystem {
 	private final Climber m_climber;
 	private final FieldState m_fieldState;
 	private final GreyTTurret m_turret;
-
 	private final Timer m_stateChangedTimer, m_wantStateChangeTimer;
 	private final PeriodicIO m_periodicIO;
+	private final DataLog m_log;
+	private final StringLogEntry m_shotLogger;
+
 	private Optional<Rotation> m_turretGuess;
 	private int m_climbCount;
 	private double m_shotAdjustment;
@@ -99,8 +108,10 @@ public final class Superstructure extends Subsystem {
 
 		m_stateChangedTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
-
 		m_periodicIO = new PeriodicIO();
+
+		m_log = DataLogManager.getLog();
+		m_shotLogger = new StringLogEntry(m_log, "/shots");
 
 		m_prepareShot = false;
 		m_weakShot = false;
@@ -146,14 +157,15 @@ public final class Superstructure extends Subsystem {
 			|| m_state == SystemState.PLACE_ON_BAR
 			|| m_state == SystemState.GRAB_BAR
 			|| m_state == SystemState.DONE
+			|| m_state == SystemState.EXTEND_TO_BAR
 			|| m_state == SystemState.LOW_SHOT
+			|| DriverStation.getStickButton(0, 6)
 		) {
 			m_turret.setReference(Rotation.identity());
 		} else if (m_turretLocked) {
 			m_turret.setDisabled();
 		} else if (m_periodicIO.shotParameters.isPresent()) {
-setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal().direction());
-		//	m_turret.setDisabled();
+			setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal().direction());
 		} else if (m_turretGuess.isPresent()) {
 			m_turret.setReference(m_turretGuess.get());
 		} else {
@@ -165,7 +177,6 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 		SmartDashboard.putString("Wanted State", m_stateWanted.toString());
 		SmartDashboard.putString("Current State", m_state.toString());
 		SmartDashboard.putNumber("Shot Adjustment", m_shotAdjustment);
-		SmartDashboard.putString("Shots", "root");
 
 		switch (m_state) {
 			case IDLE:
@@ -182,6 +193,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 				break;
 			case LOW_SHOT:
 			case SHOOTING:
+			case REJECTING_CARGO:
 				newState = handleShooting();
 				break;
 			case PRECLIMB:
@@ -247,7 +259,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	private SystemState handleIdle() {
 		m_intake.setWantedState(Intake.State.RETRACTED);
 		m_uptake.setWantedState(Uptake.State.NEUTRAL);
-		setShooterDefer();
+		setShooterDeferring();
 
 		return applyWantedState();
 	}
@@ -255,22 +267,26 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	private SystemState handleIntaking() {
 		m_intake.setWantedState(Intake.State.INTAKING);
 		m_uptake.setWantedState(Uptake.State.INTAKING);
-		setShooterDefer();
+		setShooterDeferring();
 
-		return applyWantedState();
+		if (Constants.DO_CARGO_REJECT && m_uptake.isWrongCargoHeld()) {
+			return SystemState.REJECTING_CARGO;
+		} else {
+			return applyWantedState();
+		}
 	}
 
 	private SystemState handleOuttaking() {
 		m_intake.setWantedState(Intake.State.OUTTAKING);
 		m_uptake.setWantedState(Uptake.State.OUTTAKING);
-		setShooterDefer();
+		setShooterDeferring();
 
 		return applyWantedState();
 	}
 
 	private SystemState handleWaitingForFlywheel() {
 //		setShooterLinearVelocity(DriverStation.getStickButton(0, B button number) ? 2.5 : getVisionVelocity());
-		setShooterLinearVelocity(getVisionVelocity());
+		setShooterLinearVelocity(getIntendedVelocity());
 
 		m_intake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Intake.State.INTAKING : Intake.State.RETRACTED);
 		m_uptake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Uptake.State.INTAKING : Uptake.State.NEUTRAL);
@@ -278,7 +294,7 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 		final var chassisSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		final var leftOk = abs(chassisSpeeds.left) < SHOOTING_ALLOWED_SPEED;
 		final var rightOk = abs(chassisSpeeds.right) < SHOOTING_ALLOWED_SPEED;
-		final var rangeOk = true;//getVisionDistance().map(distance -> distance > 1.39 && distance < 2.75).orElse(true);
+		final var rangeOk = getVisionDistance().map(distance -> distance > 1.7 && distance < 2.85).orElse(true);
 
 		if (m_shooterUpper.atReference()
 			&& m_shooterLower.atReference()
@@ -297,12 +313,21 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 	}
 
 	private SystemState handleShooting() {
-		setShooterLinearVelocity(getVisionVelocity());
+		final var intendedVelocity = getIntendedVelocity();
+		setShooterLinearVelocity(intendedVelocity);
 
-		m_intake.setWantedState(m_stateWanted == WantedState.SHOOTING_AND_INTAKING ? Intake.State.INTAKING : Intake.State.RETRACTED);
-		m_uptake.setWantedState(Uptake.State.FEEDING);
+		if (Constants.DO_SHOOTER_LOGGING && m_stateChanged) {
+			m_shotLogger.append(getVisionDistance().map(FastDoubleToString::format).orElse("nil") + ": " + FastDoubleToString.format(intendedVelocity));
+		}
 
-		if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
+		var wantsIntake = m_stateWanted == WantedState.SHOOTING_AND_INTAKING || m_stateWanted == WantedState.INTAKING;
+		m_intake.setWantedState(wantsIntake ? Intake.State.INTAKING : Intake.State.RETRACTED);
+		var revTimeRejectPassed = m_stateChangedTimer.get() > 0.05;
+		m_uptake.setWantedState((m_state != SystemState.REJECTING_CARGO || revTimeRejectPassed) ? Uptake.State.FEEDING : Uptake.State.INTAKING);
+
+		if (m_state == SystemState.REJECTING_CARGO && m_stateChangedTimer.get() < 0.4) {
+			return SystemState.REJECTING_CARGO;
+		} else if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
 			return SystemState.SHOOTING;
 		} else {
 			return applyWantedState();
@@ -405,11 +430,11 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 		return m_periodicIO.shotParameters.map(shot -> shot.getCurrentTurretToGoal().norm());
 	}
 
-	private double getVisionVelocity() {
+	private double getIntendedVelocity() {
 //		return SmartDashboard.getNumber("Shooter Velocity Meters", 0.0);
 
 		if (m_stateWanted == WantedState.LOW_SHOT) {
-			return 2.5;
+			return 4.0;
 		}
 
 		return m_periodicIO.shotParameters.map(shotParameters ->
@@ -429,15 +454,15 @@ setTurretFieldRotation(m_periodicIO.shotParameters.get().getCurrentTurretToGoal(
 			m_shooterLower.setVelocityMetersPerSecond(0);
 			m_shooterUpper.setVelocityMetersPerSecond(0);
 		} else {
-			m_shooterLower.setVelocityMetersPerSecond(velocity - 0.5);
-			m_shooterUpper.setVelocityMetersPerSecond(velocity - 0.5);
+			m_shooterLower.setVelocityMetersPerSecond(velocity - 1.);
+			m_shooterUpper.setVelocityMetersPerSecond(velocity - 1.);
 		}
 	}
 
 	// use for preparing the shot asap
-	public void setShooterDefer() {
+	public void setShooterDeferring() {
 		if (Constants.DO_EARLY_FLYWHEEL && m_prepareShot) {
-			setShooterLinearVelocity(getVisionVelocity());
+			setShooterLinearVelocity(getIntendedVelocity());
 		} else {
 			setShooterLinearVelocity(0.0);
 		}

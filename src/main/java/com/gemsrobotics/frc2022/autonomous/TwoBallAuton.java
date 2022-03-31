@@ -21,8 +21,8 @@ public class TwoBallAuton extends SequentialCommandGroup {
 		));
 
 		final var trajectory2 = chassis.getGeneratedWPITrajectory(List.of(
-				new RigidTransform(new Translation(Units.inches2Meters(60), Units.inches2Meters(-14)), Rotation.degrees(-120)),
-				new RigidTransform(new Translation(Units.inches2Meters(55), Units.inches2Meters(-36)), Rotation.degrees(-120))
+				new RigidTransform(new Translation(Units.inches2Meters(60), Units.inches2Meters(-14)), Rotation.degrees(-105)),
+				new RigidTransform(new Translation(Units.inches2Meters(65), Units.inches2Meters(-38)), Rotation.degrees(-105))
 		));
 
 //		final var trajectory2 = chassis.getGeneratedWPITrajectory(List.of(
@@ -50,7 +50,7 @@ public class TwoBallAuton extends SequentialCommandGroup {
 						),
 						new GemRamseteCommand(trajectory2)
 				),
-				new TurnToHeading(Rotation.degrees(45)),
+				new TurnToHeading(Rotation.degrees(25)),
 				new InstantCommand(() -> Superstructure.getInstance().setWantedState(Superstructure.WantedState.OUTTAKING)),
 				new WaitCommand(3.0),
 				new InstantCommand(() -> Superstructure.getInstance().setWantedState(Superstructure.WantedState.IDLE))

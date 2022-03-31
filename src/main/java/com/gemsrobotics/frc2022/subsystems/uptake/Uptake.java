@@ -1,4 +1,4 @@
-package com.gemsrobotics.frc2022.subsystems;
+package com.gemsrobotics.frc2022.subsystems.uptake;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -32,6 +32,8 @@ public final class Uptake extends Subsystem {
 	private final DigitalInput
 			m_sensorUpper,
 			m_sensorLower;
+	private final CargoColorObserver
+			m_colorObserver;
 	private final PeriodicIO m_periodicIO;
 	private State m_wantedState;
 
@@ -52,6 +54,8 @@ public final class Uptake extends Subsystem {
 		// true when beam is received
 		m_sensorUpper = new DigitalInput(SENSOR_PORT_UPPER);
 		m_sensorLower = new DigitalInput(SENSOR_PORT_LOWER);
+
+		m_colorObserver = new LimelightColorObserver();
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -119,5 +123,9 @@ public final class Uptake extends Subsystem {
 
 	public void setWantedState(final State state) {
 		m_wantedState = state;
+	}
+
+	public boolean isWrongCargoHeld() {
+		return getBallCount() >= 1 && !m_colorObserver.isCargoOurs();
 	}
 }
