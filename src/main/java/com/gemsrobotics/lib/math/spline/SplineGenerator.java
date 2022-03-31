@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.math.spline;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.math.se2.*;
 
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ public class SplineGenerator {
      */
     private static List<RigidTransformWithCurvature> parameterizeSpline(
             final Spline s,
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final double t0,
             final double t1
     ) {
@@ -39,12 +40,12 @@ public class SplineGenerator {
         return rv;
     }
 
-    public static List<RigidTransformWithCurvature> parameterizeSpline(final DriveMotionPlanner.MotionConfig config, final Spline s) {
+    public static List<RigidTransformWithCurvature> parameterizeSpline(final MotionPlanner.MotionConfig config, final Spline s) {
         return parameterizeSpline(s, config, 0.0, 1.0);
     }
 
     public static List<RigidTransformWithCurvature> parameterizeSplines(
-            final DriveMotionPlanner.MotionConfig config,
+            final MotionPlanner.MotionConfig config,
             final List<? extends Spline> splines
     ) {
         final var rv = new ArrayList<RigidTransformWithCurvature>();

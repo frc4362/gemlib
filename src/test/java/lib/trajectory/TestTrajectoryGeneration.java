@@ -1,6 +1,7 @@
 package lib.trajectory;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.math.se2.*;
 import com.gemsrobotics.lib.physics.MotorModel;
@@ -71,10 +72,7 @@ public class TestTrajectoryGeneration {
                 maxVoltage = 12.0;
                 secondsToMaxVoltage = 0.1;
 
-                motionConfig = new DriveMotionPlanner.MotionConfig() {{
-                    beta = 2.0;
-                    zeta = 0.7;
-
+                motionConfig = new MotionPlanner.MotionConfig() {{
                     maxDx = 0.00127;
                     maxDy = 0.00127;
                     maxDtheta = Rotation.degrees(5.0).getRadians();

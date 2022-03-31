@@ -68,7 +68,7 @@ public final class RobotState extends Subsystem {
 			return m_odometer.getDistanceDriven() - m_captureDriveDistance;
 		}
 
-		public Translation getVehicleToOuterGoal() {
+		public Translation getVehicleGoal() {
 			// L A T E N C Y
 			final var turretPose = RobotState.this.getLatestFieldToVehicle()
 				   .transformBy(VEHICLE_TO_TURRET)
@@ -77,7 +77,7 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Optional<Translation> getVehicleToInnerGoal() {
-			final var innerGoal = getVehicleToOuterGoal().translateBy(Constants.OUTER_TO_INNER);
+			final var innerGoal = getVehicleGoal().translateBy(Constants.OUTER_TO_INNER);
 			final var innerA = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION, MANY_METERS).inverse());
 			final var innerC = innerGoal.translateBy(Translation.fromPolar(INNER_SHOT_ALLOWED_DEFLECTION.inverse(), MANY_METERS).inverse());
 			// get latest field to turret
@@ -93,7 +93,7 @@ public final class RobotState extends Subsystem {
 		}
 
 		public Translation getOptimalGoal() {
-			return Constants.USE_INNER_ADJUSTMENT ? getVehicleToInnerGoal().orElseGet(this::getVehicleToOuterGoal) : getVehicleToOuterGoal();
+			return Constants.USE_INNER_ADJUSTMENT ? getVehicleToInnerGoal().orElseGet(this::getVehicleGoal) : getVehicleGoal();
 		}
 	}
 

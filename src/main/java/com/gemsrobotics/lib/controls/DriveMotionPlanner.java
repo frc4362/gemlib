@@ -26,39 +26,9 @@ public class DriveMotionPlanner implements Loggable {
         return "Motion Planner";
     }
 
-	public static class MotionConfig implements Loggable {
-        @Config(name="Beta (Aggression)(0, +Infinity)")
-        public double beta; // aggression coefficient, >0
-        @Config(name="Zeta (Dampening)[0, 1]")
-        public double zeta; // dampening coefficient, [0, 1]
-
-        @Log(name="Max Dx (m)")
-		public double maxDx; // meters
-		@Log(name="Max Dy (m)")
-        public double maxDy; // meters
-		@Log(name="Max Dtheta (rad)")
-        public double maxDtheta; // radians
-		@Log(name="Max Voltage (V)")
-        public double maxVoltage; // volts
-		@Log(name="Max Velocity (m per s)")
-        public double maxVelocity; // meters/second
-		@Log(name="Max Acceleration (m per s^2)")
-        public double maxAcceleration; // meters/second^2
-		@Log(name="Max Centripetal Acceleration (m per s)")
-        public double maxCentripetalAcceleration; // meters/s
-	}
-
-	public static class Output implements Loggable {
-	    @Log.ToString(name="Velocity (rad per s, rad per s)")
-		public WheelState velocityRadiansPerSecond = new WheelState();
-        @Log.ToString(name="Acceleration (rad per s^2, rad per s^2)")
-		public WheelState accelerationRadiansPerSecondSquared = new WheelState();
-        @Log.ToString(name="Feedforward (V, V)")
-		public WheelState feedforwardVoltage = new WheelState();
-	}
 
 	protected transient final DifferentialDriveModel m_model;
-	protected transient final MotionConfig m_config;
+	protected transient final MotionPlanner.MotionConfig m_config;
 
 	protected FollowerType m_followerType;
 
@@ -84,11 +54,11 @@ public class DriveMotionPlanner implements Loggable {
     @Log(name="Reversed? (Boolean)")
 	protected boolean m_isReversed;
 	protected double m_lastTime;
-	protected Output m_output;
+	protected MotionPlanner.Output m_output;
 	protected ChassisState m_previousVelocity;
 
 	public DriveMotionPlanner(
-			final MotionConfig config,
+			final MotionPlanner.MotionConfig config,
 			final DifferentialDriveModel model,
 			final FollowerType followerType
 	) {
@@ -117,12 +87,12 @@ public class DriveMotionPlanner implements Loggable {
 
 	public final void reset() {
 		m_error = RigidTransform.identity();
-		m_output = new Output();
+		m_output = new MotionPlanner.Output();
 		m_lastTime = Double.POSITIVE_INFINITY;
 		m_previousVelocity = new ChassisState();
 	}
 
-	public Optional<Output> update(final double timestamp, final RigidTransform currentPose, final boolean isHighGear) {
+	public Optional<MotionPlanner.Output> update(final double timestamp, final RigidTransform currentPose, final boolean isHighGear) {
 		if (Objects.isNull(m_trajectory)) {
 			return Optional.empty();
 		}
@@ -171,8 +141,8 @@ public class DriveMotionPlanner implements Loggable {
 	}
 
 	// Implements eqn. 5.12 from https://www.dis.uniroma1.it/~labrob/pub/papers/Ramsete01.pdf
-	protected Output updateRamsete(final double dt, final DifferentialDriveModel.Dynamics ref, final boolean isHighGear) {
-		final double k = 2.0 * m_config.zeta * sqrt(m_config.beta * ref.chassisVelocity.linear * ref.chassisVelocity.linear + ref.chassisVelocity.angular * ref.chassisVelocity.angular);
+	protected MotionPlanner.Output updateRamsete(final double dt, final DifferentialDriveModel.Dynamics ref, final boolean isHighGear) {
+		final double k = 2.0 * 0.7 * sqrt(2.0 * ref.chassisVelocity.linear * ref.chassisVelocity.linear + ref.chassisVelocity.angular * ref.chassisVelocity.angular);
 
 		final var angularErrorRadians = m_error.getRotation().getRadians();
 
@@ -182,7 +152,7 @@ public class DriveMotionPlanner implements Loggable {
 						+ k * m_error.getTranslation().x(),
 				ref.chassisVelocity.angular
 						+ k * angularErrorRadians
-						+ ref.chassisVelocity.linear * m_config.beta * sinc(angularErrorRadians, 0.01) * m_error.getTranslation().y());
+						+ ref.chassisVelocity.linear * 2.0 * sinc(angularErrorRadians, 0.01) * m_error.getTranslation().y());
 		// this is where everything goes from meters to wheel radians/s!!
 		ref.wheelVelocityRadiansPerSecond = m_model.inverseKinematics(ref.chassisVelocity);
 
@@ -200,7 +170,7 @@ public class DriveMotionPlanner implements Loggable {
         // our Ramsete controller is highly coupled. This should be fine. - Ethan, 9/24/19
 		m_previousVelocity = ref.chassisVelocity;
 
-		final var output = new Output();
+		final var output = new MotionPlanner.Output();
 		output.velocityRadiansPerSecond = ref.wheelVelocityRadiansPerSecond;
 		output.accelerationRadiansPerSecondSquared = ref.wheelAccelerationRadiansPerSecondSquared;
 		output.feedforwardVoltage = m_model.solveInverseDynamics(ref.chassisVelocity, ref.chassisAcceleration, isHighGear).voltage;

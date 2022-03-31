@@ -4,6 +4,7 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.gemsrobotics.frc2020.Constants;
 import com.gemsrobotics.lib.controls.PIDFController;
+import com.gemsrobotics.lib.drivers.motorcontrol.GemTalon;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -26,7 +27,7 @@ public final class ArmabotTurret240 extends Subsystem implements Loggable, Turre
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(1.0, Units.inches2Meters(13.75) / 2.0, 4096);
 	private static final PIDFController.Gains TURRET_GAINS = new PIDFController.Gains(2.66, 0.0, 0.0, 0.0);
-	private static final int TURRET_USABLE_RANGE = (int) (4096 * (179.5 / 360.0));
+	private static final int TURRET_USABLE_RANGE = (int) (4096 * (178.5 / 360.0));
 
 	private static ArmabotTurret240 INSTANCE;
 
@@ -44,7 +45,7 @@ public final class ArmabotTurret240 extends Subsystem implements Loggable, Turre
 	private Mode m_controlMode;
 
 	private ArmabotTurret240() {
-		m_motor = MotorControllerFactory.createDefaultTalonSRX(Constants.TURRET_PORT);
+		m_motor = new GemTalon<>(new TalonSRX(Constants.TURRET_PORT));//MotorControllerFactory.createDefaultTalonSRX(Constants.TURRET_PORT);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.getInternalController().configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 10);

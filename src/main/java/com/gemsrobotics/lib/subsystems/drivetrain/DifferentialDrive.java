@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.subsystems.drivetrain;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.imu.NavX;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -42,7 +43,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		public MotorModel.Properties propertiesLowGear;
 		public MotorModel.Properties propertiesHighGear;
 		public DifferentialDriveModel.Properties propertiesModel;
-		public DriveMotionPlanner.MotionConfig motionConfig;
+		public MotionPlanner.MotionConfig motionConfig;
 
 		public OpenLoopDriveHelper.Config openLoopConfig;
 
@@ -61,11 +62,11 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     protected final TrajectoryGenerator m_generator;
 	protected final DriveMotionPlanner m_motionPlanner;
 
-    public final NavX m_imu;
+    protected final NavX m_imu;
 	protected final MotorControllerGroup<MotorType> m_motorsLeft, m_motorsRight;
     protected final MotorController<MotorType> m_masterMotorLeft, m_masterMotorRight;
 	protected final Transmission m_transmission;
-    public final PeriodicIO m_periodicIO;
+    protected final PeriodicIO m_periodicIO;
 
     protected FieldToVehicleEstimator m_odometer;
     protected boolean m_isHighGear, m_forceFinishTrajectory;
@@ -100,7 +101,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 new MotorModel(m_config.propertiesHighGear));
         m_openLoopHelper = new OpenLoopDriveHelper(m_config.openLoopConfig);
         m_generator = new TrajectoryGenerator(m_config.motionConfig, m_model);
-		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.RAMSETE);
+		m_motionPlanner = new DriveMotionPlanner(m_config.motionConfig, m_model, FollowerType.FEEDFORWARD);
         m_periodicIO = new PeriodicIO();
 
 		m_odometer = FieldToVehicleEstimator.withStarting(m_model, 0.0, RigidTransform.identity());
@@ -124,7 +125,8 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 		OPEN_LOOP,
 		VELOCITY,
         TRAJECTORY_TRACKING,
-		TUNING
+		TUNING,
+		VOLTAGE
 	}
 
 	private final class PeriodicIO implements Loggable {
@@ -161,7 +163,9 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
     public synchronized boolean setNeutralBehaviour(final MotorController.NeutralBehaviour mode) {
         // please note the use of the NON short-circuiting operator (&&)
-        return m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode)) & m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+		final var left = m_motorsLeft.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+		final var right = m_motorsRight.forEachAttempt(motor -> motor.setNeutralBehaviour(mode));
+        return left && right;
     }
 
 	public synchronized void setHighGear(final boolean wantsHighGear) {
@@ -197,9 +201,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_controlMode = ControlMode.DISABLED;
                     break;
                 case OPEN_LOOP:
+				case VOLTAGE:
                     setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 
-                    m_controlMode = ControlMode.OPEN_LOOP;
+                    m_controlMode = newControlMode;
                     break;
 				case VELOCITY:
                 case TRAJECTORY_TRACKING:
@@ -211,7 +216,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                     m_controlMode = ControlMode.TRAJECTORY_TRACKING;
                     break;
 				case TUNING:
-					setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+					setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 					m_controlMode = ControlMode.TUNING;
 					break;
             }
@@ -230,6 +235,11 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
     public synchronized void setOpenLoop(final WheelState wheelState) {
 		configureControlMode(ControlMode.OPEN_LOOP);
 		m_periodicIO.demand = wheelState;
+	}
+
+	public void setVoltages(final WheelState voltages) {
+		configureControlMode(ControlMode.VOLTAGE);
+		m_periodicIO.demand = voltages;
 	}
 
 	public synchronized void setTrajectory(final TrajectoryIterator<TimedState<RigidTransformWithCurvature>> trajectory) {
@@ -295,7 +305,7 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
 
 	protected void updateTrajectoryFollowingDemands(final double timestamp) {
 		final var output = m_motionPlanner.update(timestamp, m_odometer.getFieldToVehicle(timestamp), m_periodicIO.isHighGear)
-								   .orElse(new DriveMotionPlanner.Output());
+								   .orElse(new MotionPlanner.Output());
 
 		m_periodicIO.trackingError = m_motionPlanner.getError();
 		m_periodicIO.trackingReference = m_motionPlanner.getReference();
@@ -328,6 +338,10 @@ public abstract class DifferentialDrive<MotorType> extends Subsystem {
                 // This makes sense, since this demand was updated externally
                 driveOpenLoop(m_periodicIO.demand);
                 break;
+			case VOLTAGE:
+				m_masterMotorLeft.setVoltage(m_periodicIO.demand.left);
+				m_masterMotorRight.setVoltage(m_periodicIO.demand.right);
+				break;
             case TRAJECTORY_TRACKING:
                 updateTrajectoryFollowingDemands(timestamp);
 			case VELOCITY: // note fallthrough

@@ -9,9 +9,11 @@ import static edu.wpi.first.wpilibj.Timer.getFPGATimestamp;
 
 public final class SingleThreadedSubsystemManager {
 	private final List<Subsystem> m_subsystems;
+	private boolean m_isStarted;
 
 	public SingleThreadedSubsystemManager(final List<Subsystem> subsystems) {
 		m_subsystems = subsystems;
+		m_isStarted = false;
 	}
 
 	public void update() {
@@ -33,16 +35,22 @@ public final class SingleThreadedSubsystemManager {
 	}
 
 	public void start() {
-		m_subsystems.forEach(subsystem -> {
-			try {
-				subsystem.onStart(getFPGATimestamp());
-			} catch (final Throwable throwable) {
-				System.out.println("ERROR: " + throwable);
-			}
-		});
+		if (!m_isStarted) {
+			m_subsystems.forEach(subsystem -> {
+				try {
+					subsystem.onStart(getFPGATimestamp());
+				} catch (final Throwable throwable) {
+					System.out.println("ERROR: " + throwable);
+				}
+			});
+		}
+
+		m_isStarted = true;
 	}
 
 	public void stop() {
+
+		m_isStarted = false;
 		m_subsystems.forEach(subsystem -> {
 			try {
 				subsystem.onStop(getFPGATimestamp());

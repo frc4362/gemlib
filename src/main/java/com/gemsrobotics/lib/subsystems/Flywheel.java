@@ -1,5 +1,6 @@
 package com.gemsrobotics.lib.subsystems;
 
+import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.lib.controls.MotorFeedforward;
 import com.gemsrobotics.lib.controls.PIDFController;
@@ -11,7 +12,7 @@ import edu.wpi.first.wpilibj.MedianFilter;
 
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 
-public abstract class Flywheel<MotorType> extends Subsystem {
+public abstract class Flywheel extends Subsystem {
 	private static final int FILTER_SAMPLE_SIZE = 10;
 
 	public static class Config {
@@ -20,6 +21,7 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 		public PIDFController.Gains gains;
 		public MotorFeedforward feedforward;
 		public double allowableRPMError;
+		public StatorCurrentLimitConfiguration currentLimitConfiguration;
 	}
 
 	protected abstract Config getConfig();
@@ -33,7 +35,7 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 	private final Config m_config;
 	private final MotorControllerGroup<TalonFX> m_motors;
 	private final MedianFilter m_filter;
-	private final PeriodicIO m_periodicIO;
+	public final PeriodicIO m_periodicIO;
 
 	protected Flywheel() {
 		m_config = getConfig();
@@ -43,16 +45,17 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 		motor.setPIDF(m_config.gains);
 		motor.setGearingParameters(1.0, m_config.wheelRadius, 2048);
 		motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+		motor.getInternalController().configStatorCurrentLimit(m_config.currentLimitConfiguration);
 
 		m_filter = new MedianFilter(FILTER_SAMPLE_SIZE);
 		m_periodicIO = new PeriodicIO();
 	}
 
-	private static class PeriodicIO {
+	public static class PeriodicIO {
 		public double shooterMeasuredRPM = 0.0;
 		public double shooterFilteredRPM = 0.0;
 		public double shooterReferenceRPM = 0.0;
-		public double shooterCurrent = 0.0;
+		public double currentDrawnAmps = 0.0;
 		public boolean enabled = false;
 		public boolean atReference = false;
 	}
@@ -62,7 +65,7 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 		m_periodicIO.shooterMeasuredRPM = m_motors.getMaster().getVelocityAngularRPM();
 		final var masterCurrent = m_motors.getMaster().getDrawnCurrentAmps();
 		final var slaveCurrents = m_motors.getSlaves().stream().mapToDouble(MotorController::getDrawnCurrentAmps).sum();
-		m_periodicIO.shooterCurrent = masterCurrent + slaveCurrents;
+		m_periodicIO.currentDrawnAmps = masterCurrent + slaveCurrents;
 		m_periodicIO.shooterFilteredRPM = m_filter.calculate(m_periodicIO.shooterMeasuredRPM);
 	}
 
@@ -79,10 +82,8 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 	protected synchronized void onUpdate(final double timestamp) {
 		if (m_periodicIO.enabled) {
 			final double accelerationSetpoint = (m_periodicIO.shooterReferenceRPM - m_periodicIO.shooterFilteredRPM) / dt();
-			final double shooterFeedforward = m_config.feedforward.calculateVolts(
-					Units.rpm2RadsPerSecond(m_periodicIO.shooterReferenceRPM),
-					Units.rpm2RadsPerSecond(accelerationSetpoint)) / 12.0;
-			m_motors.getMaster().setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforward);
+			final double shooterFeedforwardVolts = m_config.feedforward.calculateVolts(Units.rpm2RadsPerSecond(m_periodicIO.shooterReferenceRPM));
+			m_motors.getMaster().setVelocityRPM(m_periodicIO.shooterReferenceRPM, shooterFeedforwardVolts / 12.0);
 		} else {
 			m_motors.getMaster().setNeutral();
 		}
@@ -103,13 +104,25 @@ public abstract class Flywheel<MotorType> extends Subsystem {
 		m_periodicIO.shooterReferenceRPM = shooterRPM;
 	}
 
-	public synchronized void setMetersPerSecond(final double shooterVelocity) {
+	public synchronized void setVelocityMetersPerSecond(final double shooterVelocity) {
 		m_periodicIO.enabled = shooterVelocity != 0.0;
 		m_periodicIO.shooterReferenceRPM = Units.radsPerSec2Rpm(shooterVelocity / m_config.wheelRadius);
 	}
 
 	public synchronized boolean atReference() {
 		return epsilonEquals(m_periodicIO.shooterReferenceRPM, m_periodicIO.shooterFilteredRPM, m_config.allowableRPMError);
+	}
+
+	public synchronized double getLinearVelocity() {
+		return m_motors.getMaster().getVelocityLinearMetersPerSecond();
+	}
+
+	public double getCurrentAmps() {
+		return m_periodicIO.currentDrawnAmps;
+	}
+
+	public double getVelocityRPM() {
+		return m_periodicIO.shooterFilteredRPM;
 	}
 
 	public synchronized boolean isNeutral() {

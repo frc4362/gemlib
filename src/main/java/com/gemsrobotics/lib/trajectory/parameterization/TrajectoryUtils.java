@@ -1,6 +1,7 @@
 package com.gemsrobotics.lib.trajectory.parameterization;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.math.se2.*;
 import com.gemsrobotics.lib.math.spline.QuinticHermiteSpline;
 import com.gemsrobotics.lib.math.spline.Spline;
@@ -68,7 +69,7 @@ public class TrajectoryUtils {
 
     public static Trajectory<RigidTransformWithCurvature> trajectoryFromSplineWaypoints(
     	final List<RigidTransform> waypoints,
-        final DriveMotionPlanner.MotionConfig config
+        final MotionPlanner.MotionConfig config
 	) {
         List<QuinticHermiteSpline> splines = new ArrayList<>(waypoints.size() - 1);
         for (int i = 1; i < waypoints.size(); ++i) {
@@ -82,7 +83,7 @@ public class TrajectoryUtils {
 
     public static Trajectory<RigidTransformWithCurvature> trajectoryFromSplines(
             final List<? extends Spline> splines,
-            final DriveMotionPlanner.MotionConfig config
+            final MotionPlanner.MotionConfig config
     ) {
         return new Trajectory<>(SplineGenerator.parameterizeSplines(config, splines));
     }

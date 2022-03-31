@@ -136,11 +136,6 @@ public final class Shooter extends Subsystem implements Loggable {
 			m_feederMaster.setNeutral();
 			m_shooterMaster.setNeutral();
 		}
-
-		SmartDashboard.putNumber("Shooter Measured RPM", m_periodicIO.shooterMeasuredRPM);
-		SmartDashboard.putNumber("Shooter Target RPM", m_periodicIO.shooterReferenceRPM);
-		SmartDashboard.putNumber("Feeder Measured RPM", m_periodicIO.feederMeasuredRPM);
-		SmartDashboard.putNumber("Feeder Target RPM", m_periodicIO.feederReferenceRPM);
 	}
 
 	@Override

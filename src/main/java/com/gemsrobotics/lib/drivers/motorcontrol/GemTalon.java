@@ -20,8 +20,8 @@ import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
 public class GemTalon<TalonType extends BaseTalon> implements MotorController<TalonType> {
 	private static final int
-			MAX_TRIES = 3,
-			TIMEOUT_MS = 10;
+			MAX_TRIES = 10,
+			TIMEOUT_MS = 500;
 
 	private final String m_name;
 	private final TalonType m_internal;
@@ -358,8 +358,8 @@ public class GemTalon<TalonType extends BaseTalon> implements MotorController<Ta
 		return (rps / Tau * m_ticksPerRotation / 10.0) / m_cylinderToEncoderReduction;
 	}
 
-	private int getInversionMultiplier() {
-		return (m_inverted && m_isFX ? -1 : 1);
+	protected int getInversionMultiplier() {
+		return (m_inverted && !m_isFX ? -1 : 1);
 	}
 
 	private synchronized boolean runWithRetries(final Supplier<ErrorCode> call) {

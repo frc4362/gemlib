@@ -11,5 +11,5 @@ public interface ShotParameters {
 	/**
 	 * @return The translation from the vehicle to the goal, in the frame of reference of the field
 	 */
-	Translation getVehicleToGoal();
+	Translation getCurrentTurretToGoal();
 }

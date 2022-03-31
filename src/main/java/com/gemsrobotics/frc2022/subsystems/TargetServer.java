@@ -11,11 +11,9 @@ import java.util.*;
 import static java.lang.Math.tan;
 
 public final class TargetServer extends Limelight {
-	// TODO
-	private static final double LENS_HEIGHT_METERS = 0.64;
+	private static final double LENS_HEIGHT_METERS = Units.inches2Meters(43);
 	private static final double GOAL_CENTER_HEIGHT_METERS = 2.581275;
-	// TODO
-	private static final Rotation LENS_PITCH = Rotation.degrees(31.0);
+	private static final Rotation LENS_PITCH = Rotation.degrees(30.0);
 
 	private static TargetServer INSTANCE;
 
@@ -66,8 +64,8 @@ public final class TargetServer extends Limelight {
 			final Rotation a2 = m_periodicIO.offsetVertical;
 			final double distanceMeters = ((GOAL_CENTER_HEIGHT_METERS - LENS_HEIGHT_METERS) / tan(LENS_PITCH.sum(a2).getRadians()));
 			// TODO
-			final double correctedDistanceMeters = (distanceMeters / 1.2) + 0.2968395564; // thanks regression
-			final RigidTransform cameraToTarget = RigidTransform.fromTranslation(Translation.fromPolar(m_periodicIO.offsetHorizontal, correctedDistanceMeters));
+//			final double correctedDistanceMeters = (distanceMeters / 1.2) + 0.2968395564; // thanks regression
+			final RigidTransform cameraToTarget = RigidTransform.fromTranslation(Translation.fromPolar(m_periodicIO.offsetHorizontal, distanceMeters));
 
 			return Optional.of(new TargetInfo(m_periodicIO.timestamp, cameraToTarget));
 		} else {

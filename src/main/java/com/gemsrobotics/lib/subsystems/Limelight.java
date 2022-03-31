@@ -116,21 +116,21 @@ public abstract class Limelight extends Subsystem {
 	public synchronized final void setLEDMode(final LEDMode mode) {
 		if (mode != m_periodicIO.ledMode) {
 			m_modeLedEntry.setDouble(mode.ordinal());
-			System.out.println("Wanted LED mode changed to " + mode.toString() + ".");
+			// System.out.println("Wanted LED mode changed to " + mode.toString() + ".");
 		}
 	}
 
 	public synchronized final void setCameraMode(final CameraMode mode) {
 		if (mode != m_periodicIO.cameraMode) {
 			m_modeCameraEntry.setDouble(mode.ordinal());
-			System.out.println("Wanted camera mode swapped to " + mode.toString() + ".");
+			// System.out.println("Wanted camera mode swapped to " + mode.toString() + ".");
 		}
 	}
 
 	public synchronized final void setSelectedPipeline(final int p) {
 		if (p < 9 && p > 0 && p != m_periodicIO.pipeline) {
 			m_pipelineEntry.setDouble(p);
-			System.out.println("Wanted pipeline swapped to " + p + ".");
+			// System.out.println("Wanted pipeline swapped to " + p + ".");
 		}
 	}
 

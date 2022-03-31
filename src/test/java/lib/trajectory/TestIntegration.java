@@ -1,6 +1,7 @@
 package lib.trajectory;
 
 import com.gemsrobotics.lib.controls.DriveMotionPlanner;
+import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.RigidTransformWithCurvature;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -33,16 +34,13 @@ public class TestIntegration {
 
         final double peakVoltage = 12.0;
         final double wheelRadius = 0.08016875;
-        final double freeSpeed = 4.8 / wheelRadius; // m/s
+        final double freeSpeed = 4.8 / wheelRadius; // r/s
         final double kS = 0.36167; // V
         final double kV = 0.1329; // V / (rad / s)
         final double kA = 0.012; // V / (rad / s^2)
         final double mass = 62.73; // kg
 
-        final var cfg = new DriveMotionPlanner.MotionConfig() {{
-            beta = 2.0;
-            zeta = 0.7;
-
+        final var cfg = new MotionPlanner.MotionConfig() {{
             maxDx = 0.00127;
             maxDy = 0.00127;
             maxDtheta = Rotation.degrees(5.0).getRadians();

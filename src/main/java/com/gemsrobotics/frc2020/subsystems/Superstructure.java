@@ -172,7 +172,7 @@ public final class Superstructure extends Subsystem {
 		}
 
 		@Override
-		public Translation getVehicleToOuterGoal() {
+		public Translation getVehicleGoal() {
 			return m_t.getTranslation().translateBy(new Translation(1.0, 0.0));
 		}
 
@@ -344,7 +344,7 @@ public final class Superstructure extends Subsystem {
 		if (m_periodicIO.target.isPresent()) {
 			final var target = m_periodicIO.target.get();
 			final var goal = target.getOptimalGoal();
-			final var outerDistance = target.getVehicleToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
+			final var outerDistance = target.getVehicleGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 			m_hood.setDeployed(!DriverStation.getStickButton(1, 4));
 
@@ -505,7 +505,7 @@ public final class Superstructure extends Subsystem {
 
 	private boolean isAligned(final Target target, final boolean allowDeadspot) {
 		final var wheelSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond).map(Math::abs);
-		final var outerDistance = target.getVehicleToOuterGoal().distance(m_periodicIO.turretPose.getTranslation());
+		final var outerDistance = target.getVehicleGoal().distance(m_periodicIO.turretPose.getTranslation());
 
 		final var a = m_turret.atReference();
 		final var b = (wheelSpeeds.left + wheelSpeeds.right) < 0.04;

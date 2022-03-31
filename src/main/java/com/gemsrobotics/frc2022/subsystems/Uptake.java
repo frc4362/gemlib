@@ -5,15 +5,16 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
 public final class Uptake extends Subsystem {
-	DigitalInput input = new DigitalInput(14);
-
 	private static final int
 			MOTOR_PORT_TRANSFER = 6,
-			MOTOR_PORT_UPTAKE = 7;
+			MOTOR_PORT_UPTAKE = 7,
+			SENSOR_PORT_UPPER = 0,
+			SENSOR_PORT_LOWER = 1;
 
 	private static Uptake INSTANCE;
 
@@ -28,24 +29,42 @@ public final class Uptake extends Subsystem {
 	private final MotorController<TalonFX>
 			m_motorTransfer,
 			m_motorUptake;
+	private final DigitalInput
+			m_sensorUpper,
+			m_sensorLower;
+	private final PeriodicIO m_periodicIO;
 	private State m_wantedState;
 
 	public enum State {
 		NEUTRAL,
-		INTAKING
+		INTAKING,
+		OUTTAKING,
+		FEEDING
 	}
 
 	private Uptake() {
 		m_motorTransfer = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_TRANSFER);
-		m_motorTransfer.setInvertedOutput(false);
+		m_motorTransfer.setInvertedOutput(true);
 
 		m_motorUptake = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_UPTAKE);
-		m_motorTransfer.setInvertedOutput(false);
+		m_motorUptake.setInvertedOutput(true);
+
+		// true when beam is received
+		m_sensorUpper = new DigitalInput(SENSOR_PORT_UPPER);
+		m_sensorLower = new DigitalInput(SENSOR_PORT_LOWER);
+
+		m_periodicIO = new PeriodicIO();
+	}
+
+	private static class PeriodicIO {
+		public boolean sensorUpper = false;
+		public boolean sensorLower = false;
 	}
 
 	@Override
 	protected void readPeriodicInputs(final double timestamp) {
-
+		m_periodicIO.sensorUpper = m_sensorUpper.get();
+		m_periodicIO.sensorLower = m_sensorLower.get();
 	}
 
 	@Override
@@ -56,15 +75,33 @@ public final class Uptake extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putBoolean("Bottom Broken", !m_periodicIO.sensorLower);
+		SmartDashboard.putBoolean("Upper Broken", !m_periodicIO.sensorUpper);
+
 		if (m_wantedState == State.NEUTRAL) {
 			m_motorTransfer.setNeutral();
 			m_motorUptake.setNeutral();
-		} else if (m_wantedState == State.INTAKING && input.get()) {
-			m_motorTransfer.setDutyCycle(0.5);
-			m_motorUptake.setDutyCycle(0.5);
-		} else if (m_wantedState == State.INTAKING && !input.get()) {
-			m_motorTransfer.setDutyCycle(0.5);
-			m_motorUptake.setNeutral();
+		} else if (m_wantedState == State.INTAKING) {
+			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 1.0);
+			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
+		} else if (m_wantedState == State.FEEDING) {
+			m_motorTransfer.setDutyCycle(1.0);
+			m_motorUptake.setDutyCycle(0.7);
+		} else if (m_wantedState == State.OUTTAKING) {
+			m_motorTransfer.setDutyCycle(-0.7);
+			m_motorUptake.setDutyCycle(-0.5);
+		}
+	}
+
+	public int getBallCount() {
+		if (!m_periodicIO.sensorUpper && !m_periodicIO.sensorLower) {
+			return 2;
+		} else if (!m_periodicIO.sensorLower && m_periodicIO.sensorUpper) {
+			return 0;
+		} else if (!m_periodicIO.sensorUpper && m_periodicIO.sensorLower) {
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 
@@ -80,7 +117,7 @@ public final class Uptake extends Subsystem {
 		m_motorUptake.setNeutral();
 	}
 
-	public void setState(final State state) {
+	public void setWantedState(final State state) {
 		m_wantedState = state;
 	}
 }
