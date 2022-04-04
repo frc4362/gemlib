@@ -8,6 +8,7 @@ import java.util.AbstractMap;
 
 public final class Constants {
 	public static final double OPEN_LOOP_TURN_SENSITIVITY = 0.65;
+	public static final double CLIMB_EXTEND_THRESHOLD_DEGREES = 41.5;
 
 	public static String SMARTDASHBOARD_HOOD_KEY = "Hood Reference Degrees";
 	public static String SMARTDASHBOARD_SHOOTER_KEY = "Shooter Reference Velocity";
@@ -18,7 +19,7 @@ public final class Constants {
 		}
 	}
 
-	public static final boolean DO_SHOOTER_TUNING = true;
+	public static final boolean DO_SHOOTER_TUNING = false;
 	public static final boolean DO_SHOOTER_LOGGING = false;
 	public static final boolean DO_EARLY_FLYWHEEL = true;
 	public static final boolean DO_CARGO_REJECT = false;

@@ -408,7 +408,7 @@ public final class Superstructure extends Subsystem {
 
 		m_climber.setReferencePercent(0.72);
 
-		if (m_chassis.getPitch().getDegrees() > 41.5 && m_climber.atReference()) {
+		if (m_chassis.getPitch().getDegrees() > Constants.CLIMB_EXTEND_THRESHOLD_DEGREES && m_climber.atReference()) {
 			return SystemState.GRAB_BAR;
 		} else {
 			return SystemState.EXTEND_TO_BAR;

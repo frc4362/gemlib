@@ -109,6 +109,7 @@ public final class Blackbird extends TimedRobot {
 	public void robotPeriodic() {
 		SmartDashboard.putString("Robot Position", m_chassis.getOdometer().getLatestFieldToVehicleValue().toString());
 		SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
+		SmartDashboard.putNumber("Robot Pitch Degrees", m_chassis.getPitch().getDegrees());
 	}
 
 	@Override
@@ -212,7 +213,7 @@ public final class Blackbird extends TimedRobot {
 				.map(TargetServer.TargetInfo::getCameraToTarget)
 				.map(RigidTransform::getTranslation)
 				.map(Translation::norm);
-		SmartDashboard.putString("Distance", distance.map(Object::toString).orElse("No target"));
+		SmartDashboard.putString("Distance Meters", distance.map(Object::toString).orElse("No target"));
 		SmartDashboard.putBoolean("Distance Good?", distance.map(Constants::isRangeOk).orElse(false));
 
 		m_subsystemManager.update();
