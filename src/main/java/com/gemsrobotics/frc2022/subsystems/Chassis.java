@@ -24,6 +24,7 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.List;
 import java.util.Objects;
@@ -167,6 +168,11 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	@Override
 	protected Transmission getTransmission() {
 		return new SingleSpeedTransmission();
+	}
+
+	@Override
+	public void onUpdate(final double timestamp) {
+		super.onUpdate(timestamp);
 	}
 
 	public Rotation getPitch() {

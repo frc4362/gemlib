@@ -3,22 +3,13 @@ package com.gemsrobotics.frc2022;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 
-import java.util.Optional;
-
 public class Constants {
 	public static final boolean DO_SHOOTER_LOGGING = true;
 	public static final boolean DO_EARLY_FLYWHEEL = true;
 	public static final boolean DO_CARGO_REJECT = false;
 
-//	private static final double[][] SHOOTER_RANGE_MPS = {
-//			{ 1.39, 8.75 + 0.45 },
-//			{ 1.67, 9.5 + 0.35 },
-//			{ 1.97, 10.25 + 0.3 },
-//			{ 2.24, 10.5 + 0.1},
-//			{ 2.50, 11.0 },
-//			{ 2.80, 12.5 },
-//			{ 3.25, 12.5 }
-//	};
+	public static final double SHOOTER_ALLOWED_MINIMUM_METERS = 1.7;
+	public static final double SHOOTER_ALLOWED_MAXIMUM_METERS = 2.85;
 
 	private static final double[][] SHOOTER_RANGE_MPS = {
 			{ 1.25, 9.15 },

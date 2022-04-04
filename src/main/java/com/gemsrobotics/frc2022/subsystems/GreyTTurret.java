@@ -18,14 +18,14 @@ import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 import static java.lang.Math.abs;
 
 public final class GreyTTurret extends Subsystem implements Turret {
-	private static final double REDUCTION = 1.0 / 140.0;
+	private static final double REDUCTION = 1.0 / 98.0;
 	private static final double ENCODER_COUNTS_PER_REVOLUTION = 2048.0; // unused, integrated sensor
 	private static final MotorController.GearingParameters GEARING_PARAMETERS =
 			new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
 	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.1, 0.0, 0.75, 0.0);
 	private static final int MOTOR_PORT = 4;
 	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.59621, 2.3639, 0.056218);
-	private static final double TICKS_PER_DEGREE = (2048 * 140 / 360.0);
+	private static final double TICKS_PER_DEGREE = (ENCODER_COUNTS_PER_REVOLUTION / REDUCTION / 360.0);
 	private static final double ALLOWABLE_ERROR_TICKS = TICKS_PER_DEGREE * 0.9;
 	private static final int STATE_ESTIMATOR_MAX_SAMPLES = 100;
 	private static final double TIME_TO_RAMP = 0.01;
@@ -50,7 +50,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 	private GreyTTurret() {
 		m_motor = MotorControllerFactory.createTalonFX(MOTOR_PORT, MotorControllerFactory.HIGH_PERFORMANCE_TALON_CONFIG, false);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
-		m_motor.getInternalController().configVoltageCompSaturation(10.0);
+		m_motor.getInternalController().configVoltageCompSaturation(12.0);
 		m_motor.setGearingParameters(GEARING_PARAMETERS);
 		m_motor.setPIDF(GAINS);
 		m_motor.setInvertedOutput(true);
@@ -109,7 +109,7 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
-//		SmartDashboard.putNumber("Turret Velocity", m_periodicIO.velocity.getDegrees());
+		SmartDashboard.putNumber("Turret Volts", m_motor.getVoltageOutput());
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();

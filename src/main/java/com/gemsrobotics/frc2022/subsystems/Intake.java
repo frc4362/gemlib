@@ -1,11 +1,10 @@
 package com.gemsrobotics.frc2022.subsystems;
 
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.gemsrobotics.frc2022.PneumaticsContainer;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
-import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.motorcontrol.PWMTalonFX;
 
 import java.util.Objects;
 
@@ -16,6 +15,7 @@ public final class Intake extends Subsystem {
 			INTAKE_SOLENOID_FORWARD_CHANNEL = 8,
 			INTAKE_SOLENOID_REVERSE_CHANNEL = 9;
 	private static final double EXTENSION_MOTOR_DELAY = 0.3;
+	private static final int MOTOR_PWM_INTAKE = 0;
 
 	private static Intake INSTANCE;
 
@@ -34,17 +34,20 @@ public final class Intake extends Subsystem {
 		EXTENDED
 	}
 
-	private final MotorController<TalonFX> m_motor;
+//	private final MotorController<TalonFX> m_motor;
+	private final PWMTalonFX m_motor;
 	private final DoubleSolenoid m_extender;
 	private final Timer m_intakeExtensionTimer;
 
 	private State m_wantedState;
 
 	private Intake() {
-		m_motor = MotorControllerFactory.createDefaultTalonFX(INTAKE_MOTOR_PORT);
-		m_motor.setOpenLoopVoltageRampRate(0.05);
-		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
-		m_motor.setInvertedOutput(false);
+		m_motor = new PWMTalonFX(MOTOR_PWM_INTAKE);
+		m_motor.setInverted(false);
+//		m_motor = MotorControllerFactory.createDefaultTalonFX(INTAKE_MOTOR_PORT);
+//		m_motor.setOpenLoopVoltageRampRate(0.05);
+//		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.COAST);
+//		m_motor.setInvertedOutput(false);
 
 		m_extender = PneumaticsContainer.getInstance().getIntakeSolenoid();
 
@@ -69,14 +72,17 @@ public final class Intake extends Subsystem {
 			m_extender.set(DoubleSolenoid.Value.kForward);
 
 			if (m_intakeExtensionTimer.get() > EXTENSION_MOTOR_DELAY) {
-				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.6 : -0.6);
+				m_motor.set(m_wantedState == State.INTAKING ? 0.6 : -0.6);
+//				m_motor.setDutyCycle(m_wantedState == State.INTAKING ? 0.6 : -0.6);
 			}
 		} else if (m_wantedState == State.EXTENDED) {
 			m_extender.set(DoubleSolenoid.Value.kForward);
-			m_motor.setDutyCycle(0.0);
+			m_motor.set(0.0);
+//			m_motor.setDutyCycle(0.0);
 		} else {
 			m_extender.set(DoubleSolenoid.Value.kReverse);
-			m_motor.setDutyCycle(0.0);
+			m_motor.set(0.0);
+//			m_motor.setDutyCycle(0.0);
 		}
 	}
 

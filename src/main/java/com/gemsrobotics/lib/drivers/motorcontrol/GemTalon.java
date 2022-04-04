@@ -20,8 +20,8 @@ import static com.gemsrobotics.lib.utils.MathUtils.Tau;
 
 public class GemTalon<TalonType extends BaseTalon> implements MotorController<TalonType> {
 	private static final int
-			MAX_TRIES = 10,
-			TIMEOUT_MS = 500;
+			MAX_TRIES = 3,
+			TIMEOUT_MS = 50;
 
 	private final String m_name;
 	private final TalonType m_internal;

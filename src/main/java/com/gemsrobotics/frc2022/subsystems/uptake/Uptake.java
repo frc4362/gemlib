@@ -5,6 +5,7 @@ import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.motorcontrol.PWMTalonFX;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
@@ -15,6 +16,9 @@ public final class Uptake extends Subsystem {
 			MOTOR_PORT_UPTAKE = 7,
 			SENSOR_PORT_UPPER = 0,
 			SENSOR_PORT_LOWER = 1;
+	private static final int
+			MOTOR_PWM_TRANSFER = 1,
+			MOTOR_PWM_UPTAKE = 2;
 
 	private static Uptake INSTANCE;
 
@@ -26,9 +30,12 @@ public final class Uptake extends Subsystem {
 		return INSTANCE;
 	}
 
-	private final MotorController<TalonFX>
-			m_motorTransfer,
-			m_motorUptake;
+//	private final MotorController<TalonFX>
+//			m_motorTransfer,
+//			m_motorUptake;
+	 private final PWMTalonFX
+	 		m_motorTransfer,
+	 		m_motorUptake;
 	private final DigitalInput
 			m_sensorUpper,
 			m_sensorLower;
@@ -45,11 +52,15 @@ public final class Uptake extends Subsystem {
 	}
 
 	private Uptake() {
-		m_motorTransfer = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_TRANSFER);
-		m_motorTransfer.setInvertedOutput(true);
+//		m_motorTransfer = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_TRANSFER);
+//		m_motorTransfer.setInvertedOutput(true);
+	 	m_motorTransfer = new PWMTalonFX(MOTOR_PWM_TRANSFER);
+	 	m_motorTransfer.setInverted(true);
 
-		m_motorUptake = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_UPTAKE);
-		m_motorUptake.setInvertedOutput(true);
+//		m_motorUptake = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT_UPTAKE);
+//		m_motorUptake.setInvertedOutput(true);
+		m_motorUptake = new PWMTalonFX(MOTOR_PWM_UPTAKE);
+		m_motorUptake.setInverted(true);
 
 		// true when beam is received
 		m_sensorUpper = new DigitalInput(SENSOR_PORT_UPPER);
@@ -73,8 +84,10 @@ public final class Uptake extends Subsystem {
 
 	@Override
 	protected void onStart(final double timestamp) {
-		m_motorTransfer.setNeutral();
-		m_motorUptake.setNeutral();
+		m_motorTransfer.set(0.0);
+		m_motorUptake.set(0.0);
+//		m_motorTransfer.setNeutral();
+//		m_motorUptake.setNeutral();
 	}
 
 	@Override
@@ -83,17 +96,25 @@ public final class Uptake extends Subsystem {
 		SmartDashboard.putBoolean("Upper Broken", !m_periodicIO.sensorUpper);
 
 		if (m_wantedState == State.NEUTRAL) {
-			m_motorTransfer.setNeutral();
-			m_motorUptake.setNeutral();
+			m_motorTransfer.set(0.0);
+			m_motorUptake.set(0.0);
+//			m_motorTransfer.setNeutral();
+//			m_motorUptake.setNeutral();
 		} else if (m_wantedState == State.INTAKING) {
-			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 1.0);
-			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
+			m_motorTransfer.set(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 1.0);
+			m_motorUptake.set(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
+//			m_motorTransfer.setDutyCycle(!m_periodicIO.sensorLower && !m_periodicIO.sensorUpper ? 0.0 : 1.0);
+//			m_motorUptake.setDutyCycle(!m_periodicIO.sensorUpper ? 0.0 : 0.7);
 		} else if (m_wantedState == State.FEEDING) {
-			m_motorTransfer.setDutyCycle(1.0);
-			m_motorUptake.setDutyCycle(0.7);
+			m_motorTransfer.set(1.0);
+			m_motorUptake.set(0.7);
+//			m_motorTransfer.setDutyCycle(1.0);
+//			m_motorUptake.setDutyCycle(0.7);
 		} else if (m_wantedState == State.OUTTAKING) {
-			m_motorTransfer.setDutyCycle(-0.7);
-			m_motorUptake.setDutyCycle(-0.5);
+			m_motorTransfer.set(-0.7);
+			m_motorUptake.set(-0.5);
+//			m_motorTransfer.setDutyCycle(-0.7);
+//			m_motorUptake.setDutyCycle(-0.5);
 		}
 	}
 
@@ -111,14 +132,18 @@ public final class Uptake extends Subsystem {
 
 	@Override
 	protected void onStop(final double timestamp) {
-		m_motorTransfer.setNeutral();
-		m_motorUptake.setNeutral();
+		m_motorTransfer.set(0.0);
+		m_motorUptake.set(0.0);
+//		m_motorTransfer.setNeutral();
+//		m_motorUptake.setNeutral();
 	}
 
 	@Override
 	public void setSafeState() {
-		m_motorTransfer.setNeutral();
-		m_motorUptake.setNeutral();
+		m_motorTransfer.set(0.0);
+		m_motorUptake.set(0.0);
+//		m_motorTransfer.setNeutral();
+//		m_motorUptake.setNeutral();
 	}
 
 	public void setWantedState(final State state) {

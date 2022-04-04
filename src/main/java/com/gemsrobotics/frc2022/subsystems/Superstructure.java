@@ -159,7 +159,7 @@ public final class Superstructure extends Subsystem {
 			|| m_state == SystemState.DONE
 			|| m_state == SystemState.EXTEND_TO_BAR
 			|| m_state == SystemState.LOW_SHOT
-			|| DriverStation.getStickButton(0, 6)
+//			|| DriverStation.getStickButton(0, 6)
 		) {
 			m_turret.setReference(Rotation.identity());
 		} else if (m_turretLocked) {
@@ -294,7 +294,7 @@ public final class Superstructure extends Subsystem {
 		final var chassisSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		final var leftOk = abs(chassisSpeeds.left) < SHOOTING_ALLOWED_SPEED;
 		final var rightOk = abs(chassisSpeeds.right) < SHOOTING_ALLOWED_SPEED;
-		final var rangeOk = getVisionDistance().map(distance -> distance > 1.7 && distance < 2.85).orElse(true);
+		final var rangeOk = true;// getVisionDistance().map(distance -> distance > 1.7 && distance < 2.85).orElse(true);
 
 		if (m_shooterUpper.atReference()
 			&& m_shooterLower.atReference()
@@ -355,7 +355,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.DONE;
 		}
 
-		if (m_climbCount > 0 && m_stateChangedTimer.get() < .5) {
+		if (m_climbCount > 0 && m_stateChangedTimer.get() < 0.5) {
 			return SystemState.PULL_TO_BAR;
 		}
 
@@ -397,7 +397,7 @@ public final class Superstructure extends Subsystem {
 
 		m_climber.setReferencePercent(0.72);
 
-		if (m_chassis.getPitch().getDegrees() < -37.5 && m_climber.atReference()) {
+		if (m_chassis.getPitch().getDegrees() > 41.5 && m_climber.atReference()) {
 			return SystemState.GRAB_BAR;
 		} else {
 			return SystemState.EXTEND_TO_BAR;
@@ -417,9 +417,9 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleDone() {
-		if (m_stateChangedTimer.get() < 2.0) {
-			return SystemState.DONE;
-		}
+//		if (m_stateChangedTimer.get() < 5.0) {
+//			return SystemState.DONE;
+//		}
 
 		m_climber.setReferencePercent(0.7);
 

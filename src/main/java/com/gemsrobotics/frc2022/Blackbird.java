@@ -12,7 +12,6 @@ import com.gemsrobotics.lib.math.se2.Translation;
 import com.gemsrobotics.lib.structure.SingleThreadedSubsystemManager;
 import com.gemsrobotics.lib.subsystems.Flywheel;
 import com.gemsrobotics.lib.subsystems.Limelight;
-import edu.wpi.first.util.datalog.DataLogEntry;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -35,6 +34,7 @@ public final class Blackbird extends TimedRobot {
 	private Uptake m_uptake;
 	private Flywheel m_shooterLower, m_shooterUpper;
 	private Climber m_climber;
+	private Hood m_hood;
 
 	private GreyTTurret m_greytestTurret;
 	private TargetServer m_targetServer;
@@ -67,6 +67,7 @@ public final class Blackbird extends TimedRobot {
 		m_greytestTurret = GreyTTurret.getInstance();
 		m_fieldState = FieldState.getInstance();
 		m_targetServer = TargetServer.getInstance();
+		m_hood = Hood.getInstance();
 
 		m_superstructure = Superstructure.getInstance();
 		m_subsystemManager = new SingleThreadedSubsystemManager(List.of(
@@ -79,7 +80,8 @@ public final class Blackbird extends TimedRobot {
 				m_fieldState,
 				m_superstructure,
 				m_shooterLower,
-				m_shooterUpper
+				m_shooterUpper,
+				m_hood
 		));
 
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
@@ -96,6 +98,7 @@ public final class Blackbird extends TimedRobot {
 		m_brakeTimer = new Timer();
 
 		DataLogManager.start();
+		SmartDashboard.putNumber("Hood Reference Degrees", 21.2);
 	}
 
 	@Override
@@ -209,7 +212,8 @@ public final class Blackbird extends TimedRobot {
 				.map(RigidTransform::getTranslation)
 				.map(Translation::norm);
 		SmartDashboard.putNumber("Distance", distance.orElse(0.0));
-		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > 1.7 && f < 2.85)).orElse(false));
+		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > Constants.SHOOTER_ALLOWED_MINIMUM_METERS && f < Constants.SHOOTER_ALLOWED_MAXIMUM_METERS)).orElse(false));
+		m_hood.setReference(Rotation.degrees(SmartDashboard.getNumber("Hood Reference Degrees", 0.0)));
 
 		m_subsystemManager.update();
 	}
