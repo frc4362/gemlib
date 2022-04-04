@@ -1,6 +1,6 @@
 package com.gemsrobotics.frc2022.subsystems;
 
-import com.gemsrobotics.frc2022.ShotParameters;
+import com.gemsrobotics.frc2022.TargetParameters;
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -16,7 +16,6 @@ import java.util.Optional;
 
 public final class FieldState extends Subsystem {
 	private static final int BUFFER_SIZE = 400;
-	private static final int MANY_METERS = 100;
 
 	private static final RigidTransform
 			VEHICLE_TO_TURRET = RigidTransform.fromTranslation(new Translation(-0.205, 0)), // meters
@@ -43,7 +42,7 @@ public final class FieldState extends Subsystem {
 		m_periodicIO = new PeriodicIO();
 	}
 
-	public class CachedTarget implements ShotParameters {
+	public class CachedTarget implements TargetParameters {
 		private final Timer m_timer;
 		private final Translation m_fieldToGoal;
 		private final double m_captureDriveDistance;
@@ -71,7 +70,8 @@ public final class FieldState extends Subsystem {
 			// L A T E N C Y
 			final var turretPose = FieldState.this.getLatestFieldToVehicle()
 				   .transformBy(VEHICLE_TO_TURRET)
-				   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()));
+				   .transformBy(RigidTransform.fromRotation(m_turretHeading.lastEntry().getValue()))
+				   .transformBy(TURRET_TO_CAMERA);
 			return m_fieldToGoal.difference(turretPose.getTranslation());
 		}
 	}
@@ -80,7 +80,7 @@ public final class FieldState extends Subsystem {
 		public boolean isTargetServerAlive = false;
 		public Rotation newTurretRotation = Rotation.identity();
 		public Optional<TargetServer.TargetInfo> newTargetInfo = Optional.empty();
-		public Optional<ShotParameters> fieldToTargetCached = Optional.empty();
+		public Optional<TargetParameters> fieldToTargetCached = Optional.empty();
 	}
 
 	@Override
@@ -137,7 +137,7 @@ public final class FieldState extends Subsystem {
 		return getFieldToTurret(timestamp).transformBy(TURRET_TO_CAMERA);
 	}
 
-	public Optional<ShotParameters> getCachedFieldToTarget() {
+	public Optional<TargetParameters> getCachedFieldToTarget() {
 		return m_periodicIO.fieldToTargetCached;
 	}
 }

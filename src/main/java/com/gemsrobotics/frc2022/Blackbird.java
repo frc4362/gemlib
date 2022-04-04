@@ -21,8 +21,10 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
+import static com.gemsrobotics.frc2022.Constants.SMARTDASHBOARD_SHOOTER_KEY;
 import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
@@ -57,6 +59,7 @@ public final class Blackbird extends TimedRobot {
 	public void robotInit() {
 		m_pilot = new XboxController(0);
 		m_copilot = new XboxController(1);
+		m_brakeTimer = new Timer();
 
 		m_chassis = Chassis.getInstance();
 		m_intake = Intake.getInstance();
@@ -93,12 +96,13 @@ public final class Blackbird extends TimedRobot {
 		m_autonChooser.addOption("5-Ball", new FiveBallAutonWithSafe());
 		SmartDashboard.putData(m_autonChooser);
 
+		if (Constants.DO_SHOOTER_TUNING) {
+			SmartDashboard.putNumber(Constants.SMARTDASHBOARD_SHOOTER_KEY, 0.0);
+			SmartDashboard.putNumber(Constants.SMARTDASHBOARD_HOOD_KEY, Hood.MIN_ANGLE.getDegrees());
+		}
+
 		LiveWindow.disableAllTelemetry();
-
-		m_brakeTimer = new Timer();
-
 		DataLogManager.start();
-		SmartDashboard.putNumber("Hood Reference Degrees", 21.2);
 	}
 
 	@Override
@@ -129,8 +133,7 @@ public final class Blackbird extends TimedRobot {
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
-		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected())
-				.orElse(new TwoBallAuton());
+		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected()).orElseGet(TwoBallAuton::new);
 		CommandScheduler.getInstance().schedule(autonCommand);
 		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 	}
@@ -169,14 +172,12 @@ public final class Blackbird extends TimedRobot {
 				rightX = m_pilot.getRightX();
 			}
 
-			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX * 0.65, m_pilot.getRightBumper());
+			m_chassis.setCurvatureDrive(powSign(leftY, 2.0), rightX * Constants.OPEN_LOOP_TURN_SENSITIVITY, m_pilot.getRightBumper());
 
 			if (m_pilot.getAButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.INTAKING);
 			} else if (m_pilot.getYButton()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.OUTTAKING);
-			} else if (m_pilot.getLeftTriggerAxis() > 0.7) {
-				m_superstructure.setWantedState(Superstructure.WantedState.LOW_SHOT);
 			} else if (m_pilot.getLeftBumper()) {
 				m_superstructure.setWantedState(Superstructure.WantedState.SHOOTING);
 			} else if (m_copilot.getBButton() && m_copilot.getYButton()) {
@@ -211,9 +212,8 @@ public final class Blackbird extends TimedRobot {
 				.map(TargetServer.TargetInfo::getCameraToTarget)
 				.map(RigidTransform::getTranslation)
 				.map(Translation::norm);
-		SmartDashboard.putNumber("Distance", distance.orElse(0.0));
-		SmartDashboard.putBoolean("Distance Good?", distance.map(f -> (f > Constants.SHOOTER_ALLOWED_MINIMUM_METERS && f < Constants.SHOOTER_ALLOWED_MAXIMUM_METERS)).orElse(false));
-		m_hood.setReference(Rotation.degrees(SmartDashboard.getNumber("Hood Reference Degrees", 0.0)));
+		SmartDashboard.putString("Distance", distance.map(Object::toString).orElse("No target"));
+		SmartDashboard.putBoolean("Distance Good?", distance.map(Constants::isRangeOk).orElse(false));
 
 		m_subsystemManager.update();
 	}

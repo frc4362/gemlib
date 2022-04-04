@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.Objects;
 
+import static com.gemsrobotics.lib.utils.MathUtils.Epsilon;
 import static com.gemsrobotics.lib.utils.MathUtils.epsilonEquals;
 import static java.lang.Math.*;
 
@@ -128,7 +129,7 @@ public class Rotation implements IRotation2d<Rotation> {
     }
 
     public boolean isParallel(final Rotation other) {
-        return epsilonEquals(Translation.cross(toTranslation(), other.toTranslation()), 0.0);
+        return epsilonEquals(Translation.cross(toTranslation(), other.toTranslation()), Epsilon);
     }
 
     public Translation toTranslation() {

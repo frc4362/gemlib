@@ -21,12 +21,12 @@ public final class Hood extends Subsystem {
 		new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
 	private static final PIDController CONTROLLER =
 			new PIDController(0.3, 0.0, 0.011);
-	private static final Rotation
+	public static final Rotation
 		MIN_ANGLE = Rotation.degrees(21.2),
 		MAX_ANGLE = Rotation.degrees(46.0);
 	private static final double
 		FORWARD_SOFT_LIMIT = 12_225,
-		REVERSE_SOFT_LIMIT = -0; // maybe -12_275
+		REVERSE_SOFT_LIMIT = -0;
 	private static final double STICTION_VOLTS = 0.4;
 
 	private static Hood INSTANCE;
@@ -85,10 +85,9 @@ public final class Hood extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putNumber("Hood Position Degrees", m_periodicIO.position.getDegrees());
 		if (m_periodicIO.enabled) {
 			final var v = CONTROLLER.calculate(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees());
-			SmartDashboard.putNumber("Hood Volts Effort", v);
-			SmartDashboard.putNumber("Hood Position Degrees", m_periodicIO.position.getDegrees());
 			m_motor.setVoltage(v);
 		} else {
 			m_motor.setNeutral();
@@ -117,5 +116,13 @@ public final class Hood extends Subsystem {
 
 		m_periodicIO.enabled = true;
 		m_periodicIO.reference = newReference;
+	}
+
+	public void setStowed() {
+		setReference(MIN_ANGLE);
+	}
+
+	public boolean atReference() {
+		return MathUtils.epsilonEquals(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees(), 0.25);
 	}
 }

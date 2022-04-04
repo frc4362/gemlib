@@ -2,44 +2,58 @@ package com.gemsrobotics.frc2022;
 
 import com.gemsrobotics.lib.data.InterpolatingTreeMap;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
+import com.gemsrobotics.lib.math.se2.Rotation;
 
-public class Constants {
-	public static final boolean DO_SHOOTER_LOGGING = true;
-	public static final boolean DO_EARLY_FLYWHEEL = true;
-	public static final boolean DO_CARGO_REJECT = false;
+import java.util.AbstractMap;
 
-	public static final double SHOOTER_ALLOWED_MINIMUM_METERS = 1.7;
-	public static final double SHOOTER_ALLOWED_MAXIMUM_METERS = 2.85;
+public final class Constants {
+	public static final double OPEN_LOOP_TURN_SENSITIVITY = 0.65;
 
-	private static final double[][] SHOOTER_RANGE_MPS = {
-			{ 1.25, 9.15 },
-			{ 1.4, 9.25 },
-			{ 1.55, 9.6 },
-			{ 1.7, 9.8 },
-			{ 2.00, 10.0 },
-			{ 2.17, 10.7 },
-			{ 2.45, 11.0 },
-			{ 2.63, 12.0 },
-			{ 3.1, 13.9 },
-			{ 3.27, 14.2 }
-	};
+	public static String SMARTDASHBOARD_HOOD_KEY = "Hood Reference Degrees";
+	public static String SMARTDASHBOARD_SHOOTER_KEY = "Shooter Reference Velocity";
 
-	private static final InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> SHOOTER_RANGE_RPM_LERPER_CLOSE;
-	static {
-		SHOOTER_RANGE_RPM_LERPER_CLOSE = new InterpolatingTreeMap<>(SHOOTER_RANGE_MPS.length);
-
-		for (final var tuning : SHOOTER_RANGE_MPS) {
-			SHOOTER_RANGE_RPM_LERPER_CLOSE.put(new InterpolatingDouble(tuning[0]), new InterpolatingDouble(tuning[1]));
+	private static class Entry extends AbstractMap.SimpleImmutableEntry<Double, ShooterConfiguration> {
+		public Entry(final Double key, final ShooterConfiguration value) {
+			super(key, value);
 		}
 	}
 
-	public static double getRPM(final double range) {
-		if (range < SHOOTER_RANGE_MPS[0][0]) {
-			return SHOOTER_RANGE_MPS[0][1];
-		} else if (range > SHOOTER_RANGE_MPS[SHOOTER_RANGE_MPS.length - 1][0]) {
-			return SHOOTER_RANGE_MPS[SHOOTER_RANGE_MPS.length - 1][1];
+	public static final boolean DO_SHOOTER_TUNING = true;
+	public static final boolean DO_SHOOTER_LOGGING = false;
+	public static final boolean DO_EARLY_FLYWHEEL = true;
+	public static final boolean DO_CARGO_REJECT = false;
+
+	public static final boolean DO_RANGE_LOCK = false;
+	private static final double SHOOTER_ALLOWED_MINIMUM_METERS = 1.7;
+	private static final double SHOOTER_ALLOWED_MAXIMUM_METERS = 2.85;
+
+	public static boolean isRangeOk(final double rangeMeters) {
+		return rangeMeters > SHOOTER_ALLOWED_MINIMUM_METERS && rangeMeters < SHOOTER_ALLOWED_MAXIMUM_METERS;
+	}
+
+	// range -> (angle, velocity)
+	private static final Entry[] SHOOTER_RANGE_ENTRIES = {
+			new Entry(1.25, new ShooterConfiguration(Rotation.degrees(21.2), new InterpolatingDouble(9.15))),
+			new Entry(1.4, new ShooterConfiguration(Rotation.degrees(21.2), new InterpolatingDouble(9.4))),
+			new Entry(1.55, new ShooterConfiguration(Rotation.degrees(21.2), new InterpolatingDouble(9.6)))
+	};
+
+	private static final InterpolatingTreeMap<InterpolatingDouble, ShooterConfiguration> SHOOTER_RANGE_LERPER;
+	static {
+		SHOOTER_RANGE_LERPER = new InterpolatingTreeMap<>(SHOOTER_RANGE_ENTRIES.length);
+
+		for (final var tuning : SHOOTER_RANGE_ENTRIES) {
+			SHOOTER_RANGE_LERPER.put(new InterpolatingDouble(tuning.getKey()), tuning.getValue());
+		}
+	}
+
+	public static ShooterConfiguration getShooterConfiguration(final double rangeMeters) {
+		if (rangeMeters < SHOOTER_RANGE_ENTRIES[0].getKey()) {
+			return SHOOTER_RANGE_ENTRIES[0].getValue();
+		} else if (rangeMeters > SHOOTER_RANGE_ENTRIES[SHOOTER_RANGE_ENTRIES.length - 1].getKey()) {
+			return SHOOTER_RANGE_ENTRIES[SHOOTER_RANGE_ENTRIES.length - 1].getValue();
 		} else {
-			return SHOOTER_RANGE_RPM_LERPER_CLOSE.getInterpolated(new InterpolatingDouble(range)).value;
+			return SHOOTER_RANGE_LERPER.getInterpolated(new InterpolatingDouble(rangeMeters));
 		}
 	}
 }

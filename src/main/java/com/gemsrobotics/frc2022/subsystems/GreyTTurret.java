@@ -109,7 +109,6 @@ public final class GreyTTurret extends Subsystem implements Turret {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
-		SmartDashboard.putNumber("Turret Volts", m_motor.getVoltageOutput());
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();

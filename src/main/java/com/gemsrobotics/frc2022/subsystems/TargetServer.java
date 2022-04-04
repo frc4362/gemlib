@@ -63,8 +63,6 @@ public final class TargetServer extends Limelight {
 		if (m_periodicIO.targetPresent) {
 			final Rotation a2 = m_periodicIO.offsetVertical;
 			final double distanceMeters = ((GOAL_CENTER_HEIGHT_METERS - LENS_HEIGHT_METERS) / tan(LENS_PITCH.sum(a2).getRadians()));
-			// TODO
-//			final double correctedDistanceMeters = (distanceMeters / 1.2) + 0.2968395564; // thanks regression
 			final RigidTransform cameraToTarget = RigidTransform.fromTranslation(Translation.fromPolar(m_periodicIO.offsetHorizontal, distanceMeters));
 
 			return Optional.of(new TargetInfo(m_periodicIO.timestamp, cameraToTarget));

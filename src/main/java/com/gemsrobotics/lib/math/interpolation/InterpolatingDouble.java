@@ -42,12 +42,6 @@ public class InterpolatingDouble implements
 
     @Override
     public int compareTo(final InterpolatingDouble other) {
-        if (other.value < value) {
-            return 1;
-        } else if (other.value > value) {
-            return -1;
-        } else {
-            return 0;
-        }
+        return value.compareTo(other.value);
     }
 }
