@@ -20,7 +20,7 @@ public final class Constants {
 	}
 
 	public static final boolean DO_SHOOTER_TUNING = false;
-	public static final boolean DO_SHOOTER_LOGGING = false;
+	public static final boolean DO_SHOOTER_LOGGING = true;
 	public static final boolean DO_EARLY_FLYWHEEL = true;
 	public static final boolean DO_CARGO_REJECT = false;
 

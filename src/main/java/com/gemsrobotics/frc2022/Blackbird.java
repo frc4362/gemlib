@@ -197,17 +197,17 @@ public final class Blackbird extends TimedRobot {
 		} else if (m_copilot.getRightBumper()) {
 			m_superstructure.adjustShot(-0.1);
 		}
-
-		if (Constants.DO_SHOOTER_LOGGING) {
-			SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
-			SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
-
-			SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
-			SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
-
-			SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
-			SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
-		}
+//
+//		if (Constants.DO_SHOOTER_LOGGING) {
+//			SmartDashboard.putNumber("Current Drawn Lower", m_shooterLower.getCurrentAmps());
+//			SmartDashboard.putNumber("Current Drawn Upper", m_shooterUpper.getCurrentAmps());
+//
+//			SmartDashboard.putNumber("Shooter Reference RPM Upper", m_shooterUpper.m_periodicIO.shooterReferenceRPM);
+//			SmartDashboard.putNumber("Shooter Reference RPM Lower", m_shooterLower.m_periodicIO.shooterReferenceRPM);
+//
+//			SmartDashboard.putNumber("Shooter Measured RPM Upper", m_shooterUpper.getVelocityRPM());
+//			SmartDashboard.putNumber("Shooter Measured RPM Lower", m_shooterLower.getVelocityRPM());
+//		}
 
 		final var distance = m_targetServer.getTargetInfo()
 				.map(TargetServer.TargetInfo::getCameraToTarget)
