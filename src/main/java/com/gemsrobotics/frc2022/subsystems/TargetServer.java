@@ -11,7 +11,7 @@ import java.util.*;
 import static java.lang.Math.tan;
 
 public final class TargetServer extends Limelight {
-	private static final double LENS_HEIGHT_METERS = Units.inches2Meters(43);
+	private static final double LENS_HEIGHT_METERS = Units.inches2Meters(41.5);
 	private static final double GOAL_CENTER_HEIGHT_METERS = 2.581275;
 	private static final Rotation LENS_PITCH = Rotation.degrees(30.0);
 

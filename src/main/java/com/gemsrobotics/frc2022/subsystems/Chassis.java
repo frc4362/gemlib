@@ -2,7 +2,6 @@ package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.StatorCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.gemsrobotics.lib.controls.DriveMotionPlanner;
 import com.gemsrobotics.lib.controls.MotionPlanner;
 import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -24,7 +23,6 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.List;
 import java.util.Objects;
@@ -38,7 +36,7 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	public static final double peakVoltage = 12.0;
 	public static final double wheelRadius = Units.inches2Meters(4.0) / 2.0;
 	public static final double freeSpeed = 4.6 / wheelRadius; // radians/s
-	public static final double trackWidth = 0.567; // m
+	public static final double trackWidth = 0.63; // m
 	public static final double mass = 62.414; // kg
 	public static final double gearing = 5.91; // 5.91 : 1
 	public static final double kS = 0.65; // V
@@ -77,12 +75,12 @@ public final class Chassis extends DifferentialDrive<TalonFX> {
 	private Chassis() {
 		super();
 		m_kinematics = new DifferentialDriveKinematics(trackWidth);
-		m_autoVoltageConstraint = new DifferentialDriveVoltageConstraint(new SimpleMotorFeedforward(0.7065, 1.98693, 0.39), m_kinematics, 10);
-		m_trajectoryConfig = new TrajectoryConfig(3.0, 3.0)
+		m_autoVoltageConstraint = new DifferentialDriveVoltageConstraint(new SimpleMotorFeedforward(0.734, 1.8448, 1.0571), m_kinematics, 10);
+		m_trajectoryConfig = new TrajectoryConfig(4.0, 3.0)
 				.setKinematics(m_kinematics)
 				.addConstraint(m_autoVoltageConstraint)
 			    .setReversed(false);
-		m_reversedTrajectoryConfig = new TrajectoryConfig(3.0, 3.0)
+		m_reversedTrajectoryConfig = new TrajectoryConfig(4.0, 3.0)
 				.setKinematics(m_kinematics)
 				.addConstraint(m_autoVoltageConstraint)
 				.setReversed(true);

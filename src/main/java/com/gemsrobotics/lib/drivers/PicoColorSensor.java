@@ -4,13 +4,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.gemsrobotics.lib.math.interpolation.Interpolatable;
+import com.gemsrobotics.lib.utils.MathUtils;
+
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.SerialPortJNI;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.wpilibj.Timer;
 
 public class PicoColorSensor implements AutoCloseable {
-	public static class RawColor {
+	public static class RawColor implements Interpolatable<RawColor> {
 		public RawColor(int r, int g, int b, int _ir) {
 			red = r;
 			green = g;
@@ -25,6 +28,24 @@ public class PicoColorSensor implements AutoCloseable {
 		public int green;
 		public int blue;
 		public int ir;
+
+		@Override
+		public String toString() {
+			return "[r: " + red + ", g: " + green + ", b: " + blue + ", ir: " + ir + "]";
+		}
+
+		@Override
+		public RawColor interpolate(RawColor other, double x) {
+			return new RawColor(
+				(int) MathUtils.lerp(red, other.red, x),
+				(int) MathUtils.lerp(green, other.green, x),
+				(int) MathUtils.lerp(blue, other.blue, x),
+				0);
+		}
+
+		public int getBrightness() {
+			return (red + green + blue) / 3;
+		}
 	}
 
 	private static class SingleCharSequence implements CharSequence {

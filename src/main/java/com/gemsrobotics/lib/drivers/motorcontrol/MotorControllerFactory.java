@@ -155,6 +155,37 @@ public final class MotorControllerFactory {
         }
     };
 
+    public static final TalonConfiguration HOOD_TALON_CONFIG = new TalonConfiguration() {
+        {
+             NEUTRAL_MODE = NeutralMode.Brake;
+             NEUTRAL_DEADBAND = 0.02;
+
+             ENABLE_CURRENT_LIMIT = false;
+             ENABLE_SOFT_LIMIT = true;
+             ENABLE_LIMIT_SWITCH = false;
+             FORWARD_SOFT_LIMIT = 0;
+             REVERSE_SOFT_LIMIT = 0;
+
+             INVERTED = false;
+             SENSOR_PHASE = false;
+
+             CONTROL_FRAME_PERIOD_MS = 10;
+             MOTION_CONTROL_FRAME_PERIOD_MS = 100;
+             GENERAL_STATUS_FRAME_RATE_MS = 10;
+             FEEDBACK_STATUS_FRAME_RATE_MS = 20;
+             QUAD_ENCODER_STATUS_FRAME_RATE_MS = 255;
+             ANALOG_TEMP_VBAT_STATUS_FRAME_RATE_MS = 255;
+             PULSE_WIDTH_STATUS_FRAME_RATE_MS = 255;
+
+             VELOCITY_MEASUREMENT_PERIOD = SensorVelocityMeasPeriod.Period_10Ms;
+             VELOCITY_MEASUREMENT_ROLLING_AVERAGE_WINDOW = 4;
+
+             OPEN_LOOP_RAMP_RATE = 0.0;
+             CLOSED_LOOP_RAMP_RATE = 0.0;
+        }
+    };
+
+
     private static final TalonConfiguration DRIVE_TALON = new TalonConfiguration() {
         {
             NEUTRAL_MODE = NeutralMode.Brake;

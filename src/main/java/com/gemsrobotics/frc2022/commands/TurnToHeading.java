@@ -3,15 +3,16 @@ package com.gemsrobotics.frc2022.commands;
 import com.gemsrobotics.frc2022.subsystems.Chassis;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.subsystems.drivetrain.WheelState;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 
 import java.util.Set;
 
 public class TurnToHeading implements Command {
-	private static final double kP = 0.005;
-	private static final double kFF = 0.03;
+	// private static final double kP = 0.005;
+	// private static final double kFF = 0.03;
+	private static final double kP = 0.05;
+	private static final double kFF = 0.07;
 	private final Chassis m_chassis;
 	private final Rotation m_goal;
 	private Rotation m_error;
@@ -25,7 +26,7 @@ public class TurnToHeading implements Command {
 	public void execute() {
 		m_error = m_goal.difference(m_chassis.getHeading());
 		final var e = m_error.getDegrees();
-		m_chassis.setVoltages(new WheelState(e * -kP - kFF * e, e * kP + kFF * e));
+		m_chassis.setVoltages(new WheelState(e * -kP - kFF * Math.signum(e), e * kP + kFF * Math.signum(e)));
 	}
 
 	@Override

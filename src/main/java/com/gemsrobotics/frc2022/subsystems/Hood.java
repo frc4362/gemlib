@@ -1,33 +1,39 @@
 package com.gemsrobotics.frc2022.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
+import com.gemsrobotics.frc2022.Blackbird;
+import com.gemsrobotics.lib.controls.PIDFController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.structure.Subsystem;
 import com.gemsrobotics.lib.utils.MathUtils;
-import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.wpilibj.controller.ArmFeedforward;
+import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.util.Objects;
 
-import static com.gemsrobotics.lib.utils.MathUtils.coerce;
+import static com.gemsrobotics.lib.utils.MathUtils.*;
+import static java.lang.Math.abs;
 
 public final class Hood extends Subsystem {
 	private static final int MOTOR_PORT = 15;
-	private static final double REDUCTION = 1.0 / 84.2;
+	private static final double REDUCTION = 1.0 / (84.2 * 4.0); // added another gearing stage :)
 	private static final int ENCODER_COUNTS_PER_REVOLUTION = 2048;
 	private static final MotorController.GearingParameters GEARING =
 		new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
 	private static final PIDController CONTROLLER =
-			new PIDController(0.3, 0.0, 0.011);
+			new PIDController(0.4, 0.0, 0.0, Blackbird.kPeriod);
 	public static final Rotation
-		MIN_ANGLE = Rotation.degrees(21.2),
+		MIN_ANGLE = Rotation.degrees(22.0),
 		MAX_ANGLE = Rotation.degrees(46.0);
 	private static final double
-		FORWARD_SOFT_LIMIT = 12_225,
+		FORWARD_SOFT_LIMIT = 47_200,
 		REVERSE_SOFT_LIMIT = -0;
-	private static final double STICTION_VOLTS = 0.4;
+	private static final double STICTION_VOLTS = 0.3;
+	private static final double TICKS_PER_DEGREE = FORWARD_SOFT_LIMIT / (MAX_ANGLE.difference(MIN_ANGLE).getDegrees());
+	private static final Rotation ACCEPTABLE_ERROR = Rotation.degrees(0.1);
 
 	private static Hood INSTANCE;
 
@@ -43,13 +49,14 @@ public final class Hood extends Subsystem {
 	private final PeriodicIO m_periodicIO;
 
 	private Hood() {
-		m_motor = MotorControllerFactory.createDefaultTalonFX(MOTOR_PORT);
+		m_motor = MotorControllerFactory.createTalonFX(MOTOR_PORT, MotorControllerFactory.HOOD_TALON_CONFIG, false);
 		m_motor.setGearingParameters(GEARING);
 		m_motor.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_motor.setInvertedOutput(true);
-		m_motor.setOpenLoopVoltageRampRate(0.05);
+		m_motor.setOpenLoopVoltageRampRate(0.02);
 
-		m_motor.getInternalController().configAllowableClosedloopError(0, 70.4);
+		m_motor.getInternalController().configAllowableClosedloopError(0, TICKS_PER_DEGREE * ACCEPTABLE_ERROR.getDegrees());
+		m_motor.getInternalController().configClosedloopRamp(0.05);
 
 		m_motor.getInternalController().configNominalOutputForward(STICTION_VOLTS / 12.0);
 		m_motor.getInternalController().configNominalOutputReverse(-STICTION_VOLTS / 12.0);
@@ -67,14 +74,12 @@ public final class Hood extends Subsystem {
 
 	private static class PeriodicIO {
 		public boolean enabled = false;
-		public double voltsApplied = 0.0;
 		public Rotation reference = Rotation.identity();
 		public Rotation position = Rotation.identity();
 	}
 
 	@Override
 	protected void readPeriodicInputs(final double timestamp) {
-		m_periodicIO.voltsApplied = m_motor.getVoltageOutput();
 		m_periodicIO.position = MIN_ANGLE.rotateBy(Rotation.radians(m_motor.getPositionRotations() * MathUtils.Tau));
 	}
 
@@ -85,10 +90,17 @@ public final class Hood extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
-		SmartDashboard.putNumber("Hood Position Degrees", m_periodicIO.position.getDegrees());
+		final var effort = CONTROLLER.calculate(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees());
+		final var errorDegs = m_periodicIO.reference.difference(m_periodicIO.position).getDegrees();
+		SmartDashboard.putNumber("Hood Error Degrees", errorDegs);
+		SmartDashboard.putNumber("Control Effort", effort);
 		if (m_periodicIO.enabled) {
-			final var v = CONTROLLER.calculate(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees());
-			m_motor.setVoltage(v);
+//			m_motor.setPositionRotations(m_periodicIO.reference.difference(MIN_ANGLE).getRadians() / Tau);
+			// if (abs(errorDegs) < ACCEPTABLE_ERROR.getDegrees()) {
+			// 	m_motor.setNeutral();
+			// } else {
+				m_motor.setVoltage(effort);
+			// }
 		} else {
 			m_motor.setNeutral();
 		}
@@ -123,6 +135,9 @@ public final class Hood extends Subsystem {
 	}
 
 	public boolean atReference() {
-		return MathUtils.epsilonEquals(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees(), 0.25);
+		return epsilonEquals(
+				m_periodicIO.position.getDegrees(),
+				m_periodicIO.reference.getDegrees(),
+				0.25);
 	}
 }

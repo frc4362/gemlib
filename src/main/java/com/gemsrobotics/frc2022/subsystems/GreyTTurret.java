@@ -24,9 +24,10 @@ public final class GreyTTurret extends Subsystem implements Turret {
 			new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
 	private static final PIDFController.Gains GAINS = new PIDFController.Gains(0.1, 0.0, 0.75, 0.0);
 	private static final int MOTOR_PORT = 4;
-	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.59621, 2.3639, 0.056218);
+	// private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.59621, 2.3639, 0.056218);
+	private static final SimpleMotorFeedforward FEEDFORWARD = new SimpleMotorFeedforward(0.3, 2.3639, 0.056218);
 	private static final double TICKS_PER_DEGREE = (ENCODER_COUNTS_PER_REVOLUTION / REDUCTION / 360.0);
-	private static final double ALLOWABLE_ERROR_TICKS = TICKS_PER_DEGREE * 0.9;
+	private static final double ALLOWABLE_ERROR_TICKS = TICKS_PER_DEGREE * 0.5;
 	private static final int STATE_ESTIMATOR_MAX_SAMPLES = 100;
 	private static final double TIME_TO_RAMP = 0.01;
 	private static final double SOFT_LIMIT_TICKS = TICKS_PER_DEGREE * 178.0;

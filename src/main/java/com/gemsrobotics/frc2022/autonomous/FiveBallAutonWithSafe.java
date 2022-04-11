@@ -31,15 +31,15 @@ public class FiveBallAutonWithSafe extends SequentialCommandGroup {
 		));
 
 		final var pickupPose = new RigidTransform(new Translation(Units.inches2Meters(25.0), Units.inches2Meters(-78 - (13.5 * 12))), Rotation.degrees(-55));
-		final var newPickupPose = pickupPose.transformBy(RigidTransform.fromTranslation(new Translation(0.0, Units.inches2Meters(-6))));
+		final var newPickupPose = pickupPose.transformBy(RigidTransform.fromTranslation(new Translation(Units.inches2Meters(-18.0), Units.inches2Meters(6))));
 
 		final var trajectory5 = chassis.getGeneratedWPITrajectory(List.of(
 				new RigidTransform(new Translation(Units.inches2Meters(5.0), Units.inches2Meters(-95)), Rotation.degrees(-110)),
-				pickupPose
+				newPickupPose
 		));
 
 		final var trajectory6 = chassis.getReversedTrajectory(List.of(
-				pickupPose,
+				newPickupPose,
 				new RigidTransform(new Translation(Units.inches2Meters(20.0), Units.inches2Meters(-110)), Rotation.degrees(-90)),
 				new RigidTransform(new Translation(Units.inches2Meters(40.0), Units.inches2Meters(-40)), Rotation.degrees(-90))
 		));
@@ -49,7 +49,7 @@ public class FiveBallAutonWithSafe extends SequentialCommandGroup {
 				new SetTurretLockedCommand(true),
 				new SetTurretGuess(Rotation.degrees(-90)),
 				new ParallelCommandGroup(
-						new IntakeCommand(2, 45.0),
+						new IntakeCommand(2, 2.0),
 						new SequentialCommandGroup(
 							new WaitCommand(0.0),
 							new GemRamseteCommand(trajectory1))
@@ -81,11 +81,12 @@ public class FiveBallAutonWithSafe extends SequentialCommandGroup {
 						)
 					),
 					new SequentialCommandGroup(
-						new WaitCommand(1.5),
+						new WaitCommand(1.),
 						new IntakeCommand(2, 15.0)
 					)
 				),
 				new ShootAllBalls(),
-				new TurnToHeading(Rotation.degrees(70)));
+				new TurnToHeading(Rotation.degrees(90))
+		);
 	}
 }

@@ -129,7 +129,7 @@ public class Rotation implements IRotation2d<Rotation> {
     }
 
     public boolean isParallel(final Rotation other) {
-        return epsilonEquals(Translation.cross(toTranslation(), other.toTranslation()), Epsilon);
+        return epsilonEquals(Translation.cross(toTranslation(), other.toTranslation()), 0);
     }
 
     public Translation toTranslation() {

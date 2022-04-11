@@ -3,6 +3,7 @@ package com.gemsrobotics.frc2022.subsystems;
 import com.gemsrobotics.frc2022.Constants;
 import com.gemsrobotics.frc2022.ShooterConfiguration;
 import com.gemsrobotics.frc2022.TargetParameters;
+import com.gemsrobotics.frc2022.subsystems.Intake.State;
 import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
@@ -54,9 +55,9 @@ public final class Superstructure extends Subsystem {
 		INTAKING,
 		OUTTAKING,
 		LOW_SHOT,
+		TWO_PLUS,
 		WAITING_FOR_FLYWHEEL,
 		SHOOTING,
-		REJECTING_CARGO,
 		PRECLIMB,
 		PULL_TO_BAR,
 		PLACE_ON_BAR,
@@ -84,12 +85,14 @@ public final class Superstructure extends Subsystem {
 	private final FieldState m_fieldState;
 	private final GreyTTurret m_turret;
 	private final Hood m_hood;
+	private final OurPicoSensor m_colorSensor;
 
 	private final PeriodicIO m_periodicIO;
 	private final DataLog m_log;
 	private final StringLogEntry m_shotLogger;
 	private final Timer m_stateChangedTimer, m_wantStateChangeTimer;
 
+	private boolean m_lastBadCargoDetected;
 	private Optional<Rotation> m_turretGuess;
 	private int m_climbCount;
 	private double m_shotAdjustment;
@@ -108,6 +111,7 @@ public final class Superstructure extends Subsystem {
 		m_fieldState = FieldState.getInstance();
 		m_turret = GreyTTurret.getInstance();
 		m_hood = Hood.getInstance();
+		m_colorSensor = OurPicoSensor.getInstance();
 
 		m_periodicIO = new PeriodicIO();
 		m_log = DataLogManager.getLog();
@@ -116,6 +120,7 @@ public final class Superstructure extends Subsystem {
 		m_stateChangedTimer = new Timer();
 		m_wantStateChangeTimer = new Timer();
 
+		m_lastBadCargoDetected = false;
 		m_prepareShot = false;
 		m_turretLocked = false;
 		m_shotAdjustment = 0;
@@ -159,6 +164,12 @@ public final class Superstructure extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		final boolean badCargoDetected = m_colorSensor.isBadCargo();
+
+		if (badCargoDetected && !m_lastBadCargoDetected) {
+			m_uptake.requestRejectCargo();
+		}
+
 		if (m_state == SystemState.PRECLIMB
 			|| m_state == SystemState.PULL_TO_BAR
 			|| m_state == SystemState.PLACE_ON_BAR
@@ -169,6 +180,8 @@ public final class Superstructure extends Subsystem {
 //			|| DriverStation.getStickButton(0, 6)
 		) {
 			m_turret.setReference(Rotation.identity());
+		} else if (m_state == SystemState.TWO_PLUS) {
+			m_turret.setReference(Rotation.degrees(160));
 		} else if (m_turretLocked) {
 			m_turret.setDisabled();
 		} else if (m_periodicIO.shotParameters.isPresent()) {
@@ -200,7 +213,7 @@ public final class Superstructure extends Subsystem {
 				break;
 			case LOW_SHOT:
 			case SHOOTING:
-			case REJECTING_CARGO:
+			case TWO_PLUS:
 				newState = handleShooting();
 				break;
 			case PRECLIMB:
@@ -233,6 +246,8 @@ public final class Superstructure extends Subsystem {
 		} else {
 			m_stateChanged = false;
 		}
+
+		m_lastBadCargoDetected = badCargoDetected;
 	}
 
 	@Override
@@ -276,11 +291,7 @@ public final class Superstructure extends Subsystem {
 		m_uptake.setWantedState(Uptake.State.INTAKING);
 		setShooterDeferring();
 
-		if (Constants.DO_CARGO_REJECT && m_uptake.isWrongCargoHeld()) {
-			return SystemState.REJECTING_CARGO;
-		} else {
-			return applyWantedState();
-		}
+		return applyWantedState();
 	}
 
 	private SystemState handleOuttaking() {
@@ -333,12 +344,9 @@ public final class Superstructure extends Subsystem {
 
 		var wantsIntake = m_stateWanted == WantedState.SHOOTING_AND_INTAKING || m_stateWanted == WantedState.INTAKING;
 		m_intake.setWantedState(wantsIntake ? Intake.State.INTAKING : Intake.State.RETRACTED);
-		var revTimeRejectPassed = m_stateChangedTimer.get() > 0.05;
-		m_uptake.setWantedState((m_state != SystemState.REJECTING_CARGO || revTimeRejectPassed) ? Uptake.State.FEEDING : Uptake.State.INTAKING);
+		m_uptake.setWantedState(Uptake.State.FEEDING);
 
-		if (m_state == SystemState.REJECTING_CARGO && m_stateChangedTimer.get() < 0.4) {
-			return SystemState.REJECTING_CARGO;
-		} else if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
+		if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
 			return SystemState.SHOOTING;
 		} else {
 			return applyWantedState();
@@ -348,6 +356,7 @@ public final class Superstructure extends Subsystem {
 	private SystemState handlePreclimb() {
 		m_climber.setVoltageSettings(Climber.VoltageSetting.HIGH);
 		m_climber.setPreclimbHeight();
+		m_intake.setWantedState(State.CLIMBING);
 		TargetServer.getInstance().setLEDMode(Limelight.LEDMode.OFF);
 
 		if (m_stateWanted == WantedState.CLIMBING) {
@@ -437,10 +446,9 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private Optional<ShooterConfiguration> getShooterConfiguration() {
-		// TODO
-//		if (m_stateWanted == WantedState.LOW_SHOT) {
-//			return 4.0;
-//		}
+		if (m_stateWanted == WantedState.LOW_SHOT) {
+			return Optional.of(Constants.LOW_SHOOTER_CONFIGURATION);
+		}
 
 		if (Constants.DO_SHOOTER_TUNING) {
 			return Optional.of(new ShooterConfiguration(

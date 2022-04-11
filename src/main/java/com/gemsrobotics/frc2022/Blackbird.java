@@ -1,6 +1,5 @@
 package com.gemsrobotics.frc2022;
 
-import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithFender;
 import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
 import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
@@ -21,7 +20,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static com.gemsrobotics.frc2022.Constants.SMARTDASHBOARD_SHOOTER_KEY;
@@ -29,7 +27,7 @@ import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
 public final class Blackbird extends TimedRobot {
-	private static final double kPeriod = 0.02;
+	public static final double kPeriod = 0.02;
 
 	private Chassis m_chassis;
 	private Intake m_intake;
@@ -37,7 +35,7 @@ public final class Blackbird extends TimedRobot {
 	private Flywheel m_shooterLower, m_shooterUpper;
 	private Climber m_climber;
 	private Hood m_hood;
-
+	private OurPicoSensor m_colorSensor;
 	private GreyTTurret m_greytestTurret;
 	private TargetServer m_targetServer;
 	private FieldState m_fieldState;
@@ -47,7 +45,6 @@ public final class Blackbird extends TimedRobot {
 	private XboxController m_pilot, m_copilot;
 
 	private SendableChooser<Command> m_autonChooser;
-	private FiveBallAutonWithFender m_fiveBall;
 
 	private Timer m_brakeTimer;
 
@@ -71,6 +68,7 @@ public final class Blackbird extends TimedRobot {
 		m_fieldState = FieldState.getInstance();
 		m_targetServer = TargetServer.getInstance();
 		m_hood = Hood.getInstance();
+		m_colorSensor = OurPicoSensor.getInstance();
 
 		m_superstructure = Superstructure.getInstance();
 		m_subsystemManager = new SingleThreadedSubsystemManager(List.of(
@@ -84,7 +82,8 @@ public final class Blackbird extends TimedRobot {
 				m_superstructure,
 				m_shooterLower,
 				m_shooterUpper,
-				m_hood
+				m_hood,
+				m_colorSensor
 		));
 
 		m_chassis.getOdometer().reset(Timer.getFPGATimestamp(), RigidTransform.identity());
@@ -110,6 +109,9 @@ public final class Blackbird extends TimedRobot {
 		SmartDashboard.putString("Robot Position", m_chassis.getOdometer().getLatestFieldToVehicleValue().toString());
 		SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
 		SmartDashboard.putNumber("Robot Pitch Degrees", m_chassis.getPitch().getDegrees());
+		SmartDashboard.putString("Observed Color", m_colorSensor.getCargoAlliance().toString());
+		SmartDashboard.putString("Raw Color", m_colorSensor.getFilteredColor().toString());
+		SmartDashboard.putNumber("Brightness", m_colorSensor.getFilteredBrightness());
 	}
 
 	@Override
@@ -137,6 +139,7 @@ public final class Blackbird extends TimedRobot {
 		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected()).orElseGet(TwoBallAuton::new);
 		CommandScheduler.getInstance().schedule(autonCommand);
 		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		m_colorSensor.setFilterDefault();
 	}
 
 	@Override
@@ -154,6 +157,7 @@ public final class Blackbird extends TimedRobot {
 		m_superstructure.setPrepareShot(false);
 		m_superstructure.setTurretLocked(false);
 		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
+		m_colorSensor.setFilterDefault();
 	}
 
 	@Override
