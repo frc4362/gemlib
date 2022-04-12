@@ -1,7 +1,7 @@
 package com.gemsrobotics.frc2022.commands;
 
 import com.gemsrobotics.frc2022.subsystems.Superstructure;
-import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
+import com.gemsrobotics.frc2022.subsystems.Uptake;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;

@@ -31,6 +31,10 @@ public class ShooterConfiguration implements Interpolatable<ShooterConfiguration
 		return m_wheelSpeedMetersPerSecond.value;
 	}
 
+	public static ShooterConfiguration make(final Rotation angle, final double velocityMetersPerSecond) {
+		return new ShooterConfiguration(angle, new InterpolatingDouble(velocityMetersPerSecond));
+	}
+
 	@Override
 	public boolean equals(final Object obj) {
 		if (!(obj instanceof ShooterConfiguration)) {

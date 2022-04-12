@@ -24,7 +24,7 @@ public final class Hood extends Subsystem {
 	private static final MotorController.GearingParameters GEARING =
 		new MotorController.GearingParameters(REDUCTION, 1.0, ENCODER_COUNTS_PER_REVOLUTION);
 	private static final PIDController CONTROLLER =
-			new PIDController(0.4, 0.0, 0.0, Blackbird.kPeriod);
+			new PIDController(0.6, 0.0, 0.0, Blackbird.kPeriod);
 	public static final Rotation
 		MIN_ANGLE = Rotation.degrees(22.0),
 		MAX_ANGLE = Rotation.degrees(46.0);
@@ -93,14 +93,9 @@ public final class Hood extends Subsystem {
 		final var effort = CONTROLLER.calculate(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees());
 		final var errorDegs = m_periodicIO.reference.difference(m_periodicIO.position).getDegrees();
 		SmartDashboard.putNumber("Hood Error Degrees", errorDegs);
-		SmartDashboard.putNumber("Control Effort", effort);
+		SmartDashboard.putNumber("Hood Control Effort", effort);
 		if (m_periodicIO.enabled) {
-//			m_motor.setPositionRotations(m_periodicIO.reference.difference(MIN_ANGLE).getRadians() / Tau);
-			// if (abs(errorDegs) < ACCEPTABLE_ERROR.getDegrees()) {
-			// 	m_motor.setNeutral();
-			// } else {
-				m_motor.setVoltage(effort);
-			// }
+			m_motor.setVoltage(effort);
 		} else {
 			m_motor.setNeutral();
 		}

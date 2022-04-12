@@ -4,7 +4,6 @@ import com.gemsrobotics.frc2022.Constants;
 import com.gemsrobotics.frc2022.ShooterConfiguration;
 import com.gemsrobotics.frc2022.TargetParameters;
 import com.gemsrobotics.frc2022.subsystems.Intake.State;
-import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.interpolation.InterpolatingDouble;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
@@ -29,6 +28,7 @@ import static java.lang.Math.abs;
 
 public final class Superstructure extends Subsystem {
 	private static final double SHOOTING_ALLOWED_SPEED = 0.1;
+
 	private static Superstructure INSTANCE;
 
 	public static Superstructure getInstance() {
@@ -85,7 +85,7 @@ public final class Superstructure extends Subsystem {
 	private final FieldState m_fieldState;
 	private final GreyTTurret m_turret;
 	private final Hood m_hood;
-	private final OurPicoSensor m_colorSensor;
+	private final CargoObserver m_colorSensor;
 
 	private final PeriodicIO m_periodicIO;
 	private final DataLog m_log;
@@ -111,7 +111,7 @@ public final class Superstructure extends Subsystem {
 		m_fieldState = FieldState.getInstance();
 		m_turret = GreyTTurret.getInstance();
 		m_hood = Hood.getInstance();
-		m_colorSensor = OurPicoSensor.getInstance();
+		m_colorSensor = CargoObserver.getInstance();
 
 		m_periodicIO = new PeriodicIO();
 		m_log = DataLogManager.getLog();
@@ -281,7 +281,7 @@ public final class Superstructure extends Subsystem {
 	private SystemState handleIdle() {
 		m_intake.setWantedState(Intake.State.RETRACTED);
 		m_uptake.setWantedState(Uptake.State.NEUTRAL);
-		setShooterDeferring();
+		setShooterEarly();
 
 		return applyWantedState();
 	}
@@ -289,7 +289,7 @@ public final class Superstructure extends Subsystem {
 	private SystemState handleIntaking() {
 		m_intake.setWantedState(Intake.State.INTAKING);
 		m_uptake.setWantedState(Uptake.State.INTAKING);
-		setShooterDeferring();
+		setShooterEarly();
 
 		return applyWantedState();
 	}
@@ -297,7 +297,7 @@ public final class Superstructure extends Subsystem {
 	private SystemState handleOuttaking() {
 		m_intake.setWantedState(Intake.State.OUTTAKING);
 		m_uptake.setWantedState(Uptake.State.OUTTAKING);
-		setShooterDeferring();
+		setShooterEarly();
 
 		return applyWantedState();
 	}
@@ -358,6 +358,7 @@ public final class Superstructure extends Subsystem {
 		m_climber.setPreclimbHeight();
 		m_intake.setWantedState(State.CLIMBING);
 		TargetServer.getInstance().setLEDMode(Limelight.LEDMode.OFF);
+		setShooterConfiguration(ShooterConfiguration.NULL_CONFIGURATION);
 
 		if (m_stateWanted == WantedState.CLIMBING) {
 			return SystemState.PULL_TO_BAR;
@@ -367,14 +368,17 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handlePullToBar() {
+		// set us to correct voltage
 		if (m_stateChanged) {
 			m_climber.setVoltageSettings(Climber.VoltageSetting.LOW);
 		}
 
+		// end the climb
 		if (m_climbCount >= m_climbGoal.map(goal -> goal.allowedClimbs).orElse(0)) {
 			return SystemState.DONE;
 		}
 
+		// wait a minute before proceeding
 		if (m_climbCount > 0 && m_stateChangedTimer.get() < 0.5) {
 			return SystemState.PULL_TO_BAR;
 		}
@@ -425,7 +429,7 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleGrabBar() {
-		m_climber.setReferencePercent(0.95);
+		m_climber.setReferencePercent(0.98);
 
 		if (m_climber.atReference()) {
 			m_climber.setSwingerExtended(false);
@@ -437,7 +441,14 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleDone() {
-		m_climber.setReferencePercent(0.7);
+		if (m_stateChanged) {
+			m_climber.setVoltageSettings(Climber.VoltageSetting.END);
+		}
+
+		if (m_stateChangedTimer.get() > 0.5) {
+			m_climber.setReferencePercent(0.7);
+		}
+
 		return SystemState.DONE;
 	}
 
@@ -447,7 +458,7 @@ public final class Superstructure extends Subsystem {
 
 	private Optional<ShooterConfiguration> getShooterConfiguration() {
 		if (m_stateWanted == WantedState.LOW_SHOT) {
-			return Optional.of(Constants.LOW_SHOOTER_CONFIGURATION);
+			return Optional.of(Constants.FENDER_SHOT_CONFIGURATION);
 		}
 
 		if (Constants.DO_SHOOTER_TUNING) {
@@ -481,11 +492,17 @@ public final class Superstructure extends Subsystem {
 	}
 
 	// use for preparing the shot asap
-	public void setShooterDeferring() {
+	public void setShooterEarly() {
+		final var config = getShooterConfiguration().orElse(ShooterConfiguration.NULL_CONFIGURATION);
 		if (Constants.DO_EARLY_FLYWHEEL && m_prepareShot) {
-			setShooterConfiguration(getShooterConfiguration().orElse(ShooterConfiguration.NULL_CONFIGURATION));
+			setShooterConfiguration(config);
 		} else {
-			setShooterConfiguration(ShooterConfiguration.NULL_CONFIGURATION);
+			var candidateAngle = config.getHoodAngle();
+			if (candidateAngle.getDegrees() > Constants.SAFE_AUTO_HOOD_ANGLE.getDegrees()) {
+				candidateAngle = Constants.SAFE_AUTO_HOOD_ANGLE;
+			}
+
+			setShooterConfiguration(ShooterConfiguration.make(candidateAngle, 0.0));
 		}
 	}
 

@@ -35,8 +35,6 @@ public final class Climber extends Subsystem {
 	private static final ElevatorFeedforward ELEVATOR_FEEDFORWARD = new ElevatorFeedforward(0.51654, 0.36935, 16.29, 0.40084);
 	private static final StatorCurrentLimitConfiguration ELEVATOR_CURRENT_LIMIT =
 			new StatorCurrentLimitConfiguration(false, 100, 100, 1.0);
-	private static final double SLOW_EXTEND_DUTY_CYCLE = 0.375;
-	private static final double SLOW_RETRACT_DUTY_CYCLE = -0.25;
 
 	private static Climber INSTANCE;
 
@@ -154,9 +152,10 @@ public final class Climber extends Subsystem {
 	}
 
 	public enum VoltageSetting {
-		LOW(.6, -2.0 / 3.0),
-		MID(.6, -2.0 / 3.0),
-		HIGH(1.0, -2.0 / 3.0);
+		LOW(1.0, -1),
+		MID(1.0, -1),
+		HIGH(1.0, -1),
+		END(1.0, -0.35);
 
 		public final double forwardLimit, reverseLimit;
 

@@ -12,12 +12,12 @@ import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
-public final class OurPicoSensor extends Subsystem {
-    private static OurPicoSensor INSTANCE;
+public final class CargoObserver extends Subsystem {
+    private static CargoObserver INSTANCE;
 
-    public static OurPicoSensor getInstance() {
+    public static CargoObserver getInstance() {
         if (Objects.isNull(INSTANCE)) {
-            INSTANCE = new OurPicoSensor();
+            INSTANCE = new CargoObserver();
         }
 
         return INSTANCE;
@@ -27,7 +27,7 @@ public final class OurPicoSensor extends Subsystem {
     private final RollingAverage<RawColor> m_rollingAverage;
     private boolean m_filterEnabled;
 
-    private OurPicoSensor() {
+    private CargoObserver() {
         m_colorSensor = new PicoColorSensor();
         m_rollingAverage = new RollingAverage<RawColor>(5);
         m_rollingAverage.add(new RawColor(0, 0, 0, 0));

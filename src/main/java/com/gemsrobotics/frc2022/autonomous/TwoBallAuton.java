@@ -2,8 +2,7 @@ package com.gemsrobotics.frc2022.autonomous;
 
 import com.gemsrobotics.frc2022.commands.*;
 import com.gemsrobotics.frc2022.subsystems.Chassis;
-import com.gemsrobotics.frc2022.subsystems.OurPicoSensor;
-import com.gemsrobotics.frc2022.subsystems.Superstructure;
+import com.gemsrobotics.frc2022.subsystems.CargoObserver;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
 import com.gemsrobotics.lib.math.se2.Translation;
@@ -49,7 +48,7 @@ public class TwoBallAuton extends SequentialCommandGroup {
 
 		addCommands(
 				new ResetOdometerCommand(chassis, trajectory1),
-				new InstantCommand(() -> OurPicoSensor.getInstance().setFilterDisabled()),
+				new InstantCommand(() -> CargoObserver.getInstance().setFilterDisabled()),
 				new SetTurretGuess(Rotation.degrees(-150)),
 				new PrepareShotCommand(true),
 				new ParallelCommandGroup(

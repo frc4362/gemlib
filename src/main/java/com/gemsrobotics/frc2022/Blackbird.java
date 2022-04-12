@@ -3,7 +3,7 @@ package com.gemsrobotics.frc2022;
 import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
 import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
-import com.gemsrobotics.frc2022.subsystems.uptake.Uptake;
+import com.gemsrobotics.frc2022.subsystems.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 import com.gemsrobotics.lib.math.se2.RigidTransform;
 import com.gemsrobotics.lib.math.se2.Rotation;
@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import java.util.List;
 import java.util.Optional;
 
-import static com.gemsrobotics.frc2022.Constants.SMARTDASHBOARD_SHOOTER_KEY;
 import static com.gemsrobotics.lib.utils.MathUtils.powSign;
 import static java.lang.Math.abs;
 
@@ -35,7 +34,7 @@ public final class Blackbird extends TimedRobot {
 	private Flywheel m_shooterLower, m_shooterUpper;
 	private Climber m_climber;
 	private Hood m_hood;
-	private OurPicoSensor m_colorSensor;
+	private CargoObserver m_colorSensor;
 	private GreyTTurret m_greytestTurret;
 	private TargetServer m_targetServer;
 	private FieldState m_fieldState;
@@ -68,7 +67,7 @@ public final class Blackbird extends TimedRobot {
 		m_fieldState = FieldState.getInstance();
 		m_targetServer = TargetServer.getInstance();
 		m_hood = Hood.getInstance();
-		m_colorSensor = OurPicoSensor.getInstance();
+		m_colorSensor = CargoObserver.getInstance();
 
 		m_superstructure = Superstructure.getInstance();
 		m_subsystemManager = new SingleThreadedSubsystemManager(List.of(
@@ -108,10 +107,7 @@ public final class Blackbird extends TimedRobot {
 	public void robotPeriodic() {
 		SmartDashboard.putString("Robot Position", m_chassis.getOdometer().getLatestFieldToVehicleValue().toString());
 		SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
-		SmartDashboard.putNumber("Robot Pitch Degrees", m_chassis.getPitch().getDegrees());
-		SmartDashboard.putString("Observed Color", m_colorSensor.getCargoAlliance().toString());
-		SmartDashboard.putString("Raw Color", m_colorSensor.getFilteredColor().toString());
-		SmartDashboard.putNumber("Brightness", m_colorSensor.getFilteredBrightness());
+		SmartDashboard.putNumber("Robot Pitch",  m_chassis.getPitch().getDegrees());
 	}
 
 	@Override

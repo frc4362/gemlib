@@ -1,8 +1,5 @@
-package com.gemsrobotics.frc2022.subsystems.uptake;
+package com.gemsrobotics.frc2022.subsystems;
 
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
-import com.gemsrobotics.lib.drivers.motorcontrol.MotorControllerFactory;
 import com.gemsrobotics.lib.structure.Subsystem;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
@@ -93,7 +90,7 @@ public final class Uptake extends Subsystem {
 		if (m_wantedState == State.OUTTAKING) {
 			m_motorTransfer.set(-0.7);
 			m_motorUptake.set(-0.5);
-		} else if (m_rejectionTimer.get() < REJECTION_TIME_SECONDS) {
+		} else if (m_rejectionTimer.hasElapsed(REJECTION_TIME_SECONDS)) {
 			m_motorTransfer.set(1.0);
 			m_motorUptake.set(-0.2);
 		} else if (m_wantedState == State.NEUTRAL) {
@@ -118,6 +115,10 @@ public final class Uptake extends Subsystem {
 		} else {
 			return 0;
 		}
+	}
+
+	public boolean isFull() {
+		return !m_periodicIO.sensorLower && m_periodicIO.sensorUpper && m_rejectionTimer.hasElapsed(REJECTION_TIME_SECONDS);
 	}
 
 	@Override
