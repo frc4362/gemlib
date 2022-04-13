@@ -44,7 +44,9 @@ public final class Uptake extends Subsystem {
 		NEUTRAL,
 		INTAKING,
 		OUTTAKING,
-		FEEDING
+		FEEDING,
+		EXHAUSTING,
+		UNLOADING
 	}
 
 	private Uptake() {
@@ -102,7 +104,13 @@ public final class Uptake extends Subsystem {
 		} else if (m_wantedState == State.FEEDING) {
 			m_motorTransfer.set(1.0);
 			m_motorUptake.set(0.7);
-		} 
+		} else if (m_wantedState == State.EXHAUSTING) {
+			m_motorUptake.set(0.0);
+			m_motorTransfer.set(1.0);
+		} else if (m_wantedState == State.UNLOADING) {
+			m_motorUptake.set(-0.7);
+			m_motorTransfer.set(1.0);
+		}
 	}
 
 	public int getBallCount() {

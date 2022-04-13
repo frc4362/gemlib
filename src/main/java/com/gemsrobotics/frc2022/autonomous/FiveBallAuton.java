@@ -11,8 +11,8 @@ import edu.wpi.first.wpilibj2.command.*;
 
 import java.util.List;
 
-public class FiveBallAutonWithSafe extends SequentialCommandGroup {
-	public FiveBallAutonWithSafe() {
+public class FiveBallAuton extends SequentialCommandGroup {
+	public FiveBallAuton() {
 		final var chassis = Chassis.getInstance();
 
 		final var trajectory1 = chassis.getGeneratedWPITrajectory(List.of(

@@ -11,8 +11,8 @@ import edu.wpi.first.wpilibj2.command.*;
 
 import java.util.List;
 
-public class TwoBallAuton extends SequentialCommandGroup {
-	public TwoBallAuton() {
+public class TwoPlusTwoAuton extends SequentialCommandGroup {
+	public TwoPlusTwoAuton() {
 		final var chassis = Chassis.getInstance();
 
 		final var trajectory1 = chassis.getGeneratedWPITrajectory(List.of(
@@ -21,7 +21,7 @@ public class TwoBallAuton extends SequentialCommandGroup {
 		));
 
 		final var pivot = new RigidTransform(new Translation(Units.inches2Meters(65), Units.inches2Meters(-14)), Rotation.degrees(-80));
-		final var endPivot = pivot.transformBy(RigidTransform.fromTranslation(new Translation(Units.inches2Meters(36.0), 0)));
+		final var endPivot = new RigidTransform(new Translation(1.810, -1.256), Rotation.degrees(-80));
 		final var trajectory2 = chassis.getGeneratedWPITrajectory(List.of(
 			pivot,
 			endPivot
@@ -40,11 +40,6 @@ public class TwoBallAuton extends SequentialCommandGroup {
 			ending,
 			G,
 			G.transformBy(new RigidTransform(new Translation(Units.inches2Meters(-20), Units.inches2Meters(8)), Rotation.degrees(-10)))));
-
-//		final var trajectory2 = chassis.getGeneratedWPITrajectory(List.of(
-//				new RigidTransform(new Translation(Units.inches2Meters(40), 0.0), Rotation.degrees(20.0)),
-//				new RigidTransform(new Translation(Units.inches2Meters(40) + Units.inches2Meters(20), -10), Rotation.degrees(20.0))
-//		));
 
 		addCommands(
 				new ResetOdometerCommand(chassis, trajectory1),
@@ -72,13 +67,8 @@ public class TwoBallAuton extends SequentialCommandGroup {
 						new IntakeCommand(2, 5.0)),
 					new GemRamseteCommand(trajectory3)
 				),
-				new GemRamseteCommand(trajectory4)
-
-				// new InstantCommand(() -> Superstructure.getInstance().setWantedState(Superstructure.WantedState.OUTTAKING)),
-				// new WaitCommand(3.0),
-				// new InstantCommand(() -> Superstructure.getInstance().setWantedState(Superstructure.WantedState.IDLE))
-				// new InstantCommand(() -> OurPicoSensor.getInstance().setFilterDefault())
-//				new GemRamseteCommand(trajectory2)
+				new GemRamseteCommand(trajectory4),
+				new ExhaustBallsCommand()
 		);
 	}
 }

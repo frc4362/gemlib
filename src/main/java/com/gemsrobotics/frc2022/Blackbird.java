@@ -1,7 +1,7 @@
 package com.gemsrobotics.frc2022;
 
-import com.gemsrobotics.frc2022.autonomous.FiveBallAutonWithSafe;
-import com.gemsrobotics.frc2022.autonomous.TwoBallAuton;
+import com.gemsrobotics.frc2022.autonomous.FiveBallAuton;
+import com.gemsrobotics.frc2022.autonomous.TwoPlusTwoAuton;
 import com.gemsrobotics.frc2022.subsystems.*;
 import com.gemsrobotics.frc2022.subsystems.Uptake;
 import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
@@ -45,7 +45,8 @@ public final class Blackbird extends TimedRobot {
 
 	private SendableChooser<Command> m_autonChooser;
 
-	private Timer m_brakeTimer;
+	private boolean m_lastUptakeFull;
+	private Timer m_brakeTimer, m_vibrateTimer;
 
 	public Blackbird() {
 		super(kPeriod);
@@ -55,7 +56,6 @@ public final class Blackbird extends TimedRobot {
 	public void robotInit() {
 		m_pilot = new XboxController(0);
 		m_copilot = new XboxController(1);
-		m_brakeTimer = new Timer();
 
 		m_chassis = Chassis.getInstance();
 		m_intake = Intake.getInstance();
@@ -90,14 +90,18 @@ public final class Blackbird extends TimedRobot {
 
 		m_autonChooser = new SendableChooser<>();
 		m_autonChooser.addOption("None", new WaitCommand(1.0));
-		m_autonChooser.addOption("2-Ball", new TwoBallAuton());
-		m_autonChooser.addOption("5-Ball", new FiveBallAutonWithSafe());
+		m_autonChooser.addOption("2-Ball", new TwoPlusTwoAuton());
+		m_autonChooser.addOption("5-Ball", new FiveBallAuton());
 		SmartDashboard.putData(m_autonChooser);
 
 		if (Constants.DO_SHOOTER_TUNING) {
 			SmartDashboard.putNumber(Constants.SMARTDASHBOARD_SHOOTER_KEY, 0.0);
 			SmartDashboard.putNumber(Constants.SMARTDASHBOARD_HOOD_KEY, Hood.MIN_ANGLE.getDegrees());
 		}
+
+		m_brakeTimer = new Timer();
+		m_vibrateTimer = new Timer();
+		m_lastUptakeFull = false;
 
 		LiveWindow.disableAllTelemetry();
 		DataLogManager.start();
@@ -115,6 +119,10 @@ public final class Blackbird extends TimedRobot {
 		m_subsystemManager.stop();
 		m_brakeTimer.reset();
 		m_brakeTimer.start();
+
+		m_vibrateTimer.reset();
+		m_pilot.setRumble(GenericHID.RumbleType.kLeftRumble, 0.0);
+		m_pilot.setRumble(GenericHID.RumbleType.kRightRumble, 0.0);
 	}
 
 	@Override
@@ -132,7 +140,7 @@ public final class Blackbird extends TimedRobot {
 		m_subsystemManager.start();
 		m_targetServer.setLEDMode(Limelight.LEDMode.ON);
 		PneumaticsContainer.getInstance().getSwingSolenoid().set(DoubleSolenoid.Value.kForward);
-		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected()).orElseGet(TwoBallAuton::new);
+		final var autonCommand = Optional.ofNullable(m_autonChooser.getSelected()).orElseGet(TwoPlusTwoAuton::new);
 		CommandScheduler.getInstance().schedule(autonCommand);
 		m_chassis.setNeutralBehaviour(MotorController.NeutralBehaviour.BRAKE);
 		m_colorSensor.setFilterDefault();
@@ -217,5 +225,22 @@ public final class Blackbird extends TimedRobot {
 		SmartDashboard.putBoolean("Distance Good?", distance.map(Constants::isRangeOk).orElse(false));
 
 		m_subsystemManager.update();
+
+		final var uptakeFull = m_uptake.isFull();
+
+		if (uptakeFull && !m_lastUptakeFull) {
+			m_pilot.setRumble(GenericHID.RumbleType.kLeftRumble, 1.0);
+			m_pilot.setRumble(GenericHID.RumbleType.kRightRumble, 1.0);
+			m_vibrateTimer.start();
+		}
+
+		if (m_vibrateTimer.hasElapsed(0.5)) {
+			m_pilot.setRumble(GenericHID.RumbleType.kLeftRumble, 0.0);
+			m_pilot.setRumble(GenericHID.RumbleType.kRightRumble, 0.0);
+			m_vibrateTimer.stop();
+			m_vibrateTimer.reset();
+		}
+
+		m_lastUptakeFull = uptakeFull;
 	}
 }
