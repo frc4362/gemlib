@@ -22,7 +22,8 @@ public abstract class Limelight extends Subsystem {
 	protected static final Rotation FOV_HORIZONTAL_HALF = Rotation.degrees(27.0);
 	protected static final Rotation FOV_VERTICAL_HALF = Rotation.degrees(20.5);
 
-	protected static final double IMAGE_CAPTURE_LATENCY_S = 11e-3;
+	// TODO: put this back
+	protected static final double IMAGE_CAPTURE_LATENCY_S = 1.0 / 22.0; //11e-3; 
 
 	private final NetworkTable m_table;
 	private final NetworkTableEntry

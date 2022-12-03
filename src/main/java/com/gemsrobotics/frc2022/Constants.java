@@ -25,11 +25,11 @@ public final class Constants {
 	public static final boolean DO_CARGO_REJECT = true;
 
 	public static final boolean DO_RANGE_LOCK = true;
-	private static final double SHOOTER_ALLOWED_MINIMUM_METERS = 1.25;
-	private static final double SHOOTER_ALLOWED_MAXIMUM_METERS = 10.0;
+	private static final double SHOOTER_ALLOWED_MINIMUM_METERS = 1.6;
+	private static final double SHOOTER_ALLOWED_MAXIMUM_METERS = 5.6;
 
 	public static final Rotation SAFE_AUTO_HOOD_ANGLE = Rotation.degrees(33.0);
-	public static final ShooterConfiguration FENDER_SHOT_CONFIGURATION = new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(5.0));
+	public static final ShooterConfiguration FENDER_SHOT_CONFIGURATION = new ShooterConfiguration(Rotation.degrees(22), new InterpolatingDouble(4.5));
 
 	public static boolean isRangeOk(final double rangeMeters) {
 		return rangeMeters > SHOOTER_ALLOWED_MINIMUM_METERS && rangeMeters < SHOOTER_ALLOWED_MAXIMUM_METERS;
@@ -38,17 +38,20 @@ public final class Constants {
 	// range -> (angle, velocity)
 	private static final Entry[] SHOOTER_RANGE_ENTRIES = {
 			new Entry(1.25, new ShooterConfiguration(Rotation.degrees(22), new InterpolatingDouble(8.5))),
+			new Entry(1.4, new ShooterConfiguration(Rotation.degrees(24.5), new InterpolatingDouble(8.5))), // new
 			new Entry(1.59, new ShooterConfiguration(Rotation.degrees(27), new InterpolatingDouble(8.25))),
 			new Entry(1.7, new ShooterConfiguration(Rotation.degrees(28.5), new InterpolatingDouble(8.5))),
 			new Entry(1.95, new ShooterConfiguration(Rotation.degrees(31), new InterpolatingDouble(9.0))),
 			new Entry(2.2, new ShooterConfiguration(Rotation.degrees(33), new InterpolatingDouble(9.17))),
 			new Entry(2.48, new ShooterConfiguration(Rotation.degrees(33), new InterpolatingDouble(9.65))),
 			new Entry(2.8, new ShooterConfiguration(Rotation.degrees(34), new InterpolatingDouble(9.8))),
-			new Entry(3.16, new ShooterConfiguration(Rotation.degrees(35), new InterpolatingDouble(10.25))),
+			new Entry(3.16, new ShooterConfiguration(Rotation.degrees(35), new InterpolatingDouble(10.7))), // used to be 10.25
 			new Entry(3.47, new ShooterConfiguration(Rotation.degrees(35), new InterpolatingDouble(11.5))),
+			new Entry(3.77, new ShooterConfiguration(Rotation.degrees(42), new InterpolatingDouble(11.25))),
 			new Entry(3.9, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(10.9))),
 			new Entry(4.47, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(12.0))),
-			new Entry(6.2, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(13.9))),
+			new Entry(4.9, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(12.7))), // new point
+			new Entry(6.2, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(13.6))),
 			new Entry(6.5, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(14.2))),
 			new Entry(7.9, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(15.3))),
 			new Entry(10.0, new ShooterConfiguration(Rotation.degrees(46), new InterpolatingDouble(16.5))),

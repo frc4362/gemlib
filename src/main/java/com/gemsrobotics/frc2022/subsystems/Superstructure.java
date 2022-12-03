@@ -47,7 +47,8 @@ public final class Superstructure extends Subsystem {
 		SHOOTING,
 		SHOOTING_AND_INTAKING,
 		PRECLIMBING,
-		CLIMBING
+		CLIMBING,
+		RESET_CLIMB
 	}
 
 	public enum SystemState {
@@ -63,7 +64,8 @@ public final class Superstructure extends Subsystem {
 		PLACE_ON_BAR,
 		EXTEND_TO_BAR,
 		GRAB_BAR,
-		DONE
+		DONE,
+		RESETTING_CLIMB
 	}
 
 	public enum ClimbGoal {
@@ -164,6 +166,8 @@ public final class Superstructure extends Subsystem {
 
 	@Override
 	protected void onUpdate(final double timestamp) {
+		SmartDashboard.putNumber("Climb Count", m_climbCount);
+
 		final boolean badCargoDetected = m_colorSensor.isBadCargo();
 
 		if (badCargoDetected && !m_lastBadCargoDetected) {
@@ -176,7 +180,6 @@ public final class Superstructure extends Subsystem {
 			|| m_state == SystemState.GRAB_BAR
 			|| m_state == SystemState.DONE
 			|| m_state == SystemState.EXTEND_TO_BAR
-			|| m_state == SystemState.LOW_SHOT
 //			|| DriverStation.getStickButton(0, 6)
 		) {
 			m_turret.setReference(Rotation.identity());
@@ -212,6 +215,8 @@ public final class Superstructure extends Subsystem {
 				newState = handleWaitingForFlywheel();
 				break;
 			case LOW_SHOT:
+				newState = handleLowShot();
+				break;
 			case SHOOTING:
 			case TWO_PLUS:
 				newState = handleShooting();
@@ -265,6 +270,7 @@ public final class Superstructure extends Subsystem {
 			case OUTTAKING:
 				return SystemState.OUTTAKING;
 			case LOW_SHOT:
+				return SystemState.LOW_SHOT;
 			case SHOOTING:
 			case SHOOTING_AND_INTAKING:
 				return SystemState.WAITING_FOR_FLYWHEEL;
@@ -302,6 +308,30 @@ public final class Superstructure extends Subsystem {
 		return applyWantedState();
 	}
 
+	public void requestResetClimb() {
+		m_climbCount = 0;
+		m_climber.setReferencePercent(0.0);
+		m_climber.setSwingerExtended(false);
+		m_state = SystemState.IDLE;
+	}
+
+	private SystemState handleLowShot() {
+		m_shooterLower.setVelocityMetersPerSecond(3.0);
+		m_shooterUpper.setVelocityMetersPerSecond(3.0);
+
+		if (m_stateChangedTimer.get() > 0.1 && m_stateChangedTimer.get() < 0.4) {
+			m_uptake.setWantedState(Uptake.State.SLOW_FEEDING);
+		} else {
+			m_uptake.setWantedState(Uptake.State.NEUTRAL);
+		}
+
+		if (m_stateChangedTimer.get() < 0.25) {
+			return SystemState.LOW_SHOT;
+		}
+
+		return applyWantedState();
+	}
+
 	private SystemState handleWaitingForFlywheel() {
 		setShooterConfiguration(getShooterConfiguration().orElse(ShooterConfiguration.NULL_CONFIGURATION));
 
@@ -311,7 +341,7 @@ public final class Superstructure extends Subsystem {
 		final var chassisSpeeds = m_chassis.getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
 		final var leftOk = abs(chassisSpeeds.left) < SHOOTING_ALLOWED_SPEED;
 		final var rightOk = abs(chassisSpeeds.right) < SHOOTING_ALLOWED_SPEED;
-		final var rangeOk = (!Constants.DO_RANGE_LOCK) || getVisionDistance().map(Constants::isRangeOk).orElse(true);
+		final var rangeOk = (!Constants.DO_RANGE_LOCK) || (m_stateWanted == WantedState.LOW_SHOT) || getVisionDistance().map(Constants::isRangeOk).orElse(true);
 
 		if (m_shooterUpper.atReference()
 			&& m_shooterLower.atReference()
@@ -323,7 +353,7 @@ public final class Superstructure extends Subsystem {
 			&& (DriverStation.isAutonomous() || rangeOk)
 		) {
 			return SystemState.SHOOTING;
-		} else if (m_stateWanted == WantedState.SHOOTING) {
+		} else if (m_stateWanted == WantedState.SHOOTING || m_stateWanted == WantedState.LOW_SHOT) {
 			return SystemState.WAITING_FOR_FLYWHEEL;
 		} else {
 			return applyWantedState();
@@ -339,14 +369,17 @@ public final class Superstructure extends Subsystem {
 			str.append(getVisionDistance().map(FastDoubleToString::format).orElse("nil"));
 			str.append(": ");
 			str.append(FastDoubleToString.format(shooterConfiguration.getWheelSpeedMetersPerSecond()));
+			str.append(", ");
+			str.append(FastDoubleToString.format(m_hood.getAngle().getDegrees()));
+			str.append("degs");
 			m_shotLogger.append(str.toString());
 		}
 
 		var wantsIntake = m_stateWanted == WantedState.SHOOTING_AND_INTAKING || m_stateWanted == WantedState.INTAKING;
 		m_intake.setWantedState(wantsIntake ? Intake.State.INTAKING : Intake.State.RETRACTED);
-		m_uptake.setWantedState(Uptake.State.FEEDING);
+		m_uptake.setWantedState(m_stateWanted == WantedState.LOW_SHOT ? Uptake.State.SLOW_FEEDING : Uptake.State.FEEDING);
 
-		if (m_stateChangedTimer.get() < 0.75 || m_stateWanted == WantedState.SHOOTING) {
+		if (m_stateChangedTimer.get() < (m_stateWanted == WantedState.LOW_SHOT ? 0.1 : 0.75) || m_stateWanted == WantedState.SHOOTING) {
 			return SystemState.SHOOTING;
 		} else {
 			return applyWantedState();
@@ -369,7 +402,7 @@ public final class Superstructure extends Subsystem {
 
 	private SystemState handlePullToBar() {
 		// set us to correct voltage
-		if (m_stateChanged) {
+		if (m_stateChanged && m_climbCount > 0) {
 			m_climber.setVoltageSettings(Climber.VoltageSetting.LOW);
 		}
 
@@ -378,7 +411,7 @@ public final class Superstructure extends Subsystem {
 			return SystemState.DONE;
 		}
 
-		// wait a minute before proceeding
+		// wait a second before proceeding
 		if (m_climbCount > 0 && m_stateChangedTimer.get() < 0.5) {
 			return SystemState.PULL_TO_BAR;
 		}
@@ -395,6 +428,9 @@ public final class Superstructure extends Subsystem {
 	private SystemState handlePlaceOnBar() {
 		if (m_stateChanged) {
 			m_climber.setSwingerExtended(true);
+		}
+
+		if (m_stateChanged && m_climbCount > 0) {
 			m_climber.setVoltageSettings(Climber.VoltageSetting.LOW);
 		}
 
@@ -415,7 +451,7 @@ public final class Superstructure extends Subsystem {
 	}
 
 	private SystemState handleExtendToBar() {
-		if (m_stateChanged) {
+		if (m_stateChanged && m_climbCount > 0) {
 			m_climber.setVoltageSettings(Climber.VoltageSetting.MID);
 		}
 
@@ -446,8 +482,14 @@ public final class Superstructure extends Subsystem {
 		}
 
 		if (m_stateChangedTimer.get() > 0.5) {
-			m_climber.setReferencePercent(0.7);
+			m_climber.setReferencePercent(0.0);
 		}
+
+		// if (m_stateChangedTimer.get() > 2.0) {
+		// 	m_climber.setReferencePercent(0.9);
+		// } else if (m_stateChangedTimer.get() > 0.5) {
+		// 	m_climber.setReferencePercent(0.7);
+		// }
 
 		return SystemState.DONE;
 	}

@@ -6,6 +6,9 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.motorcontrol.PWMTalonFX;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import com.gemsrobotics.lib.drivers.motorcontrol.MotorController;
 
 import java.util.Objects;
 
@@ -72,7 +75,11 @@ public final class Intake extends Subsystem {
 			m_extender2.set(DoubleSolenoid.Value.kForward);
 
 			if (m_intakeExtensionTimer.get() > EXTENSION_MOTOR_DELAY) {
-				m_motor.set(m_wantedState == State.INTAKING ? 0.6 : -0.6);
+				final var sides = Chassis.getInstance().getWheelProperty(MotorController::getVelocityLinearMetersPerSecond);
+				final var groundSpeed = (sides.left + sides.right) / 2;
+				final var intakeSpeed = groundSpeed < 4.0 ? 0.6 : 1.0;
+
+				m_motor.set(intakeSpeed * (m_wantedState == State.INTAKING ? 1.0 : -1.0));
 			}
 		} else if (m_wantedState == State.EXTENDED) {
 			m_extender.set(DoubleSolenoid.Value.kForward);

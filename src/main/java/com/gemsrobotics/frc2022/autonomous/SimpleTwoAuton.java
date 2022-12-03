@@ -11,8 +11,8 @@ import edu.wpi.first.wpilibj2.command.*;
 
 import java.util.List;
 
-public class TwoPlusTwoAuton extends SequentialCommandGroup {
-	public TwoPlusTwoAuton() {
+public class SimpleTwoAuton extends SequentialCommandGroup {
+	public SimpleTwoAuton() {
 		final var chassis = Chassis.getInstance();
 
 		final var trajectory1 = chassis.getGeneratedWPITrajectory(List.of(
@@ -55,20 +55,7 @@ public class TwoPlusTwoAuton extends SequentialCommandGroup {
 				),
 				new ShootAllBalls(),
 				new PrepareShotCommand(false),
-				new TurnToHeading(Rotation.degrees(-80)),
-				new ParallelCommandGroup(
-						new IntakeCommand(1, 10.0),
-						new GemRamseteCommand(trajectory2)
-				),
-				new TurnToHeading(Rotation.degrees(100)).withTimeout(3.5),
-				new ParallelCommandGroup(
-					new SequentialCommandGroup(
-						new WaitCommand(1.0),
-						new IntakeCommand(2, 5.0)),
-					new GemRamseteCommand(trajectory3)
-				),
-				new GemRamseteCommand(trajectory4),
-				new ExhaustBallsCommand()
+				new TurnToHeading(Rotation.degrees(-80))
 		);
 	}
 }

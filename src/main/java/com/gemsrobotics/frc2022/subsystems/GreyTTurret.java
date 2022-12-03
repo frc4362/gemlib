@@ -117,16 +117,16 @@ public final class GreyTTurret extends Subsystem implements Turret {
 		switch(m_mode) {
 			case DISABLED:
 				m_motor.setNeutral();
-				break;
+				break; 
 			case ROTATION:
-				final var degs = m_motor.getPositionRotations() * 360.0;
-				if (degs > (180.0 - OVERRUN_AMOUNT_DEGREES) && m_periodicIO.reference.getDegrees() < (-180.0 + OVERRUN_AMOUNT_DEGREES)) {
-					m_motor.setPositionRotations(0.5 + m_periodicIO.reference.difference(Rotation.degrees(-180)).getDegrees() / 360.0);
-				} else if (degs < (-180.0 + OVERRUN_AMOUNT_DEGREES) && m_periodicIO.reference.getDegrees() > (180.0 - OVERRUN_AMOUNT_DEGREES)) {
-					m_motor.setPositionRotations(-0.5 - m_periodicIO.reference.difference(Rotation.degrees(180)).getDegrees() / 360.0);
-				} else {
+				// final var degs = m_motor.getPositionRotations() * 360.0;
+				// if (degs > (180.0 - OVERRUN_AMOUNT_DEGREES) && m_periodicIO.reference.getDegrees() < (-180.0 + OVERRUN_AMOUNT_DEGREES)) {
+				// 	m_motor.setPositionRotations(0.5 + m_periodicIO.reference.difference(Rotation.degrees(-180)).getDegrees() / 360.0);
+				// } else if (degs < (-180.0 + OVERRUN_AMOUNT_DEGREES) && m_periodicIO.reference.getDegrees() > (180.0 - OVERRUN_AMOUNT_DEGREES)) {
+				// 	m_motor.setPositionRotations(-0.5 - m_periodicIO.reference.difference(Rotation.degrees(180)).getDegrees() / 360.0);
+				// } else {
 					m_motor.setPositionRotations(m_periodicIO.reference.getRadians() / Tau);
-				}
+				// }
 
 				break;
 		}

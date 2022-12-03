@@ -152,10 +152,10 @@ public final class Climber extends Subsystem {
 	}
 
 	public enum VoltageSetting {
-		LOW(1.0, -1),
-		MID(1.0, -1),
+		LOW(0.34, -1),
+		MID(0.34, -1), // used to be .3
 		HIGH(1.0, -1),
-		END(1.0, -0.35);
+		END(0.34, -0.35);
 
 		public final double forwardLimit, reverseLimit;
 

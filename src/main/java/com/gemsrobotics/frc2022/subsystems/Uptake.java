@@ -46,7 +46,8 @@ public final class Uptake extends Subsystem {
 		OUTTAKING,
 		FEEDING,
 		EXHAUSTING,
-		UNLOADING
+		UNLOADING,
+		SLOW_FEEDING
 	}
 
 	private Uptake() {
@@ -62,6 +63,7 @@ public final class Uptake extends Subsystem {
 
 		m_rejectionTimer = new Timer();
 		m_rejectionTimer.start();
+		m_wantedState = State.NEUTRAL;
 
 		m_periodicIO = new PeriodicIO();
 	}
@@ -88,11 +90,12 @@ public final class Uptake extends Subsystem {
 		SmartDashboard.putBoolean("Bottom Broken", !m_periodicIO.sensorLower);
 		SmartDashboard.putBoolean("Upper Broken", !m_periodicIO.sensorUpper);
 		SmartDashboard.putNumber("Attempted Rejections", attemptedRejects);
+		SmartDashboard.putString("Uptake State", m_wantedState.toString());
 
 		if (m_wantedState == State.OUTTAKING) {
 			m_motorTransfer.set(-0.7);
 			m_motorUptake.set(-0.5);
-		} else if (m_rejectionTimer.hasElapsed(REJECTION_TIME_SECONDS)) {
+		} else if (m_rejectionTimer.get() < REJECTION_TIME_SECONDS) {
 			m_motorTransfer.set(1.0);
 			m_motorUptake.set(-0.2);
 		} else if (m_wantedState == State.NEUTRAL) {
@@ -104,12 +107,15 @@ public final class Uptake extends Subsystem {
 		} else if (m_wantedState == State.FEEDING) {
 			m_motorTransfer.set(1.0);
 			m_motorUptake.set(0.7);
-		} else if (m_wantedState == State.EXHAUSTING) {
-			m_motorUptake.set(0.0);
-			m_motorTransfer.set(1.0);
 		} else if (m_wantedState == State.UNLOADING) {
-			m_motorUptake.set(-0.7);
 			m_motorTransfer.set(1.0);
+			m_motorUptake.set(0.0);
+		} else if (m_wantedState == State.EXHAUSTING) {
+			m_motorTransfer.set(1.0);
+			m_motorUptake.set(-0.6);
+		} else if (m_wantedState == State.SLOW_FEEDING) {
+			m_motorTransfer.set(0.0);
+			m_motorUptake.set(0.3);
 		}
 	}
 

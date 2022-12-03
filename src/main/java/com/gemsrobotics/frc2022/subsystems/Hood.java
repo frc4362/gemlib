@@ -92,8 +92,6 @@ public final class Hood extends Subsystem {
 	protected void onUpdate(final double timestamp) {
 		final var effort = CONTROLLER.calculate(m_periodicIO.position.getDegrees(), m_periodicIO.reference.getDegrees());
 		final var errorDegs = m_periodicIO.reference.difference(m_periodicIO.position).getDegrees();
-		SmartDashboard.putNumber("Hood Error Degrees", errorDegs);
-		SmartDashboard.putNumber("Hood Control Effort", effort);
 		if (m_periodicIO.enabled) {
 			m_motor.setVoltage(effort);
 		} else {
@@ -127,6 +125,10 @@ public final class Hood extends Subsystem {
 
 	public void setStowed() {
 		setReference(MIN_ANGLE);
+	}
+
+	public Rotation getAngle() {
+		return m_periodicIO.position;
 	}
 
 	public boolean atReference() {

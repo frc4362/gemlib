@@ -31,11 +31,16 @@ public class FiveBallAuton extends SequentialCommandGroup {
 		));
 
 		final var pickupPose = new RigidTransform(new Translation(Units.inches2Meters(25.0), Units.inches2Meters(-78 - (13.5 * 12))), Rotation.degrees(-55));
-		final var newPickupPose = pickupPose.transformBy(RigidTransform.fromTranslation(new Translation(Units.inches2Meters(-18.0), Units.inches2Meters(6))));
+		final var newPickupPose = pickupPose.transformBy(new RigidTransform(new Translation(Units.inches2Meters(-5), Units.inches2Meters(4)), Rotation.degrees(2)));
 
 		final var trajectory5 = chassis.getGeneratedWPITrajectory(List.of(
 				new RigidTransform(new Translation(Units.inches2Meters(5.0), Units.inches2Meters(-95)), Rotation.degrees(-110)),
 				newPickupPose
+		));
+
+		final var trajectory6_5 = chassis.getReversedTrajectory(List.of(
+			newPickupPose,
+			newPickupPose.transformBy(RigidTransform.fromTranslation(new Translation(Units.inches2Meters(-8), 0.0)))
 		));
 
 		final var trajectory6 = chassis.getReversedTrajectory(List.of(
@@ -70,7 +75,9 @@ public class FiveBallAuton extends SequentialCommandGroup {
 								new PrepareShotCommand(false)
 						),
 						new GemRamseteCommand(trajectory5),
-						new WaitCommand(1.2),
+						new WaitCommand(0.25),
+						new GemRamseteCommand(trajectory6_5),
+						new WaitCommand(0.7),
 						new PrepareShotCommand(true),
 						new ParallelCommandGroup(
 								new SequentialCommandGroup(
